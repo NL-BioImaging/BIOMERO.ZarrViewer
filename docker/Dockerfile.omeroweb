@@ -1,0 +1,14 @@
+ARG OMERO_WEB_IMAGE=cellularimagingcf/omeroweb:latest
+FROM ${OMERO_WEB_IMAGE}
+
+ARG VIEWER_WHEEL
+USER root
+
+COPY ${VIEWER_WHEEL} /tmp/
+COPY docker/90-biomero-zarr-viewer.omero /opt/omero/web/config/90-biomero-zarr-viewer.omero
+
+RUN /opt/omero/web/venv3/bin/python -m pip install --no-deps /tmp/biomero_zarr_viewer-*.whl \
+    && rm -f /tmp/biomero_zarr_viewer-*.whl \
+    && chmod 0644 /opt/omero/web/config/90-biomero-zarr-viewer.omero
+
+USER omero-web

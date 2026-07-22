@@ -1,0 +1,53 @@
+"""Build and validate the frontend assets embedded in the Python wheel."""
+
+import argparse
+import shutil
+import subprocess
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "frontend"
+STATIC = ROOT / "src/biomero_zarr_viewer/static/biomero_zarr_viewer"
+PYTHON_BUILD = ROOT / "build"
+
+
+def run(*args):
+    subprocess.run([str(value) for value in args], cwd=FRONTEND, check=True)
+
+
+def validate():
+    entry = STATIC / "app.js"
+    stylesheet = STATIC / "app.css"
+    if not entry.is_file() or not stylesheet.is_file():
+        raise RuntimeError("The frontend build did not create app.js and app.css")
+    text = entry.read_text(encoding="utf-8")
+    if "Frontend bundle not built" in text:
+        raise RuntimeError("The generated frontend placeholder is still installed")
+    imports = [part.split('"', 1)[0] for part in text.split('import "')[1:]]
+    for imported in imports:
+        if not (STATIC / imported.removeprefix("./")).is_file():
+            raise RuntimeError(f"Frontend entry references missing asset: {imported}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--skip-install", action="store_true")
+    parser.add_argument("--validate-only", action="store_true")
+    args = parser.parse_args()
+    if not args.validate_only:
+        npm = shutil.which("npm.cmd" if __import__("sys").platform == "win32" else "npm")
+        if not npm:
+            raise RuntimeError("npm is required to build the viewer frontend")
+        if not args.skip_install:
+            run(npm, "ci")
+        run(npm, "run", "build")
+        # Setuptools' incremental build directory can retain content-hashed
+        # chunks from an earlier frontend build and accidentally add them to
+        # the next wheel.  A frontend rebuild invalidates that cache.
+        shutil.rmtree(PYTHON_BUILD, ignore_errors=True)
+    validate()
+    print(f"Validated viewer assets in {STATIC}")
+
+
+if __name__ == "__main__":
+    main()

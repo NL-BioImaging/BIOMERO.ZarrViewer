@@ -1,0 +1,5 @@
+"""Authenticated OME-Zarr viewing for BIOMERO and OMERO.web."""
+
+__version__ = "0.1.7"
+
+default_app_config = "biomero_zarr_viewer.apps.BiomeroZarrViewerConfig"

@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>BIOMERO OME-Zarr Viewer</title>
+  <link rel="stylesheet" href="{% static 'biomero_zarr_viewer/app.css' %}">
+</head>
+<body>
+  <div id="root">
+    <div class="boot-message">Starting BIOMERO OME-Zarr Viewer…</div>
+  </div>
+  <script>
+    window.BIOMERO_ZARR_VIEWER = {
+      capabilitiesTemplate: "{% url 'biomero_zarr_viewer_capabilities' image_id=0 %}"
+    };
+  </script>
+  <script type="module" src="{% static 'biomero_zarr_viewer/app.js' %}"></script>
+</body>
+</html>
+
