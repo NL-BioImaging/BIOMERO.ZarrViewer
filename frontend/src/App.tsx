@@ -1,17 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
-import * as zarr from "zarrita";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, type ChannelAnalysis } from "./channel-scaling";
-import type { Capability, ChannelState, LabelCapability, LabelState, SelectedObject, ViewportState } from "./types";
+import type { Capability, ChannelState, LabelCapability, LabelState, ViewportState } from "./types";
 import { applyChannelDeepLink, applyLabelDeepLink, parseDeepLink, writeDeepLink } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { OverviewGrid } from "./OverviewGrid";
 
 interface LoadedData {
   image: any[];
-  labels: Array<{ id: string; loader: any[]; capability: LabelCapability; arrayPath: string }>;
+  labels: Array<{ id: string; loader: any[] }>;
   sizeZ: number;
   sizeT: number;
   sizeC: number;
@@ -101,19 +100,6 @@ export function fieldLabelPath(labelPath: string, initialPath: string, fieldPath
     : labelPath;
 }
 
-async function scalarLabelValue(store: zarr.FetchStore, path: string, axes: string[], x: number, y: number, zIndex: number, tIndex: number): Promise<number> {
-  const array = await zarr.open(zarr.root(store).resolve(path), { kind: "array" });
-  const selection = array.shape.map((size, index) => {
-    const axis = axes[index] || (index === array.shape.length - 2 ? "y" : index === array.shape.length - 1 ? "x" : "");
-    const value = axis === "x" ? x : axis === "y" ? y : axis === "z" ? zIndex : axis === "t" ? tIndex : 0;
-    return Math.max(0, Math.min(size - 1, Math.floor(value)));
-  });
-  const result = await zarr.get(array, selection as any);
-  if (typeof result === "number" || typeof result === "bigint") return Number(result);
-  const data = (result as any)?.data;
-  return Number(ArrayBuffer.isView(data) ? (data as any)[0] : data ?? 0);
-}
-
 export default function App() {
   const imageId = useMemo(() => selectedImageId(), []);
   const deepLink = useMemo(() => parseDeepLink(), []);
@@ -129,14 +115,11 @@ export default function App() {
   const [zIndex, setZIndex] = useState(deepLink.z || 0);
   const [tIndex, setTIndex] = useState(deepLink.t || 0);
   const [viewport, setViewport] = useState<ViewportState | undefined>(deepLink.viewport);
-  const [hovered, setHovered] = useState<SelectedObject | null>(null);
-  const [selected, setSelected] = useState<SelectedObject | null>(null);
   const [viewMode, setViewMode] = useState<"field" | "well" | "plate">("field");
   const [plateFieldIndex, setPlateFieldIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showScale, setShowScale] = useState(true);
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
-  const hoverTimer = useRef<number | undefined>(undefined);
 
   const refreshCapability = useCallback(async () => {
     if (!imageId) throw new ViewerApiError("missing_image", "No OMERO image was selected", 400);
@@ -170,7 +153,7 @@ export default function App() {
       const labelResults = await Promise.allSettled(capability.labels.map(async (label) => {
         const path = fieldLabelPath(label.path, capability.initial_path, field);
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path) as any);
-        return { id: label.id, loader: result.data, capability: label, arrayPath: `${path}/${label.datasets[0].path}` };
+        return { id: label.id, loader: result.data };
       }));
       if (cancelled) return;
       const next: LoadedData = {
@@ -204,37 +187,6 @@ export default function App() {
     }, 250);
     return () => window.clearTimeout(timeout);
   }, [imageId, loaded, viewport, zIndex, tIndex, field, channels, labels]);
-
-  const inspectCoordinate = useCallback((x: number, y: number, clicked: boolean) => {
-    if (!loaded || !authStore) return;
-    const candidates = [...labels].reverse().filter((item) => item.visible && loaded.labels.some((loadedLabel) => loadedLabel.id === item.id));
-    if (!candidates.length) {
-      if (clicked) setSelected(null);
-      setHovered(null);
-      return;
-    }
-    const run = async () => {
-      let object: SelectedObject | null = null;
-      for (const active of candidates) {
-        const source = loaded.labels.find((item) => item.id === active.id)!;
-        const axes = source.loader[0]?.labels || source.capability.axes.map((axis) => axis.name);
-        const value = await scalarLabelValue(authStore.store, source.arrayPath, axes, x, y, zIndex, tIndex);
-        if (value > 0) {
-          object = { layerId: active.id, layerName: active.name, labelId: value, x, y };
-          break;
-        }
-      }
-      setHovered(object);
-      if (clicked) setSelected(object);
-    };
-    if (clicked) {
-      window.clearTimeout(hoverTimer.current);
-      void run();
-    } else {
-      window.clearTimeout(hoverTimer.current);
-      hoverTimer.current = window.setTimeout(() => void run(), 120);
-    }
-  }, [loaded, authStore, labels, zIndex, tIndex]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -276,12 +228,10 @@ export default function App() {
               z={zIndex}
               t={tIndex}
               viewport={viewport}
-              selectedLabel={selected?.labelId}
               showMinimap={showMinimap}
               showScale={showScale}
               physicalScale={physicalScale(capability)}
               onViewportChange={setViewport}
-              onCoordinate={inspectCoordinate}
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
             />
           ) : <div className="loading">{error || status}</div>}
@@ -305,8 +255,6 @@ export default function App() {
           t={tIndex}
           onZ={setZIndex}
           onT={setTIndex}
-          selected={selected}
-          hovered={hovered}
           viewMode={viewMode}
           onViewMode={setViewMode}
           plateFieldIndex={plateFieldIndex}
@@ -332,8 +280,6 @@ interface ViewerPanelProps {
   t: number;
   onZ: (value: number) => void;
   onT: (value: number) => void;
-  selected: SelectedObject | null;
-  hovered: SelectedObject | null;
   viewMode: "field" | "well" | "plate";
   onViewMode: (value: "field" | "well" | "plate") => void;
   plateFieldIndex: number;
@@ -362,10 +308,7 @@ function ViewerPanel(props: ViewerPanelProps) {
         {viewTab === "channels" ? <>
           <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
           <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} onZ={props.onZ} onT={props.onT} />
-        </> : <>
-          <LabelPanel labels={props.labels} onChange={props.onLabels} />
-          <section className="panel-section object-section"><h2>Object information</h2><ObjectInfo title="Selected" value={props.selected} /><ObjectInfo title="Hover" value={props.hovered} /></section>
-        </>}
+        </> : <LabelPanel labels={props.labels} onChange={props.onLabels} />}
       </div>
     </>}
     {capability && <div className="source-strip"><span>NGFF {capability.ngff_version}</span><span>Zarr v{capability.zarr_format}</span><span>{capability.kind}</span></div>}
@@ -492,8 +435,4 @@ function PlateGrid({ capability, field, onField, expanded }: { capability: Capab
       return <button aria-label={label} title={label} key={`${rowIndex}-${columnIndex}`} className={active ? "active" : ""} disabled={!well?.fields.length} onClick={() => well?.fields[0] && onField(well.fields[0].path)}><span/></button>;
     })])}</div>
   </details>;
-}
-
-function ObjectInfo({ title, value }: { title: string; value: SelectedObject | null }) {
-  return <div className="object-info"><h3>{title}</h3>{value ? <dl><dt>Layer</dt><dd>{value.layerName}</dd><dt>Label ID</dt><dd>{value.labelId}</dd><dt>Position</dt><dd>{value.x}, {value.y}</dd></dl> : <p className="muted">None</p>}</div>;
 }

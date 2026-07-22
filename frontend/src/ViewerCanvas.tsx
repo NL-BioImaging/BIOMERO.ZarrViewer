@@ -4,12 +4,12 @@ import {
   DetailView,
   DETAIL_VIEW_ID,
   getDefaultInitialViewState,
-  MultiscaleImageLayer,
   OverviewView,
   OVERVIEW_VIEW_ID,
   VivViewer,
 } from "@hms-dbmi/viv";
 import type { ChannelState, LabelState, ViewportState } from "./types";
+import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 
 interface LoadedLabel {
@@ -27,12 +27,10 @@ interface Props {
   z: number;
   t: number;
   viewport?: ViewportState;
-  selectedLabel?: number;
   showMinimap: boolean;
   showScale: boolean;
   physicalScale?: { size: number; unit: string };
   onViewportChange: (state: ViewportState) => void;
-  onCoordinate: (x: number, y: number, clicked: boolean) => void;
   onTileError: (message: string) => void;
 }
 
@@ -59,12 +57,10 @@ export function ViewerCanvas({
   z,
   t,
   viewport,
-  selectedLabel = 0,
   showMinimap,
   showScale,
   physicalScale,
   onViewportChange,
-  onCoordinate,
   onTileError,
 }: Props) {
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
@@ -85,7 +81,7 @@ export function ViewerCanvas({
       const loaded = labelById.get(state.id)!;
       const sourceLabels = loaded.loader[0]?.labels || [];
       const fixedColor = state.color ? hexToRgb(state.color) : undefined;
-      return new MultiscaleImageLayer({
+      return new CategoricalMultiscaleImageLayer({
         id: `label-${state.id}-#${DETAIL_VIEW_ID}#`,
         viewportId: DETAIL_VIEW_ID,
         loader: loaded.loader,
@@ -96,9 +92,9 @@ export function ViewerCanvas({
         opacity: state.opacity,
         labelMode: state.mode,
         labelColor: fixedColor,
-        selectedLabel,
         interpolation: "nearest",
-        refinementStrategy: "best-available",
+        refinementStrategy: "no-overlap",
+        excludeBackground: true,
         onTileError: (error: unknown) => onTileError(error instanceof Error ? error.message : "A label tile failed to load"),
       } as any);
     });
@@ -134,12 +130,6 @@ export function ViewerCanvas({
       }}
       deckProps={{
         layers: labelLayers,
-        onHover: (info: any) => {
-          if (Array.isArray(info.coordinate)) onCoordinate(Math.floor(info.coordinate[0]), Math.floor(info.coordinate[1]), false);
-        },
-        onClick: (info: any) => {
-          if (Array.isArray(info.coordinate)) onCoordinate(Math.floor(info.coordinate[0]), Math.floor(info.coordinate[1]), true);
-        },
       }}
     />
     {showScale && scaleBar && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit}`}>

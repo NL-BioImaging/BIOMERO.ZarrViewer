@@ -9,7 +9,6 @@ const instanceColorModule = {
     outlineOnly: "u32",
     fixedColor: "u32",
     layerColor: "vec3<f32>",
-    selectedLabel: "u32",
   },
   fs: `
 uniform instanceColorModuleUniforms {
@@ -17,7 +16,6 @@ uniform instanceColorModuleUniforms {
   uint outlineOnly;
   uint fixedColor;
   vec3 layerColor;
-  uint selectedLabel;
 } instanceColorModule;
 
 uint biomero_hash(uint value) {
@@ -34,11 +32,10 @@ vec3 biomero_hash_color(uint value) {
   return vec3(float(h & 255u), float((h >> 8) & 255u), float((h >> 16) & 255u)) / 255.0;
 }
 
-vec4 biomero_label_color(float rawValue, vec2 uv) {
-  uint value = uint(rawValue);
+vec4 biomero_label_color(float rawValue) {
+  uint value = uint(round(rawValue));
   if (value == 0u) return vec4(0.0);
   vec3 color = instanceColorModule.fixedColor != 0u ? instanceColorModule.layerColor : biomero_hash_color(value);
-  if (instanceColorModule.selectedLabel != 0u && value == instanceColorModule.selectedLabel) color = vec3(1.0);
   return vec4(color, instanceColorModule.opacity);
 }
 `,
@@ -49,7 +46,7 @@ vec4 biomero_label_color(float rawValue, vec2 uv) {
       if (instanceColorModule.outlineOnly != 0u && intensity[0] > 0.0) {
         biomeroBoundary = fwidth(intensity[0]) > 0.0;
       }
-      rgba = biomeroBoundary ? biomero_label_color(intensity[0], vTexCoord) : vec4(0.0);
+      rgba = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
     `,
   },
 };
@@ -60,7 +57,6 @@ export class InstanceColorExtension extends VivLayerExtension {
     opacity: { type: "number", value: 0.15, compare: true },
     labelMode: { type: "string", value: "fill", compare: true },
     labelColor: { type: "array", value: null, compare: true },
-    selectedLabel: { type: "number", value: 0, compare: true },
   };
 
   getVivShaderTemplates() {
@@ -75,7 +71,6 @@ export class InstanceColorExtension extends VivLayerExtension {
       outlineOnly: this.props.labelMode === "outline" ? 1 : 0,
       fixedColor: Array.isArray(this.props.labelColor) ? 1 : 0,
       layerColor: color,
-      selectedLabel: Math.max(0, Number(this.props.selectedLabel || 0)),
     };
     for (const model of this.getModels()) model.shaderInputs.setProps({ [moduleName]: uniforms });
   }

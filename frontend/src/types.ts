@@ -99,14 +99,6 @@ export interface ViewportState {
   zoom: number;
 }
 
-export interface SelectedObject {
-  layerId: string;
-  layerName: string;
-  labelId: number;
-  x: number;
-  y: number;
-}
-
 declare global {
   interface Window {
     BIOMERO_ZARR_VIEWER: { capabilitiesTemplate: string };
