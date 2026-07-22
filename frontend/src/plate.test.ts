@@ -1,4 +1,4 @@
-import { fieldLabelPath, labelStates } from "./App";
+import { defaultZIndex, fieldLabelPath, labelStates } from "./App";
 import { overviewLayout, overviewTiles } from "./OverviewGrid";
 import type { Capability } from "./types";
 
@@ -41,7 +41,13 @@ test("well and plate overviews choose the expected fields", () => {
   expect(overviewLayout(overviewTiles(plateCapability, "well", "A/1/0", 0), "well").tiles.map((tile) => [tile.left, tile.top])).toEqual([[0, 0], [432, 0]]);
 });
 
-test("NGFF labels default to fifteen percent opacity", () => {
+test("NGFF labels default to thirty percent opacity", () => {
   const capability = { ...plateCapability, labels: [{ id: "nuclei", name: "Nuclei", path: "labels/nuclei", axes: [], datasets: [] }] };
-  expect(labelStates(capability)[0].opacity).toBe(0.15);
+  expect(labelStates(capability)[0].opacity).toBe(0.3);
+});
+
+test("Z stacks start at the middle unless a deep link requests a slice", () => {
+  expect(defaultZIndex(25)).toBe(12);
+  expect(defaultZIndex(25, 0)).toBe(0);
+  expect(defaultZIndex(25, 99)).toBe(24);
 });

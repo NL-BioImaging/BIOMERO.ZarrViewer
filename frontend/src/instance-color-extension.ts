@@ -54,7 +54,7 @@ vec4 biomero_label_color(float rawValue) {
 export class InstanceColorExtension extends VivLayerExtension {
   static extensionName = "InstanceColorExtension";
   static defaultProps = {
-    opacity: { type: "number", value: 0.15, compare: true },
+    opacity: { type: "number", value: 0.3, compare: true },
     labelMode: { type: "string", value: "fill", compare: true },
     labelColor: { type: "array", value: null, compare: true },
   };
@@ -67,7 +67,7 @@ export class InstanceColorExtension extends VivLayerExtension {
     super.updateState.call(this, params as never, this as never);
     const color = Array.isArray(this.props.labelColor) ? this.props.labelColor.map((value: number) => value / 255) : [0, 0, 0];
     const uniforms = {
-      opacity: this.props.opacity ?? 0.15,
+      opacity: this.props.opacity ?? 0.3,
       outlineOnly: this.props.labelMode === "outline" ? 1 : 0,
       fixedColor: Array.isArray(this.props.labelColor) ? 1 : 0,
       layerColor: color,

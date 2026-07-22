@@ -82,6 +82,7 @@ export interface ChannelState {
 }
 
 export type LabelMode = "fill" | "outline";
+export type ProjectionMode = "slice" | "mip" | "mean" | "min";
 
 export interface LabelState {
   id: string;

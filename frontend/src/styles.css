@@ -101,6 +101,9 @@ h3 { margin: 0 0 .3rem; font-size: .76rem; color: #c8cee1; }
 .slider input { accent-color: var(--accent); }
 .slider output { text-align: right; font-variant-numeric: tabular-nums; }
 .position-section { border-top: 1px solid var(--line); }
+.projection-control { display: grid; gap: .45rem; margin-top: .7rem; color: #aeb5cd; font-size: .72rem; }
+.projection-toggle { grid-template-columns: repeat(4, 1fr); min-width: 0; }
+.projection-note { margin: .65rem 0 0; color: #8f98b5; font-size: .7rem; }
 .empty-state { padding: 1.5rem .8rem; text-align: center; color: #aeb5cc; }
 .empty-state strong { font-size: .85rem; }
 .empty-state p { margin: .5rem 0 0; font-size: .75rem; line-height: 1.45; }

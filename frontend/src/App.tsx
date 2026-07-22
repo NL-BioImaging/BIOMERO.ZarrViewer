@@ -3,7 +3,8 @@ import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, type ChannelAnalysis } from "./channel-scaling";
-import type { Capability, ChannelState, LabelCapability, LabelState, ViewportState } from "./types";
+import { projectLoader } from "./projection-loader";
+import type { Capability, ChannelState, LabelCapability, LabelState, ProjectionMode, ViewportState } from "./types";
 import { applyChannelDeepLink, applyLabelDeepLink, parseDeepLink, writeDeepLink } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { OverviewGrid } from "./OverviewGrid";
@@ -71,7 +72,7 @@ export function labelStates(capability: Capability): LabelState[] {
     name: label.name,
     path: label.path,
     visible: true,
-    opacity: label.opacity ?? 0.15,
+    opacity: 0.3,
     mode: "fill",
     color: label.color,
   }));
@@ -81,6 +82,11 @@ function axisSize(loader: any[], axis: string): number {
   const source = loader[0];
   const index = source.labels.indexOf(axis);
   return index >= 0 ? source.shape[index] : 1;
+}
+
+export function defaultZIndex(sizeZ: number, requested?: number): number {
+  const maximum = Math.max(0, sizeZ - 1);
+  return requested == null ? Math.floor(maximum / 2) : Math.max(0, Math.min(maximum, requested));
 }
 
 function physicalScale(capability: Capability | null): { size: number; unit: string } | undefined {
@@ -114,12 +120,16 @@ export default function App() {
   const [labels, setLabels] = useState<LabelState[]>([]);
   const [zIndex, setZIndex] = useState(deepLink.z || 0);
   const [tIndex, setTIndex] = useState(deepLink.t || 0);
+  const [projection, setProjection] = useState<ProjectionMode>(deepLink.projection || "slice");
   const [viewport, setViewport] = useState<ViewportState | undefined>(deepLink.viewport);
   const [viewMode, setViewMode] = useState<"field" | "well" | "plate">("field");
   const [plateFieldIndex, setPlateFieldIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showScale, setShowScale] = useState(true);
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
+  const initializedZ = useRef(false);
+  const analyzedProjection = useRef<ProjectionMode>(projection);
+  const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
 
   const refreshCapability = useCallback(async () => {
     if (!imageId) throw new ViewerApiError("missing_image", "No OMERO image was selected", 400);
@@ -163,16 +173,23 @@ export default function App() {
         sizeZ: axisSize(imageResult.data, "z"),
         sizeT: axisSize(imageResult.data, "t"),
       };
+      const nextZ = !initializedZ.current
+        ? defaultZIndex(next.sizeZ, deepLink.z)
+        : defaultZIndex(next.sizeZ, zIndex);
+      const nextT = Math.min(tIndex, next.sizeT - 1);
+      initializedZ.current = true;
       setStatus("Calculating automatic channel ranges…");
       const defaults = channelStates(capability, next.image);
-      const analyses = await analyzeChannels(next.image, defaults, zIndex, tIndex);
+      const analysisLoader = projectLoader(next.image, projection);
+      const analyses = await analyzeChannels(analysisLoader, defaults, projection === "slice" ? nextZ : 0, nextT);
       const scaled = applyChannelAnalysis(defaults, analyses);
+      analyzedProjection.current = projection;
       setLoaded(next);
       setChannelAnalyses(analyses);
       setChannels((current) => applyChannelDeepLink(scaled, current.length ? current : deepLink.channels));
       setLabels((current) => applyLabelDeepLink(labelStates(capability), current.length ? current : deepLink.labels));
-      setZIndex((value) => Math.min(value, next.sizeZ - 1));
-      setTIndex((value) => Math.min(value, next.sizeT - 1));
+      setZIndex(nextZ);
+      setTIndex(nextT);
       setStatus(labelResults.some((item) => item.status === "rejected") ? "Image ready; one or more label layers are unavailable for this field." : "Ready");
     };
     load().catch((reason) => setError(reason instanceof Error ? reason.message : "The OME-Zarr image could not be opened"));
@@ -180,13 +197,29 @@ export default function App() {
   }, [capability, authStore, field]);
 
   useEffect(() => {
+    if (!loaded || !displayLoader || !channels.length || analyzedProjection.current === projection) return;
+    analyzedProjection.current = projection;
+    let cancelled = false;
+    setStatus(projection === "slice" ? "Calculating slice ranges…" : "Calculating projection ranges…");
+    analyzeChannels(displayLoader, channels, projection === "slice" ? zIndex : 0, tIndex).then((analyses) => {
+      if (cancelled) return;
+      setChannelAnalyses(analyses);
+      setChannels((current) => applyChannelAnalysis(current, analyses));
+      setStatus("Ready");
+    }).catch((reason) => {
+      if (!cancelled) setStatus(`Projection warning: ${reason instanceof Error ? reason.message : "range calculation failed"}`);
+    });
+    return () => { cancelled = true; };
+  }, [projection, displayLoader]);
+
+  useEffect(() => {
     if (!imageId || !loaded) return;
     const timeout = window.setTimeout(() => {
-      const relative = writeDeepLink(imageId, { viewport, z: zIndex, t: tIndex, field, channels, labels });
+      const relative = writeDeepLink(imageId, { viewport, z: zIndex, t: tIndex, projection, field, channels, labels });
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, viewport, zIndex, tIndex, field, channels, labels]);
+  }, [imageId, loaded, viewport, zIndex, tIndex, projection, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -217,11 +250,11 @@ export default function App() {
                 setViewMode(viewMode === "plate" ? "well" : "field");
               }}
             />
-          ) : loaded && viewerSize.width > 0 && viewerSize.height > 0 ? (
+          ) : loaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 ? (
             <ViewerCanvas
               width={viewerSize.width}
               height={viewerSize.height}
-              loader={loaded.image}
+              loader={displayLoader}
               labels={loaded.labels}
               channels={channels}
               labelStates={labels}
@@ -255,6 +288,8 @@ export default function App() {
           t={tIndex}
           onZ={setZIndex}
           onT={setTIndex}
+          projection={projection}
+          onProjection={setProjection}
           viewMode={viewMode}
           onViewMode={setViewMode}
           plateFieldIndex={plateFieldIndex}
@@ -280,6 +315,8 @@ interface ViewerPanelProps {
   t: number;
   onZ: (value: number) => void;
   onT: (value: number) => void;
+  projection: ProjectionMode;
+  onProjection: (value: ProjectionMode) => void;
   viewMode: "field" | "well" | "plate";
   onViewMode: (value: "field" | "well" | "plate") => void;
   plateFieldIndex: number;
@@ -307,7 +344,7 @@ function ViewerPanel(props: ViewerPanelProps) {
       <div className="panel-scroll">
         {viewTab === "channels" ? <>
           <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
-          <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} onZ={props.onZ} onT={props.onT} />
+          <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />
         </> : <LabelPanel labels={props.labels} onChange={props.onLabels} />}
       </div>
     </>}
@@ -372,9 +409,34 @@ function DualRange({ channel, analysis, onChange }: { channel: ChannelState; ana
   </div>;
 }
 
-function PlaneControls({ sizeZ, sizeT, z, t, onZ, onT }: { sizeZ: number; sizeT: number; z: number; t: number; onZ: (v: number) => void; onT: (v: number) => void }) {
+function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection }: {
+  sizeZ: number;
+  sizeT: number;
+  z: number;
+  t: number;
+  projection: ProjectionMode;
+  onZ: (v: number) => void;
+  onT: (v: number) => void;
+  onProjection: (value: ProjectionMode) => void;
+}) {
   if (sizeZ === 1 && sizeT === 1) return null;
-  return <section className="panel-section position-section"><h2>Position</h2>{sizeZ > 1 && <label className="slider">Z <input type="range" min="0" max={sizeZ - 1} value={z} onChange={(e) => onZ(Number(e.target.value))}/><output>{z + 1}/{sizeZ}</output></label>}{sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}</section>;
+  const projections: Array<{ value: ProjectionMode; label: string }> = [
+    { value: "slice", label: "Slice" },
+    { value: "mip", label: "MIP" },
+    { value: "mean", label: "Mean" },
+    { value: "min", label: "Min" },
+  ];
+  return <section className="panel-section position-section"><h2>Position</h2>
+    {sizeZ > 1 && <>
+      <div className="projection-control"><span>Projection</span><div className="mode-toggle projection-toggle" role="group" aria-label="Z projection mode">
+        {projections.map((item) => <button key={item.value} className={projection === item.value ? "active" : ""} aria-pressed={projection === item.value} onClick={() => onProjection(item.value)}>{item.label}</button>)}
+      </div></div>
+      {projection === "slice"
+        ? <label className="slider">Z <input type="range" min="0" max={sizeZ - 1} value={z} onChange={(e) => onZ(Number(e.target.value))}/><output>{z + 1}/{sizeZ}</output></label>
+        : <p className="projection-note">Using all {sizeZ} Z slices</p>}
+    </>}
+    {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
+  </section>;
 }
 
 function LabelPanel({ labels, onChange }: { labels: LabelState[]; onChange: (value: LabelState[]) => void }) {

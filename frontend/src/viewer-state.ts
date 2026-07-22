@@ -1,9 +1,10 @@
-import type { ChannelState, LabelState, ViewportState } from "./types";
+import type { ChannelState, LabelState, ProjectionMode, ViewportState } from "./types";
 
 export interface DeepLinkState {
   viewport?: ViewportState;
   z?: number;
   t?: number;
+  projection?: ProjectionMode;
   field?: string;
   channels?: Array<Pick<ChannelState, "index" | "visible" | "color" | "low" | "high">>;
   labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color">>;
@@ -27,6 +28,8 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   }
   if (params.has("z")) state.z = Math.floor(finite(params.get("z"), 0, 0));
   if (params.has("t")) state.t = Math.floor(finite(params.get("t"), 0, 0));
+  const projection = params.get("projection");
+  if (projection === "mip" || projection === "mean" || projection === "min") state.projection = projection;
   if (params.get("field")) state.field = params.get("field")!;
   for (const [key, target] of [["channels", "channels"], ["labels", "labels"]] as const) {
     const raw = params.get(key);
@@ -87,9 +90,9 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   }
   params.set("z", String(Math.max(0, Math.floor(state.z))));
   params.set("t", String(Math.max(0, Math.floor(state.t))));
+  if (state.projection && state.projection !== "slice") params.set("projection", state.projection);
   if (state.field) params.set("field", state.field);
   if (state.channels) params.set("channels", JSON.stringify(state.channels.map(({ index, visible, color, low, high }) => ({ index, visible, color, low, high }))));
   if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color }) => ({ id, visible, opacity, mode, ...(color ? { color } : {}) }))));
   return `${window.location.pathname}?${params.toString()}`;
 }
-
