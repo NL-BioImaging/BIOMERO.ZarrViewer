@@ -30,7 +30,7 @@ test = [
 ]
 
 [project.urls]
-Repository = "https://github.com/NL-BioImaging/OMERO.ZarrViewer"
+Repository = "https://github.com/NL-BioImaging/BIOMERO.ZarrViewer"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
