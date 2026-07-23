@@ -229,6 +229,10 @@ export default function App() {
         <div><strong>BIOMERO OME-Zarr Viewer</strong><span>{capability?.plate ? field : capability?.image.name || "Loading…"}</span></div>
         <div className="toolbar">
           <span className="status" aria-live="polite">{error || status}</span>
+          {loaded && viewMode === "field" && <>
+            <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Show Navigator</button>
+            <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Show Scale</button>
+          </>}
           <button onClick={() => void document.documentElement.requestFullscreen()}>Fullscreen</button>
         </div>
       </header>
@@ -268,10 +272,6 @@ export default function App() {
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
             />
           ) : <div className="loading">{error || status}</div>}
-          {loaded && viewMode === "field" && <div className="viewer-options" aria-label="Viewer overlays">
-            <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Scale</button>
-            <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Minimap</button>
-          </div>}
         </main>
         <ViewerPanel
           capability={capability}

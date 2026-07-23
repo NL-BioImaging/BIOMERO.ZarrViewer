@@ -1,11 +1,9 @@
-# Include this inside the same Nginx server block that proxies OMERO.web.
-# The alias is the Zarr storage root as seen by Nginx. It may differ from
-# omero.web.zarr_viewer.mount_root when Nginx and OMERO.web use different
-# filesystem namespaces, but both roots must expose the same relative tree.
-# Mount the storage read-only into Nginx.
+# Insert inside the HTTPS server block in
+# roles/base/templates/omero.conf.j2. Nginx runs on the host in this
+# deployment, so this is a host path rather than the OMERO.web container path.
 location /_biomero_zarr_internal/ {
     internal;
-    alias /data/;
+    alias {{ biomero_zarr_nginx_root }}/;
     sendfile on;
     tcp_nopush on;
     etag on;

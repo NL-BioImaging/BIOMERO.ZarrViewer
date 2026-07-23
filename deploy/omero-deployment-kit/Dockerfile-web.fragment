@@ -1,0 +1,11 @@
+# Add this after FROM and before `omero web syncmedia` in
+# roles/docker/templates/Dockerfile-web.j2. The wheel is copied into the
+# generated docker/ build context by the Ansible role.
+USER root
+
+COPY biomero_zarr_viewer-*.whl /tmp/
+RUN /opt/omero/web/venv3/bin/python -m pip install --no-deps \
+        /tmp/biomero_zarr_viewer-*.whl \
+    && rm -f /tmp/biomero_zarr_viewer-*.whl
+
+USER omero-web

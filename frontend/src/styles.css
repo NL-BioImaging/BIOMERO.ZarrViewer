@@ -28,13 +28,11 @@ button:disabled { opacity: .35; cursor: default; }
 .toolbar { display: flex; align-items: center; gap: .55rem; min-width: 0; }
 .toolbar .status { font-size: .78rem; max-width: 24rem; }
 .toolbar button { background: transparent; }
+.toolbar button.active { color: #dfffe3; border-color: var(--accent); background: #183521; }
 
 .workspace { display: grid; grid-template-columns: minmax(24rem, 1fr) 26.5rem; min-height: 0; }
 .viewer-host { min-width: 0; min-height: 0; position: relative; background: #05070a; }
 .viewer-host canvas { outline: none; }
-.viewer-options { position: absolute; z-index: 3; left: 50%; bottom: 1rem; display: flex; gap: .35rem; padding: .3rem; border: 1px solid #343950; border-radius: 5px; background: #121526dd; transform: translateX(-50%); }
-.viewer-options button { padding: .28rem .65rem; color: #aeb7d2; background: transparent; }
-.viewer-options button.active { color: #dfffe3; border-color: var(--accent); background: #183521; }
 .physical-scale { position: absolute; z-index: 3; right: 1rem; bottom: 1.1rem; display: grid; justify-items: center; gap: .2rem; padding: .35rem .5rem; border-radius: 5px; background: #080a12d9; pointer-events: none; }
 .physical-scale span { height: .55rem; border: solid #f4f6ff; border-width: 0 2px 2px; }
 .physical-scale strong { color: #f4f6ff; font-size: .66rem; font-variant-numeric: tabular-nums; }

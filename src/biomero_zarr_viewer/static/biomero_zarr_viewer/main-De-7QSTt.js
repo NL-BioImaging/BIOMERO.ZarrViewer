@@ -38434,19 +38434,19 @@ const x2 = {
 function On(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => hk.set(i, e));
 }
-On([void 0, 1], () => import("./raw-DtJLEwEY.js").then((t) => t.default));
-On(5, () => import("./lzw-W3-mTRnb.js").then((t) => t.default));
+On([void 0, 1], () => import("./raw-9ryObAq5.js").then((t) => t.default));
+On(5, () => import("./lzw-CcC6dyhY.js").then((t) => t.default));
 On(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-On(7, () => import("./jpeg-DIM4vNbd.js").then((t) => t.default));
-On([8, 32946], () => import("./deflate-FxlhRObt.js").then((t) => t.default));
-On(32773, () => import("./packbits-DD0JAGVq.js").then((t) => t.default));
+On(7, () => import("./jpeg-BQ2E8tIl.js").then((t) => t.default));
+On([8, 32946], () => import("./deflate-SIra3pP5.js").then((t) => t.default));
+On(32773, () => import("./packbits-DnKIBrG8.js").then((t) => t.default));
 On(
   34887,
-  () => import("./lerc-CDzhp55a.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-BtAm75In.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-On(50001, () => import("./webimage-BXfpCjeQ.js").then((t) => t.default));
+On(50001, () => import("./webimage-Cs5bjkGr.js").then((t) => t.default));
 function dk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -52247,53 +52247,51 @@ function LY() {
       ] }),
       /* @__PURE__ */ z.jsxs("div", { className: "toolbar", children: [
         /* @__PURE__ */ z.jsx("span", { className: "status", "aria-live": "polite", children: A || f }),
+        l && oe === "field" && /* @__PURE__ */ z.jsxs(z.Fragment, { children: [
+          /* @__PURE__ */ z.jsx("button", { className: T ? "active" : "", "aria-pressed": T, onClick: () => B((se) => !se), children: "Show Navigator" }),
+          /* @__PURE__ */ z.jsx("button", { className: w ? "active" : "", "aria-pressed": w, onClick: () => H((se) => !se), children: "Show Scale" })
+        ] }),
         /* @__PURE__ */ z.jsx("button", { onClick: () => {
           document.documentElement.requestFullscreen();
         }, children: "Fullscreen" })
       ] })
     ] }),
     /* @__PURE__ */ z.jsxs("div", { className: "workspace", children: [
-      /* @__PURE__ */ z.jsxs("main", { className: "viewer-host", ref: V, children: [
-        i?.plate && s && oe !== "field" ? /* @__PURE__ */ z.jsx(
-          IY,
-          {
-            capability: i,
-            store: s.store,
-            mode: oe,
-            selectedPath: m,
-            plateFieldIndex: Ae,
-            channels: v,
-            z: P,
-            t: L,
-            onSelect: y,
-            onOpen: (se) => {
-              y(se), ae(oe === "plate" ? "well" : "field");
-            }
+      /* @__PURE__ */ z.jsx("main", { className: "viewer-host", ref: V, children: i?.plate && s && oe !== "field" ? /* @__PURE__ */ z.jsx(
+        IY,
+        {
+          capability: i,
+          store: s.store,
+          mode: oe,
+          selectedPath: m,
+          plateFieldIndex: Ae,
+          channels: v,
+          z: P,
+          t: L,
+          onSelect: y,
+          onOpen: (se) => {
+            y(se), ae(oe === "plate" ? "well" : "field");
           }
-        ) : l && K && R.width > 0 && R.height > 0 ? /* @__PURE__ */ z.jsx(
-          EY,
-          {
-            width: R.width,
-            height: R.height,
-            loader: K,
-            labels: l.labels,
-            channels: v,
-            labelStates: M,
-            z: P,
-            t: L,
-            viewport: J,
-            showMinimap: T,
-            showScale: w,
-            physicalScale: FY(i),
-            onViewportChange: ie,
-            onTileError: (se) => d(`Tile warning: ${se}`)
-          }
-        ) : /* @__PURE__ */ z.jsx("div", { className: "loading", children: A || f }),
-        l && oe === "field" && /* @__PURE__ */ z.jsxs("div", { className: "viewer-options", "aria-label": "Viewer overlays", children: [
-          /* @__PURE__ */ z.jsx("button", { className: w ? "active" : "", "aria-pressed": w, onClick: () => H((se) => !se), children: "Scale" }),
-          /* @__PURE__ */ z.jsx("button", { className: T ? "active" : "", "aria-pressed": T, onClick: () => B((se) => !se), children: "Minimap" })
-        ] })
-      ] }),
+        }
+      ) : l && K && R.width > 0 && R.height > 0 ? /* @__PURE__ */ z.jsx(
+        EY,
+        {
+          width: R.width,
+          height: R.height,
+          loader: K,
+          labels: l.labels,
+          channels: v,
+          labelStates: M,
+          z: P,
+          t: L,
+          viewport: J,
+          showMinimap: T,
+          showScale: w,
+          physicalScale: FY(i),
+          onViewportChange: ie,
+          onTileError: (se) => d(`Tile warning: ${se}`)
+        }
+      ) : /* @__PURE__ */ z.jsx("div", { className: "loading", children: A || f }) }),
       /* @__PURE__ */ z.jsx(
         kY,
         {

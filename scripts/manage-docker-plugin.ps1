@@ -98,7 +98,7 @@ function Show-Status {
         & docker exec $Container test -r $mount
         if ($LASTEXITCODE -ne 0) { Write-Warning "The configured Zarr mount is not readable in OMERO.web." }
     }
-    Write-Host "Nginx: verify docker/nginx-biomero-zarr.conf in the serving Nginx container."
+    Write-Host "Nginx: verify the internal Zarr location in the existing serving Nginx (host or container)."
 }
 
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { throw "Docker CLI was not found." }
