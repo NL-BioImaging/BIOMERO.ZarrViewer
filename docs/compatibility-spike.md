@@ -13,6 +13,9 @@ mounted BIOMERO stores, and representative institutional data.
   grow with label cardinality.
 - This viewer instead uses a Viv shader extension with an integer hash, so
   normal rendering has constant client memory relative to the number of IDs.
+- Viv's volume layer provides field-level intensity ray casting. The viewer
+  limits its raw volume payload to 256 MiB, checks the WebGL 3D-texture limit,
+  and defaults to the coarsest safe multiscale level.
 - The viewer accepts OME-Zarr 0.4/Zarr v2 and OME-Zarr 0.5/Zarr v3 through
   distinct backend metadata adapters and shared normalized frontend state.
 
@@ -35,15 +38,18 @@ private channel sampler declaration.
 
 Run each row first in OMERO-Vitessce as a reference and then in this viewer:
 
-| Store | Image | Labels | Plate navigation | Result |
-|---|---|---|---|---|
-| 0.4 / Zarr v2 | multiscale C/Z/T | multiple integer labels | n/a | pending deployment |
-| 0.4 / Zarr v2 | HCS field | field labels | sparse wells/FOVs | pending deployment |
-| 0.5 / Zarr v3 | multiscale C/Z/T | multiple integer labels | n/a | pending deployment |
-| 0.5 / Zarr v3 | HCS field | field labels | sparse wells/FOVs | pending deployment |
+| Store | Image | 3D intensity | Labels | Plate navigation | Result |
+|---|---|---|---|---|---|
+| 0.4 / Zarr v2 | multiscale C/Z/T | field at selected T | multiple integer labels in 2D | n/a | pending deployment |
+| 0.4 / Zarr v2 | HCS field | selected field and T | field labels in 2D | sparse wells/FOVs | pending deployment |
+| 0.5 / Zarr v3 | multiscale C/Z/T | field at selected T | multiple integer labels in 2D | n/a | pending deployment |
+| 0.5 / Zarr v3 | HCS field | selected field and T | field labels in 2D | sparse wells/FOVs | pending deployment |
 
 For each row verify authenticated metadata/chunk requests, default channel
-rendering, zero-background transparency, hover/click IDs, outline mode, deep
-links, and session-context refresh. Record fixture identifiers and screenshots
-in the deployment's validation report; do not commit patient or unpublished
-data to this repository.
+rendering, zero-background transparency, hover/click IDs, outline mode, 2D/3D
+deep links, anisotropic voxel scaling, camera reset, safe quality choices,
+time/field reload cancellation, and session-context refresh. Also test a
+single-Z field, disabled WebGL 2, and a volume above the 256 MiB limit to
+confirm that each remains safely in 2D. Record fixture identifiers and
+screenshots in the deployment's validation report; do not commit patient or
+unpublished data to this repository.

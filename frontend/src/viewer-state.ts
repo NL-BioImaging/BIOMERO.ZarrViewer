@@ -1,10 +1,13 @@
-import type { ChannelState, LabelState, ProjectionMode, ViewportState } from "./types";
+import type { ChannelState, LabelState, ProjectionMode, RenderMode, ViewportState, VolumeCameraState } from "./types";
 
 export interface DeepLinkState {
   viewport?: ViewportState;
   z?: number;
   t?: number;
   projection?: ProjectionMode;
+  renderMode?: RenderMode;
+  volumeLevel?: number;
+  volumeCamera?: VolumeCameraState;
   field?: string;
   channels?: Array<Pick<ChannelState, "index" | "visible" | "color" | "low" | "high">>;
   labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color">>;
@@ -30,6 +33,15 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   if (params.has("t")) state.t = Math.floor(finite(params.get("t"), 0, 0));
   const projection = params.get("projection");
   if (projection === "mip" || projection === "mean" || projection === "min") state.projection = projection;
+  if (params.get("render") === "3d") state.renderMode = "3d";
+  if (params.has("volumeLevel")) state.volumeLevel = Math.floor(finite(params.get("volumeLevel"), 0, 0, 1024));
+  if (params.has("orbit") || params.has("tilt") || params.has("zoom3d")) {
+    state.volumeCamera = {
+      orbit: finite(params.get("orbit"), 0, -360, 360),
+      tilt: finite(params.get("tilt"), 0, -90, 90),
+      zoom: finite(params.get("zoom3d"), 0, -30, 30),
+    };
+  }
   if (params.get("field")) state.field = params.get("field")!;
   for (const [key, target] of [["channels", "channels"], ["labels", "labels"]] as const) {
     const raw = params.get(key);
@@ -91,6 +103,13 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   params.set("z", String(Math.max(0, Math.floor(state.z))));
   params.set("t", String(Math.max(0, Math.floor(state.t))));
   if (state.projection && state.projection !== "slice") params.set("projection", state.projection);
+  if (state.renderMode === "3d") params.set("render", "3d");
+  if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
+  if (state.renderMode === "3d" && state.volumeCamera) {
+    params.set("orbit", state.volumeCamera.orbit.toFixed(2));
+    params.set("tilt", state.volumeCamera.tilt.toFixed(2));
+    params.set("zoom3d", state.volumeCamera.zoom.toFixed(3));
+  }
   if (state.field) params.set("field", state.field);
   if (state.channels) params.set("channels", JSON.stringify(state.channels.map(({ index, visible, color, low, high }) => ({ index, visible, color, low, high }))));
   if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color }) => ({ id, visible, opacity, mode, ...(color ? { color } : {}) }))));

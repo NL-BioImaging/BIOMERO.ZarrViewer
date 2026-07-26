@@ -2,13 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   // Some transitive Deck.gl dependencies still branch on Node's conventional
   // environment flag.  Replace the expression at build time so the browser
   // bundle never requires a global `process` shim.
   define: {
-    "process.env.NODE_ENV": JSON.stringify("production")
+    "process.env.NODE_ENV": JSON.stringify(mode === "test" ? "test" : "production")
   },
   build: {
     outDir: resolve(__dirname, "../src/biomero_zarr_viewer/static/biomero_zarr_viewer"),
@@ -31,4 +31,4 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts"
   }
-});
+}));

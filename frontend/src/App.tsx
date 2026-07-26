@@ -3,13 +3,34 @@ import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, type ChannelAnalysis } from "./channel-scaling";
+import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { projectLoader } from "./projection-loader";
-import type { Capability, ChannelState, LabelCapability, LabelState, ProjectionMode, ViewportState } from "./types";
+import type {
+  Capability,
+  ChannelState,
+  LabelCapability,
+  LabelState,
+  ProjectionMode,
+  RenderMode,
+  ViewportState,
+  VolumeCameraState,
+  VolumeLevel,
+} from "./types";
 import { applyChannelDeepLink, applyLabelDeepLink, parseDeepLink, writeDeepLink } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
+import { VolumeCanvas } from "./VolumeCanvas";
 import { OverviewGrid } from "./OverviewGrid";
+import {
+  activeVolumeChannels,
+  chooseVolumeLevel,
+  detectMax3dTextureSize,
+  formatBytes,
+  safeVolumeLevels,
+  volumeLevels,
+} from "./volume-utils";
 
 interface LoadedData {
+  path: string;
   image: any[];
   labels: Array<{ id: string; loader: any[] }>;
   sizeZ: number;
@@ -89,6 +110,21 @@ export function defaultZIndex(sizeZ: number, requested?: number): number {
   return requested == null ? Math.floor(maximum / 2) : Math.max(0, Math.min(maximum, requested));
 }
 
+export function RenderModeToggle({
+  mode,
+  disabled3d,
+  onChange,
+}: {
+  mode: RenderMode;
+  disabled3d: boolean;
+  onChange: (mode: RenderMode) => void;
+}) {
+  return <div className="render-mode-toggle" role="group" aria-label="Image rendering mode">
+    <button className={mode === "2d" ? "active" : ""} aria-pressed={mode === "2d"} onClick={() => onChange("2d")}>2D</button>
+    <button className={mode === "3d" ? "active" : ""} aria-pressed={mode === "3d"} disabled={disabled3d} title={disabled3d ? "No safe 3D level is available" : undefined} onClick={() => onChange("3d")}>3D</button>
+  </div>;
+}
+
 function physicalScale(capability: Capability | null): { size: number; unit: string } | undefined {
   if (!capability?.datasets?.length) return undefined;
   const xIndex = capability.axes.findIndex((axis) => axis.name === "x");
@@ -122,6 +158,11 @@ export default function App() {
   const [tIndex, setTIndex] = useState(deepLink.t || 0);
   const [projection, setProjection] = useState<ProjectionMode>(deepLink.projection || "slice");
   const [viewport, setViewport] = useState<ViewportState | undefined>(deepLink.viewport);
+  const [renderMode, setRenderMode] = useState<RenderMode>(deepLink.renderMode || "2d");
+  const [volumeLevel, setVolumeLevel] = useState<number | undefined>(deepLink.volumeLevel);
+  const [volumeCamera, setVolumeCamera] = useState<VolumeCameraState | undefined>(deepLink.volumeCamera);
+  const [volumeReset, setVolumeReset] = useState(0);
+  const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"field" | "well" | "plate">("field");
   const [plateFieldIndex, setPlateFieldIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState(true);
@@ -130,6 +171,31 @@ export default function App() {
   const initializedZ = useRef(false);
   const analyzedProjection = useRef<ProjectionMode>(projection);
   const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
+  const currentLoaded = loaded?.path === field ? loaded : null;
+  const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
+  const allVolumeLevels = useMemo(
+    () => currentLoaded && maxTextureSize != null
+      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize)
+      : [],
+    [currentLoaded, volumeChannels.length, maxTextureSize],
+  );
+  const availableVolumeLevels = useMemo(() => safeVolumeLevels(allVolumeLevels), [allVolumeLevels]);
+  const selectedVolumeLevel = useMemo(
+    () => chooseVolumeLevel(allVolumeLevels, volumeLevel),
+    [allVolumeLevels, volumeLevel],
+  );
+  const volumeAvailable = Boolean(
+    currentLoaded && currentLoaded.sizeZ > 1 && volumeChannels.length && selectedVolumeLevel,
+  );
+  const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
+  const visibleChannelCount = channels.filter((channel) => channel.visible).length;
+  const volumeChannelWarning = visibleChannelCount > volumeChannels.length
+    ? `3D loads the first ${volumeChannels.length} visible channels; hide another channel to change the set.`
+    : undefined;
+
+  useEffect(() => {
+    setMaxTextureSize(detectMax3dTextureSize());
+  }, []);
 
   const refreshCapability = useCallback(async () => {
     if (!imageId) throw new ViewerApiError("missing_image", "No OMERO image was selected", 400);
@@ -160,14 +226,16 @@ export default function App() {
     setError(null);
     const load = async () => {
       const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field) as any);
+      const imageLoader = attachNgffPhysicalSizes(imageResult.data, imageResult.metadata);
       const labelResults = await Promise.allSettled(capability.labels.map(async (label) => {
         const path = fieldLabelPath(label.path, capability.initial_path, field);
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path) as any);
-        return { id: label.id, loader: result.data };
+        return { id: label.id, loader: attachNgffPhysicalSizes(result.data, result.metadata) };
       }));
       if (cancelled) return;
       const next: LoadedData = {
-        image: imageResult.data,
+        path: field,
+        image: imageLoader,
         labels: labelResults.filter((item): item is PromiseFulfilledResult<any> => item.status === "fulfilled").map((item) => item.value),
         sizeC: axisSize(imageResult.data, "c"),
         sizeZ: axisSize(imageResult.data, "z"),
@@ -197,6 +265,34 @@ export default function App() {
   }, [capability, authStore, field]);
 
   useEffect(() => {
+    if (renderMode !== "3d" || !currentLoaded || maxTextureSize == null) return;
+    if (currentLoaded.sizeZ <= 1) {
+      setRenderMode("2d");
+      setStatus("3D is unavailable because this field has only one Z plane.");
+      return;
+    }
+    if (maxTextureSize === 0) {
+      setRenderMode("2d");
+      setStatus("3D is unavailable because WebGL 2 could not be initialized.");
+      return;
+    }
+    if (!volumeChannels.length) {
+      setRenderMode("2d");
+      setStatus("Enable at least one image channel before opening 3D.");
+      return;
+    }
+    if (!selectedVolumeLevel) {
+      setRenderMode("2d");
+      setStatus("No multiscale level fits the 256 MiB 3D memory and GPU texture limits.");
+      return;
+    }
+    if (volumeLevel !== selectedVolumeLevel.index) {
+      setVolumeLevel(selectedVolumeLevel.index);
+      if (volumeLevel != null) setStatus("The requested 3D quality was unsafe; using the coarsest safe level.");
+    }
+  }, [renderMode, currentLoaded, maxTextureSize, volumeChannels.length, selectedVolumeLevel, volumeLevel]);
+
+  useEffect(() => {
     if (!loaded || !displayLoader || !channels.length || analyzedProjection.current === projection) return;
     analyzedProjection.current = projection;
     let cancelled = false;
@@ -215,11 +311,22 @@ export default function App() {
   useEffect(() => {
     if (!imageId || !loaded) return;
     const timeout = window.setTimeout(() => {
-      const relative = writeDeepLink(imageId, { viewport, z: zIndex, t: tIndex, projection, field, channels, labels });
+      const relative = writeDeepLink(imageId, {
+        viewport,
+        z: zIndex,
+        t: tIndex,
+        projection,
+        renderMode: effectiveRenderMode,
+        volumeLevel: selectedVolumeLevel?.index,
+        volumeCamera,
+        field,
+        channels,
+        labels,
+      });
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, viewport, zIndex, tIndex, projection, field, channels, labels]);
+  }, [imageId, loaded, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -229,10 +336,24 @@ export default function App() {
         <div><strong>BIOMERO OME-Zarr Viewer</strong><span>{capability?.plate ? field : capability?.image.name || "Loading…"}</span></div>
         <div className="toolbar">
           <span className="status" aria-live="polite">{error || status}</span>
-          {loaded && viewMode === "field" && <>
+          {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 &&
+            <RenderModeToggle
+              mode={effectiveRenderMode}
+              disabled3d={!volumeAvailable}
+              onChange={(mode) => {
+                if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index);
+                setRenderMode(mode);
+              }}
+            />}
+          {currentLoaded && viewMode === "field" && effectiveRenderMode === "2d" && <>
             <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Show Navigator</button>
             <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Show Scale</button>
           </>}
+          {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
+            <button onClick={() => {
+              setVolumeCamera(undefined);
+              setVolumeReset((value) => value + 1);
+            }}>Reset 3D View</button>}
           <button onClick={() => void document.documentElement.requestFullscreen()}>Fullscreen</button>
         </div>
       </header>
@@ -248,18 +369,39 @@ export default function App() {
               channels={channels}
               z={zIndex}
               t={tIndex}
-              onSelect={setField}
+              onSelect={(path) => {
+                setField(path);
+                setVolumeLevel(undefined);
+                setVolumeCamera(undefined);
+              }}
               onOpen={(path) => {
                 setField(path);
+                setVolumeLevel(undefined);
+                setVolumeCamera(undefined);
                 setViewMode(viewMode === "plate" ? "well" : "field");
               }}
             />
-          ) : loaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 ? (
+          ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
+            <VolumeCanvas
+              key={`${currentLoaded.path}:${tIndex}:${selectedVolumeLevel.index}:${volumeChannels.map((channel) => channel.index).join(",")}:${volumeReset}`}
+              width={viewerSize.width}
+              height={viewerSize.height}
+              loader={currentLoaded.image}
+              channels={channels}
+              t={tIndex}
+              resolution={selectedVolumeLevel.index}
+              camera={volumeCamera}
+              onCameraChange={setVolumeCamera}
+              onCancel={() => setRenderMode("2d")}
+              onError={(message) => setStatus(`3D warning: ${message}`)}
+              onReady={() => setStatus(volumeChannelWarning || "3D volume ready")}
+            />
+          ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 ? (
             <ViewerCanvas
               width={viewerSize.width}
               height={viewerSize.height}
               loader={displayLoader}
-              labels={loaded.labels}
+              labels={currentLoaded.labels}
               channels={channels}
               labelStates={labels}
               z={zIndex}
@@ -276,20 +418,29 @@ export default function App() {
         <ViewerPanel
           capability={capability}
           field={field}
-          onField={setField}
+          onField={(path) => {
+            setField(path);
+            setVolumeLevel(undefined);
+            setVolumeCamera(undefined);
+          }}
           channels={channels}
           channelAnalyses={channelAnalyses}
           onChannels={setChannels}
           labels={labels}
           onLabels={setLabels}
-          sizeZ={loaded?.sizeZ || 1}
-          sizeT={loaded?.sizeT || 1}
+          sizeZ={currentLoaded?.sizeZ || 1}
+          sizeT={currentLoaded?.sizeT || 1}
           z={zIndex}
           t={tIndex}
           onZ={setZIndex}
           onT={setTIndex}
           projection={projection}
           onProjection={setProjection}
+          renderMode={effectiveRenderMode}
+          volumeLevels={availableVolumeLevels}
+          volumeLevel={selectedVolumeLevel?.index}
+          onVolumeLevel={setVolumeLevel}
+          volumeChannelWarning={volumeChannelWarning}
           viewMode={viewMode}
           onViewMode={setViewMode}
           plateFieldIndex={plateFieldIndex}
@@ -317,18 +468,27 @@ interface ViewerPanelProps {
   onT: (value: number) => void;
   projection: ProjectionMode;
   onProjection: (value: ProjectionMode) => void;
+  renderMode: RenderMode;
+  volumeLevels: VolumeLevel[];
+  volumeLevel?: number;
+  onVolumeLevel: (value: number) => void;
+  volumeChannelWarning?: string;
   viewMode: "field" | "well" | "plate";
   onViewMode: (value: "field" | "well" | "plate") => void;
   plateFieldIndex: number;
   onPlateFieldIndex: (value: number) => void;
 }
 
-function ViewerPanel(props: ViewerPanelProps) {
+export function ViewerPanel(props: ViewerPanelProps) {
   const [plateTab, setPlateTab] = useState<"navigation" | "view">("navigation");
   const [viewTab, setViewTab] = useState<"channels" | "labels">("channels");
   const { capability } = props;
   const showNavigation = Boolean(capability?.plate && plateTab === "navigation");
   const datasetName = capability?.plate?.name || capability?.image.name || "Loading dataset…";
+
+  useEffect(() => {
+    if (props.renderMode === "3d" && viewTab === "labels") setViewTab("channels");
+  }, [props.renderMode, viewTab]);
 
   return <aside className="control-panel">
     <div className="dataset-heading"><span aria-hidden="true">▰</span><strong>{datasetName}</strong></div>
@@ -339,12 +499,22 @@ function ViewerPanel(props: ViewerPanelProps) {
     {showNavigation && capability ? <PlateNavigation capability={capability} field={props.field} onField={props.onField} mode={props.viewMode} onMode={props.onViewMode} plateFieldIndex={props.plateFieldIndex} onPlateFieldIndex={props.onPlateFieldIndex} /> : <>
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <button role="tab" aria-selected={viewTab === "channels"} className={viewTab === "channels" ? "active" : ""} onClick={() => setViewTab("channels")}>Channels ({props.channels.length})</button>
-        <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
+        <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={props.renderMode === "3d"} title={props.renderMode === "3d" ? "Segmentation labels are available in 2D" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
       </div>
       <div className="panel-scroll">
         {viewTab === "channels" ? <>
           <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
-          <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />
+          {props.renderMode === "3d"
+            ? <VolumeControls
+                sizeT={props.sizeT}
+                t={props.t}
+                onT={props.onT}
+                levels={props.volumeLevels}
+                level={props.volumeLevel}
+                onLevel={props.onVolumeLevel}
+                channelWarning={props.volumeChannelWarning}
+              />
+            : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
         </> : <LabelPanel labels={props.labels} onChange={props.onLabels} />}
       </div>
     </>}
@@ -436,6 +606,39 @@ function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection 
         : <p className="projection-note">Using all {sizeZ} Z slices</p>}
     </>}
     {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
+  </section>;
+}
+
+export function VolumeControls({
+  sizeT,
+  t,
+  onT,
+  levels,
+  level,
+  onLevel,
+  channelWarning,
+}: {
+  sizeT: number;
+  t: number;
+  onT: (value: number) => void;
+  levels: VolumeLevel[];
+  level?: number;
+  onLevel: (value: number) => void;
+  channelWarning?: string;
+}) {
+  return <section className="panel-section position-section volume-controls">
+    <h2>3D Volume</h2>
+    <label className="quality-control">
+      <span>Quality</span>
+      <select aria-label="3D volume quality" value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
+        {levels.map((item) => <option key={item.index} value={item.index}>
+          Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.rawBytes)}
+        </option>)}
+      </select>
+    </label>
+    <p className="projection-note">Only visible intensity channels are loaded. Quality and visibility changes reload the volume.</p>
+    {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
+    {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }
 

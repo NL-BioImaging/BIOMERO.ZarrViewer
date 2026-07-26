@@ -10,21 +10,37 @@ const labels: LabelState[] = [
 beforeEach(() => window.history.replaceState(null, "", "/viewer/?image=42"));
 
 test("deep-link state round trips", () => {
-  const url = writeDeepLink(42, { viewport: { x: 12.25, y: 8.5, zoom: -1.25 }, z: 3, t: 2, projection: "mean", field: "A/1/0", channels, labels });
+  const url = writeDeepLink(42, {
+    viewport: { x: 12.25, y: 8.5, zoom: -1.25 },
+    z: 3,
+    t: 2,
+    projection: "mean",
+    renderMode: "3d",
+    volumeLevel: 2,
+    volumeCamera: { orbit: 45, tilt: -20, zoom: -1.5 },
+    field: "A/1/0",
+    channels,
+    labels,
+  });
   const parsed = parseDeepLink(url.slice(url.indexOf("?")));
   expect(parsed.viewport).toEqual({ x: 12.25, y: 8.5, zoom: -1.25 });
   expect(parsed.field).toBe("A/1/0");
   expect(parsed.projection).toBe("mean");
+  expect(parsed.renderMode).toBe("3d");
+  expect(parsed.volumeLevel).toBe(2);
+  expect(parsed.volumeCamera).toEqual({ orbit: 45, tilt: -20, zoom: -1.5 });
   expect(parsed.channels?.[0]).toMatchObject({ index: 0, color: "#00FF00" });
   expect(parsed.labels?.[1]).toMatchObject({ id: "b", mode: "outline" });
 });
 
 test("invalid optional state is ignored and numeric state is clamped", () => {
-  const parsed = parseDeepLink("?v=1&zoom=900&z=-3&projection=median&channels=not-json");
+  const parsed = parseDeepLink("?v=1&zoom=900&z=-3&projection=median&channels=not-json&render=3d&volumeLevel=-2&orbit=999&tilt=-999&zoom3d=99");
   expect(parsed.viewport?.zoom).toBe(30);
   expect(parsed.z).toBe(0);
   expect(parsed.channels).toBeUndefined();
   expect(parsed.projection).toBeUndefined();
+  expect(parsed.volumeLevel).toBe(0);
+  expect(parsed.volumeCamera).toEqual({ orbit: 360, tilt: -90, zoom: 30 });
 });
 
 test("saved channels are constrained to their domain", () => {

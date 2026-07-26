@@ -83,6 +83,7 @@ export interface ChannelState {
 
 export type LabelMode = "fill" | "outline";
 export type ProjectionMode = "slice" | "mip" | "mean" | "min";
+export type RenderMode = "2d" | "3d";
 
 export interface LabelState {
   id: string;
@@ -98,6 +99,22 @@ export interface ViewportState {
   x: number;
   y: number;
   zoom: number;
+}
+
+export interface VolumeCameraState {
+  orbit: number;
+  tilt: number;
+  zoom: number;
+}
+
+export interface VolumeLevel {
+  index: number;
+  width: number;
+  height: number;
+  depth: number;
+  rawBytes: number;
+  safe: boolean;
+  reason?: "memory" | "texture" | "not-3d";
 }
 
 declare global {

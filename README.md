@@ -193,16 +193,30 @@ OME-Zarr store from conventional OMERO pixels.
   Auto/Fit/Hist controls;
 - middle Z slice by default, T and Z navigation, and MIP, mean, or minimum
   intensity projection across Z;
+- a field-level 2D/3D toggle for Z stacks, with orbiting volume ray casting at
+  one selected time point and one selected HCS field;
+- bounded 3D loading that uses only visible intensity channels, defaults to the
+  coarsest safe multiscale level, and rejects levels above a 256 MiB raw-payload
+  budget or the browser's WebGL 3D-texture limit;
 - multiple independently visible and reordered label layers with 30% default
   opacity, nearest-neighbor sampling, and fill or outline display;
 - deterministic GPU label colors without a JavaScript color table
   proportional to the number of label IDs;
 - Field, Well, and Plate views with plate-grid navigation and field selection;
-- versioned URL state for viewport, planes, projection, channels, labels, and
-  the selected field.
+- versioned URL state for viewport, planes, projection, 3D camera and quality,
+  channels, labels, and the selected field.
 
 The viewer is read-only. It does not provide annotation editing,
 OMERO.tables, CSV measurements, expression data, or embedding panels.
+
+### 3D limitations
+
+The 3D view renders intensity channels only; segmentation labels remain
+available in 2D. It requires WebGL 2 and loads the selected multiscale volume
+into browser and GPU memory, so it is intentionally bounded rather than an
+out-of-core renderer. Changing the time point, quality level, selected HCS
+field, or visible channel set cancels and reloads the volume. Well and Plate
+overview modes remain 2D.
 
 ## Security model
 
