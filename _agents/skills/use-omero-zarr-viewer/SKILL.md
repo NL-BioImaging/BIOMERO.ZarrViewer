@@ -2,10 +2,12 @@
 name: use-omero-zarr-viewer
 description: Open measured CI Segmentation objects in OMERO ZarrViewer and render bounded ROI PNGs through authenticated host capabilities. Use when a user asks to show a specific HCS field, focus a measured cell or other label object, select its originating image channels, highlight its label value, or save a PNG crop from an active OMERO OME-Zarr Image or Plate.
 metadata:
-  version: "1"
+  version: "2"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis-chat"
   biomero-auto-activate: "false"
+  biomero-required-resources: "references/REFERENCE.md"
+  biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1"
 ---
 
 # Use OMERO ZarrViewer
@@ -13,11 +15,11 @@ metadata:
 Operate ZarrViewer only through authenticated capabilities supplied by the
 consumer. The skill provides navigation knowledge, not OMERO access.
 
-## Load the contract
+## Required contract
 
-Read `references/REFERENCE.md` before constructing a focused view or ROI
-request. It defines coordinate conventions, database mappings, validation,
-and failure behavior.
+The consumer must automatically load `references/REFERENCE.md` when this skill
+activates. It defines coordinate conventions, database mappings, validation,
+gallery rendering, and failure behavior.
 
 ## Procedure
 
@@ -35,9 +37,11 @@ and failure behavior.
    to the image dimensions.
 6. Use `label_sources` when the user wants the inference-origin intensity
    channel. Database channel indices and viewer `sourceChannels` are one-based.
-7. Ask the host to open the focused viewer or render the PNG. Preserve the
-   active OMERO group and pass only validated fields from the reference.
-8. Save or attach a PNG only when the user requested an export. Report the
+7. Cite the successful analysis evidence ID when asking the host to open the
+   focused viewer or render a PNG. Preserve the active OMERO group and pass
+   only validated fields from the reference.
+8. Prefer one gallery request over separate per-object PNG requests.
+9. Save or attach a PNG only when the user requested an export. Report the
    selected field, object, channels, Z/T plane, bounds, and label overlay.
 
 ## Safety

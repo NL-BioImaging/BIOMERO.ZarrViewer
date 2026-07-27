@@ -24,6 +24,7 @@ import {
   parseDeepLink,
   writeDeepLink,
   type DeepLinkState,
+  type OverlayDeepLink,
 } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
@@ -104,6 +105,7 @@ export function labelStates(capability: Capability): LabelState[] {
     opacity: 0.3,
     mode: "fill",
     color: label.color,
+    outlineWidth: 2,
   }));
 }
 
@@ -153,31 +155,74 @@ export function fieldLabelPath(labelPath: string, initialPath: string, fieldPath
 export function focusedLabelStates(
   capability: Capability,
   field: string,
-  focus: Pick<DeepLinkState, "labelPath" | "labelChannel" | "labelValue">,
+  focus: Pick<DeepLinkState, "labelPath" | "labelChannel" | "labelValue" | "overlays">,
 ): LabelState[] {
   const states = labelStates(capability);
-  if (focus.labelChannel != null) {
-    return [
-      ...states.map((state) => ({ ...state, visible: false })),
-      {
-        id: `focused-channel-${focus.labelChannel}`,
-        name: `Label channel ${focus.labelChannel}`,
-        path: `${field}:channel:${focus.labelChannel}`,
+  const overlays: OverlayDeepLink[] = focus.overlays?.length
+    ? focus.overlays
+    : focus.labelPath || focus.labelChannel
+      ? [{
+          ...(focus.labelPath ? { labelPath: focus.labelPath } : { labelChannel: focus.labelChannel }),
+          ...(focus.labelValue ? { values: [focus.labelValue] } : {}),
+          mode: "outline",
+          color: "#FFFF00",
+          opacity: 1,
+          outlineWidth: 2,
+        }]
+      : [];
+  if (!overlays.length) return states;
+  const result = states.map((state) => ({ ...state, visible: false }));
+  for (const overlay of overlays) {
+    if (overlay.labelChannel != null) {
+      result.push({
+        id: `focused-channel-${overlay.labelChannel}`,
+        name: `Label channel ${overlay.labelChannel}`,
+        path: `${field}:channel:${overlay.labelChannel}`,
         visible: true,
-        opacity: 1,
-        mode: "outline",
-        color: "#FFFF00",
-        highlightValue: focus.labelValue,
-      },
-    ];
+        opacity: overlay.opacity,
+        mode: overlay.mode === "fill" ? "fill" : "outline",
+        color: overlay.color || "#FFFF00",
+        highlightValues: overlay.values,
+        outlineWidth: overlay.outlineWidth,
+      });
+      continue;
+    }
+    const match = result.find((state) =>
+      fieldLabelPath(state.path, capability.initial_path, field) === overlay.labelPath
+    );
+    if (match) Object.assign(match, {
+      visible: true,
+      opacity: overlay.opacity,
+      mode: overlay.mode === "fill" ? "fill" : "outline",
+      color: overlay.color || match.color,
+      highlightValues: overlay.values,
+      outlineWidth: overlay.outlineWidth,
+    });
   }
-  if (!focus.labelPath) return states;
-  return states.map((state) => {
-    const matches = fieldLabelPath(state.path, capability.initial_path, field) === focus.labelPath;
+  return result;
+}
+
+function labelOverlays(
+  labels: LabelState[],
+  capability: Capability | null,
+  field?: string,
+): OverlayDeepLink[] {
+  return labels.filter((label) => label.visible).slice(0, 8).map((label) => {
+    const appended = label.path.match(/:channel:(\d+)$/);
+    const labelPath = capability && field
+      ? fieldLabelPath(label.path, capability.initial_path, field)
+      : label.path;
     return {
-      ...state,
-      visible: matches,
-      ...(matches ? { opacity: 1, mode: "outline" as const, highlightValue: focus.labelValue } : {}),
+      ...(appended ? { labelChannel: Number(appended[1]) } : { labelPath }),
+      ...(label.highlightValues?.length
+        ? { values: label.highlightValues }
+        : label.highlightValue
+          ? { values: [label.highlightValue] }
+          : {}),
+      mode: label.mode,
+      color: label.color,
+      opacity: label.opacity,
+      outlineWidth: label.outlineWidth || 2,
     };
   });
 }
@@ -310,13 +355,14 @@ export default function App() {
         image: imageLoader,
         labels: [
           ...labelResults.filter((item): item is PromiseFulfilledResult<any> => item.status === "fulfilled").map((item) => item.value),
-          ...(deepLink.labelChannel != null && deepLink.labelChannel <= axisSize(imageLoader, "c")
-            ? [{
-                id: `focused-channel-${deepLink.labelChannel}`,
-                loader: imageLoader,
-                channelIndex: deepLink.labelChannel - 1,
-              }]
-            : []),
+          ...[...new Set([
+            ...(deepLink.labelChannel != null ? [deepLink.labelChannel] : []),
+            ...(deepLink.overlays || []).flatMap((overlay) => overlay.labelChannel ? [overlay.labelChannel] : []),
+          ])].filter((channel) => channel <= axisSize(imageLoader, "c")).map((channel) => ({
+            id: `focused-channel-${channel}`,
+            loader: imageLoader,
+            channelIndex: channel - 1,
+          })),
         ],
         sizeC: axisSize(imageResult.data, "c"),
         sizeZ: axisSize(imageResult.data, "z"),
@@ -422,6 +468,7 @@ export default function App() {
         labelPath: deepLink.labelPath,
         labelChannel: deepLink.labelChannel,
         labelValue: deepLink.labelValue,
+        overlays: labelOverlays(labels, capability, field),
         storeUuid: deepLink.storeUuid,
         channels,
         labels,
@@ -429,7 +476,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
+  }, [imageId, loaded, capability, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -761,6 +808,7 @@ function LabelPanel({ labels, onChange }: { labels: LabelState[]; onChange: (val
   return <section className="panel-section label-panel">{labels.length === 0 && <div className="empty-state"><strong>No NGFF label images</strong><p>This field has no segmentation layers advertised in its label-group metadata.</p></div>}{labels.map((label, index) => <div className="layer-card" key={label.id}>
     <label className="layer-heading"><input type="checkbox" checked={label.visible} onChange={(e) => update(label.id, { visible: e.target.checked })}/><strong>{label.name}</strong>{label.color && <input aria-label={`${label.name} fixed color`} type="color" value={label.color} onChange={(e) => update(label.id, { color: e.target.value })}/>}</label>
     <label className="slider">Opacity<input type="range" min="0" max="1" step="0.05" value={label.opacity} onChange={(e) => update(label.id, { opacity: Number(e.target.value) })}/><output>{Math.round(label.opacity * 100)}%</output></label>
+    {label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="8" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
     <div className="label-actions">
       <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
         <button className={label.mode === "fill" ? "active" : ""} aria-pressed={label.mode === "fill"} onClick={() => update(label.id, { mode: "fill" })}>Fill</button>

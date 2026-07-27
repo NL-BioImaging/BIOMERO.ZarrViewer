@@ -59,6 +59,7 @@ export interface Capability {
     expires_at: string;
     uuid?: string | null;
     roi_url?: string;
+    render_url?: string;
   };
   kind: "image" | "plate";
   ngff_version: "0.4" | "0.5";
@@ -100,6 +101,8 @@ export interface LabelState {
   mode: LabelMode;
   color?: string;
   highlightValue?: number;
+  highlightValues?: number[];
+  outlineWidth?: number;
 }
 
 export interface RoiBounds {

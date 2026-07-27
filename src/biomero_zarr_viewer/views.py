@@ -1,3 +1,4 @@
+import json
 import logging
 import mimetypes
 from functools import wraps
@@ -18,10 +19,17 @@ except ImportError:  # Allows isolated tests without a full OMERO.web installati
 
         return decorator
 
-from .errors import DataNotFound, UnsupportedStore, UnsafePath, ViewerError
+from .errors import (
+    DataNotFound,
+    InvalidROI,
+    ROILimitExceeded,
+    UnsafePath,
+    UnsupportedStore,
+    ViewerError,
+)
 from .metadata import inspect_store
 from .resolver import resolve_image_store, resolve_plate_store
-from .roi import render_roi_png
+from .roi import render_recipe_png, render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
 
@@ -108,6 +116,10 @@ def _capability_response(request, conn, store, *, require_plate=False):
         "biomero_zarr_viewer_roi_png",
         kwargs={"image_id": store.image_id},
     )
+    render_url = reverse(
+        "biomero_zarr_viewer_render_png",
+        kwargs={"image_id": store.image_id},
+    )
     store_uuid = model.pop("store_uuid", None)
     return JsonResponse(
         {
@@ -120,6 +132,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "expires_at": expires_at.isoformat(),
                 "uuid": store_uuid,
                 "roi_url": roi_url,
+                "render_url": render_url,
             },
             **model,
         }
@@ -133,6 +146,27 @@ def roi_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
     model = inspect_store(store.path, store.recorded_files)
     rendered = render_roi_png(store.path, model, request.GET)
+    response = HttpResponse(rendered.content, content_type="image/png")
+    response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
+    response["Content-Length"] = str(len(rendered.content))
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@require_http_methods(["POST"])
+@login_required(setGroupContext=True)
+@api_errors
+def render_png(request, image_id, conn=None, **kwargs):
+    if len(request.body) > 1024 * 1024:
+        raise ROILimitExceeded("The render recipe exceeds 1 MiB")
+    try:
+        recipe = json.loads(request.body or b"{}")
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise InvalidROI("The render recipe is not valid JSON") from exc
+    store = resolve_image_store(conn, image_id)
+    model = inspect_store(store.path, store.recorded_files)
+    rendered = render_recipe_png(store.path, model, recipe)
     response = HttpResponse(rendered.content, content_type="image/png")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
     response["Content-Length"] = str(len(rendered.content))

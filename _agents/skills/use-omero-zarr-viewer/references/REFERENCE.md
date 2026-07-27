@@ -6,6 +6,7 @@
 - [Database mapping](#database-mapping)
 - [Focused-view inputs](#focused-view-inputs)
 - [ROI PNG behavior](#roi-png-behavior)
+- [Render v2 and galleries](#render-v2-and-galleries)
 - [Failure handling](#failure-handling)
 
 ## Required context
@@ -80,23 +81,101 @@ open-focused-view capability:
 | `t`, `z` | Zero-based indices |
 
 Use either `labelPath` or `labelChannel`, never both. A focused view fits the
-complete ROI and outlines only `labelValue`.
+complete ROI and outlines only `labelValue`. Version-2 deep links may instead
+carry an `overlays` JSON array. Continue accepting the legacy
+`labelPath`/`labelChannel`/`labelValue` parameters.
 
 ## ROI PNG behavior
 
 The authenticated renderer returns a native-resolution 8-bit RGB PNG. It uses
 OME display windows/colors for additive intensity composition and outlines the
-selected label in its display color or yellow.
+selected label in its display color or yellow. The legacy GET endpoint remains
+available and uses a complete 2-screen-pixel focused-object outline.
 
 Default server limits are:
 
 - width: 2048 pixels;
 - height: 2048 pixels;
 - intensity channels: 4;
-- encoded response: 16 MiB.
+- encoded response: 32 MiB.
 
 Request fewer channels or a smaller crop when a limit is exceeded. Do not
 silently rescale the requested native-pixel ROI.
+
+## Render v2 and galleries
+
+`zarr-render-v2` is the authenticated
+`POST /api/images/{id}/render.png` contract. The body is JSON:
+
+```json
+{
+  "storeUuid": "output store UUID",
+  "title": "Top cells by foci count",
+  "layout": {"columns": 3},
+  "filename": "top-cells.png",
+  "panels": [
+    {
+      "field": "A/1/0",
+      "roi": [120, 80, 320, 280],
+      "sourceChannels": [1, 2],
+      "t": 0,
+      "z": 0,
+      "title": "Cell 260",
+      "caption": "4 assigned foci",
+      "overlays": [
+        {
+          "labelPath": "A/1/0/labels/labels_cells",
+          "values": [260],
+          "mode": "outline",
+          "color": "#FFFF00",
+          "opacity": 1,
+          "outlineWidth": 2,
+          "name": "cell"
+        },
+        {
+          "labelPath": "A/1/0/labels/labels_foci_channel_1",
+          "values": [332, 337, 349, 353],
+          "mode": "outline-fill",
+          "color": "#FF00FF",
+          "opacity": 0.7,
+          "outlineWidth": 2,
+          "name": "foci"
+        }
+      ]
+    }
+  ]
+}
+```
+
+`channels` may replace `sourceChannels` when explicit display settings are
+needed:
+
+```json
+{"channels": [{"index": 1, "color": "#00FF00", "low": 100, "high": 1200}]}
+```
+
+Each overlay uses either `labelPath` or one-based `labelChannel`. `values` may
+select multiple positive label values from the same label array. Modes are
+`outline`, `fill`, and `outline-fill`. Outline width is 1–8 output/screen
+pixels and defaults to 2. Fill-only opacity defaults to 30%.
+
+`zarr-gallery-v1` uses the same endpoint with 2–25 panels. It opens the store
+and resolves authorization once, caches repeated image and label crops, and
+returns one montage with panel titles, metric captions, overlay legends, and
+physical scale bars when calibration is available.
+
+Limits:
+
+- 25 panels;
+- 4 intensity channels per panel;
+- 8 overlays per panel;
+- 256 selected values per overlay;
+- 2048×2048 native pixels per crop;
+- 25,000,000 aggregate native pixels;
+- 32 MiB encoded response.
+
+Use one evidence-backed render recipe. Do not create one chat artifact per
+gallery panel.
 
 ## Failure handling
 

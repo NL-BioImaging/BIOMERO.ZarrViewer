@@ -208,17 +208,19 @@ OME-Zarr store from conventional OMERO pixels.
 - measurement-oriented focused links that fit a half-open pixel ROI, select
   one-based source channels, and outline one label value by stable label path
   or appended label channel;
-- authenticated native-resolution ROI PNG export using the same focus state.
+- authenticated native-resolution ROI PNG export and batch galleries using
+  the same focus state.
 
 The viewer remains read-only. It does not provide annotation editing,
 OMERO.tables, CSV measurements, expression data, or embedding panels.
 
 ### Focused links
 
-Focused links extend the existing `v=1` state without breaking older URLs:
+Version-2 focused links add an `overlays` JSON array while still reading the
+existing `v=1` parameters:
 
 ```text
-?image=42&v=1
+?image=42&v=2
 &field=A/1/0
 &roi=120,80,260,230
 &sourceChannels=1,2
@@ -233,6 +235,9 @@ exclusive maxima. `sourceChannels` and `labelChannel` are one-based;
 `t` and `z` are zero-based. Use `labelPath` for a native label image or
 `labelChannel` for a segmentation stored in the main image, never both.
 When supplied, `storeUuid` must match the output store identity.
+Overlay entries support multiple label values, `outline`, `fill`, or
+`outline-fill`, opacity, color, and a 1–8 px outline width. The default
+focused-object outline is 2 screen pixels.
 
 ### 3D limitations
 
@@ -270,7 +275,10 @@ omero config set omero.web.zarr_viewer.max_hierarchy_entries 20000
 omero config set omero.web.zarr_viewer.roi_max_width 2048
 omero config set omero.web.zarr_viewer.roi_max_height 2048
 omero config set omero.web.zarr_viewer.roi_max_channels 4
-omero config set omero.web.zarr_viewer.roi_max_output_bytes 16777216
+omero config set omero.web.zarr_viewer.roi_max_output_bytes 33554432
+omero config set omero.web.zarr_viewer.render_max_panels 25
+omero config set omero.web.zarr_viewer.render_max_overlays 8
+omero config set omero.web.zarr_viewer.render_max_aggregate_pixels 25000000
 ```
 
 ## Development
@@ -322,6 +330,7 @@ GET /?plate=<omero-plate-id>
 GET /api/images/<id>/capabilities/
 GET /api/plates/<id>/capabilities/
 GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
+POST /api/images/<id>/render.png
 
 GET|HEAD /data/images/<id>/<zarr-key>
 X-OMERO-Zarr-Context: <signed-context>
@@ -337,14 +346,19 @@ with NGFF display colors/windows and optionally outlines the selected label
 value. Authentication and active-group resolution are identical to the
 capability endpoint; arbitrary filesystem paths are never accepted.
 
+The POST renderer accepts up to 25 panels. Each panel supports four intensity
+channels, eight overlays, multiple values from one label array, titles,
+captions, legends, and a scale bar. Repeated planes are cached within one
+request so one gallery is faster than equivalent independent render calls.
+
 ## AI consumer contract
 
 The catalog-compatible skill is published at
 `_agents/skills/use-omero-zarr-viewer`. A future AnalysisChat adapter should
-provide two typed authenticated capabilities:
+provides two typed authenticated capabilities:
 
 1. open ZarrViewer with validated focused-view inputs;
-2. render the bounded ROI PNG and save or attach the returned bytes.
+2. render a bounded ROI or gallery PNG and save or attach the returned bytes.
 
 The adapter supplies the active OMERO Image/Plate ID and group. CI Segmentation
 schema-v3 databases supply the portable store UUID, field, label, object value,

@@ -15,8 +15,19 @@ export interface DeepLinkState {
   labelChannel?: number;
   labelValue?: number;
   storeUuid?: string;
+  overlays?: OverlayDeepLink[];
   channels?: Array<Pick<ChannelState, "index" | "visible" | "color" | "low" | "high">>;
-  labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color">>;
+  labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color" | "outlineWidth" | "highlightValues">>;
+}
+
+export interface OverlayDeepLink {
+  labelPath?: string;
+  labelChannel?: number;
+  values?: number[];
+  mode: "outline" | "fill" | "outline-fill";
+  color?: string;
+  opacity: number;
+  outlineWidth: number;
 }
 
 function finite(value: unknown, fallback: number, min = -Number.MAX_VALUE, max = Number.MAX_VALUE): number {
@@ -36,7 +47,8 @@ function safePath(value: string | null): string | undefined {
 
 export function parseDeepLink(search = window.location.search): DeepLinkState {
   const params = new URLSearchParams(search);
-  if (params.get("v") !== "1") return {};
+  const version = params.get("v");
+  if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
   if (params.has("x") || params.has("y") || params.has("zoom")) {
     state.viewport = {
@@ -74,6 +86,37 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   state.labelPath = safePath(params.get("labelPath"));
   state.labelChannel = positiveInteger(params.get("labelChannel"));
   state.labelValue = positiveInteger(params.get("labelValue"));
+  if (version === "2") {
+    const raw = params.get("overlays");
+    if (raw && raw.length <= 20_000) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          state.overlays = parsed.slice(0, 8).flatMap((item): OverlayDeepLink[] => {
+            if (!item || typeof item !== "object") return [];
+            const record = item as Record<string, unknown>;
+            const labelPath = safePath(typeof record.labelPath === "string" ? record.labelPath : null);
+            const labelChannel = positiveInteger(record.labelChannel == null ? null : String(record.labelChannel));
+            if (Boolean(labelPath) === Boolean(labelChannel)) return [];
+            const rawValues: unknown[] = Array.isArray(record.values) ? record.values : [];
+            const values: number[] = [...new Set(rawValues.map((value: unknown) => positiveInteger(String(value))).filter((value: number | undefined): value is number => value != null))].slice(0, 8);
+            const mode: OverlayDeepLink["mode"] = record.mode === "fill" || record.mode === "outline-fill" ? record.mode : "outline";
+            const color = typeof record.color === "string" && /^#[0-9a-f]{6}$/i.test(record.color) ? record.color : undefined;
+            return [{
+              ...(labelPath ? { labelPath } : { labelChannel }),
+              ...(values.length ? { values } : {}),
+              mode,
+              color,
+              opacity: finite(record.opacity, mode === "fill" ? 0.3 : 1, 0, 1),
+              outlineWidth: Math.floor(finite(record.outlineWidth, 2, 1, 8)),
+            }];
+          });
+        }
+      } catch {
+        // Invalid optional overlay state is deliberately ignored.
+      }
+    }
+  }
   const storeUuid = params.get("storeUuid");
   if (storeUuid && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(storeUuid)) {
     state.storeUuid = storeUuid.toLowerCase();
@@ -126,6 +169,10 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
       opacity: finite(value.opacity, item.opacity, 0, 1),
       mode: value.mode === "outline" ? "outline" : "fill",
       color: /^#[0-9a-f]{6}$/i.test(value.color || "") ? value.color : item.color,
+      outlineWidth: Math.floor(finite(value.outlineWidth, item.outlineWidth || 2, 1, 8)),
+      highlightValues: Array.isArray(value.highlightValues)
+        ? [...new Set(value.highlightValues.map((item) => Math.floor(finite(item, 0, 0))).filter(Boolean))].slice(0, 8)
+        : item.highlightValues,
     });
     defaults.delete(item.id);
   }
@@ -135,7 +182,7 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
 export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkState, "z" | "t">> & DeepLinkState): string {
   const params = new URLSearchParams();
   params.set("image", String(imageId));
-  params.set("v", "1");
+  params.set("v", "2");
   if (state.viewport) {
     params.set("x", state.viewport.x.toFixed(2));
     params.set("y", state.viewport.y.toFixed(2));
@@ -158,8 +205,9 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.labelChannel != null) params.set("labelChannel", String(state.labelChannel));
   if (state.labelValue != null) params.set("labelValue", String(state.labelValue));
   if (state.storeUuid) params.set("storeUuid", state.storeUuid);
+  if (state.overlays?.length) params.set("overlays", JSON.stringify(state.overlays.slice(0, 8)));
   if (state.channels) params.set("channels", JSON.stringify(state.channels.map(({ index, visible, color, low, high }) => ({ index, visible, color, low, high }))));
-  if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color }) => ({ id, visible, opacity, mode, ...(color ? { color } : {}) }))));
+  if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color, outlineWidth, highlightValues }) => ({ id, visible, opacity, mode, outlineWidth, ...(color ? { color } : {}), ...(highlightValues?.length ? { highlightValues } : {}) }))));
   return `${window.location.pathname}?${params.toString()}`;
 }
 

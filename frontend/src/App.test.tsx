@@ -115,7 +115,8 @@ test("a stable label path focuses only the selected label value", () => {
     visible: true,
     mode: "outline",
     opacity: 1,
-    highlightValue: 17,
+    highlightValues: [17],
+    outlineWidth: 2,
   });
 });
 

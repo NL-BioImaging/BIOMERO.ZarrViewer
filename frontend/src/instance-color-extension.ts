@@ -8,7 +8,16 @@ const instanceColorModule = {
     opacity: "f32",
     outlineOnly: "u32",
     fixedColor: "u32",
-    highlightValue: "u32",
+    highlightCount: "u32",
+    highlight0: "u32",
+    highlight1: "u32",
+    highlight2: "u32",
+    highlight3: "u32",
+    highlight4: "u32",
+    highlight5: "u32",
+    highlight6: "u32",
+    highlight7: "u32",
+    outlineWidth: "u32",
     layerColor: "vec3<f32>",
   },
   fs: `
@@ -16,7 +25,16 @@ uniform instanceColorModuleUniforms {
   float opacity;
   uint outlineOnly;
   uint fixedColor;
-  uint highlightValue;
+  uint highlightCount;
+  uint highlight0;
+  uint highlight1;
+  uint highlight2;
+  uint highlight3;
+  uint highlight4;
+  uint highlight5;
+  uint highlight6;
+  uint highlight7;
+  uint outlineWidth;
   vec3 layerColor;
 } instanceColorModule;
 
@@ -34,10 +52,23 @@ vec3 biomero_hash_color(uint value) {
   return vec3(float(h & 255u), float((h >> 8) & 255u), float((h >> 16) & 255u)) / 255.0;
 }
 
+bool biomero_selected(uint value) {
+  if (value == 0u) return false;
+  if (instanceColorModule.highlightCount == 0u) return true;
+  return
+    (instanceColorModule.highlightCount > 0u && value == instanceColorModule.highlight0) ||
+    (instanceColorModule.highlightCount > 1u && value == instanceColorModule.highlight1) ||
+    (instanceColorModule.highlightCount > 2u && value == instanceColorModule.highlight2) ||
+    (instanceColorModule.highlightCount > 3u && value == instanceColorModule.highlight3) ||
+    (instanceColorModule.highlightCount > 4u && value == instanceColorModule.highlight4) ||
+    (instanceColorModule.highlightCount > 5u && value == instanceColorModule.highlight5) ||
+    (instanceColorModule.highlightCount > 6u && value == instanceColorModule.highlight6) ||
+    (instanceColorModule.highlightCount > 7u && value == instanceColorModule.highlight7);
+}
+
 vec4 biomero_label_color(float rawValue) {
   uint value = uint(round(rawValue));
-  if (value == 0u) return vec4(0.0);
-  if (instanceColorModule.highlightValue != 0u && value != instanceColorModule.highlightValue) return vec4(0.0);
+  if (!biomero_selected(value)) return vec4(0.0);
   vec3 color = instanceColorModule.fixedColor != 0u ? instanceColorModule.layerColor : biomero_hash_color(value);
   return vec4(color, instanceColorModule.opacity);
 }
@@ -45,9 +76,23 @@ vec4 biomero_label_color(float rawValue) {
   inject: {
     "fs:DECKGL_PROCESS_INTENSITY": "intensity = intensity;",
     "fs:DECKGL_MUTATE_COLOR": `
-      bool biomeroBoundary = true;
-      if (instanceColorModule.outlineOnly != 0u && intensity[0] > 0.0) {
-        biomeroBoundary = fwidth(intensity[0]) > 0.0;
+      uint biomeroValue = uint(round(intensity[0]));
+      bool biomeroVisible = biomero_selected(biomeroValue);
+      bool biomeroBoundary = biomeroVisible;
+      if (instanceColorModule.outlineOnly != 0u && biomeroVisible) {
+        biomeroBoundary = false;
+        vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
+        for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
+          if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
+          vec2 delta = biomeroScreenStep * float(biomeroRadius);
+          uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+          uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+          uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+          uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+          if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
+            biomeroBoundary = true;
+          }
+        }
       }
       rgba = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
     `,
@@ -60,7 +105,8 @@ export class InstanceColorExtension extends VivLayerExtension {
     opacity: { type: "number", value: 0.3, compare: true },
     labelMode: { type: "string", value: "fill", compare: true },
     labelColor: { type: "array", value: null, compare: true },
-    highlightValue: { type: "number", value: 0, compare: true },
+    highlightValues: { type: "array", value: [], compare: true },
+    outlineWidth: { type: "number", value: 2, compare: true },
   };
 
   getVivShaderTemplates() {
@@ -70,13 +116,18 @@ export class InstanceColorExtension extends VivLayerExtension {
   updateState(this: any, params: unknown): void {
     super.updateState.call(this, params as never, this as never);
     const color = Array.isArray(this.props.labelColor) ? this.props.labelColor.map((value: number) => value / 255) : [0, 0, 0];
-    const uniforms = {
+    const highlights = Array.isArray(this.props.highlightValues)
+      ? [...new Set(this.props.highlightValues.map((value: number) => Math.max(0, Math.floor(value))).filter(Boolean))].slice(0, 8)
+      : [];
+    const uniforms: Record<string, unknown> = {
       opacity: this.props.opacity ?? 0.3,
       outlineOnly: this.props.labelMode === "outline" ? 1 : 0,
       fixedColor: Array.isArray(this.props.labelColor) ? 1 : 0,
-      highlightValue: Math.max(0, Math.floor(this.props.highlightValue || 0)),
+      highlightCount: highlights.length,
+      outlineWidth: Math.max(1, Math.min(8, Math.floor(this.props.outlineWidth || 2))),
       layerColor: color,
     };
+    for (let index = 0; index < 8; index++) uniforms[`highlight${index}`] = highlights[index] || 0;
     for (const model of this.getModels()) model.shaderInputs.setProps({ [moduleName]: uniforms });
   }
 }

@@ -11,7 +11,10 @@ DEFAULT_MAX_HIERARCHY_ENTRIES = 20_000
 DEFAULT_ROI_MAX_WIDTH = 2048
 DEFAULT_ROI_MAX_HEIGHT = 2048
 DEFAULT_ROI_MAX_CHANNELS = 4
-DEFAULT_ROI_MAX_OUTPUT_BYTES = 16 * 1024 * 1024
+DEFAULT_ROI_MAX_OUTPUT_BYTES = 32 * 1024 * 1024
+DEFAULT_RENDER_MAX_PANELS = 25
+DEFAULT_RENDER_MAX_OVERLAYS = 8
+DEFAULT_RENDER_MAX_AGGREGATE_PIXELS = 25_000_000
 
 CUSTOM_SETTINGS_MAPPINGS = {
     "omero.web.zarr_viewer.source_root": [
@@ -74,6 +77,24 @@ CUSTOM_SETTINGS_MAPPINGS = {
         int,
         "Maximum encoded size of one rendered ROI PNG",
     ],
+    "omero.web.zarr_viewer.render_max_panels": [
+        "BIOMERO_ZARR_RENDER_MAX_PANELS",
+        DEFAULT_RENDER_MAX_PANELS,
+        int,
+        "Maximum panels in one authenticated gallery render",
+    ],
+    "omero.web.zarr_viewer.render_max_overlays": [
+        "BIOMERO_ZARR_RENDER_MAX_OVERLAYS",
+        DEFAULT_RENDER_MAX_OVERLAYS,
+        int,
+        "Maximum label overlays in one rendered panel",
+    ],
+    "omero.web.zarr_viewer.render_max_aggregate_pixels": [
+        "BIOMERO_ZARR_RENDER_MAX_AGGREGATE_PIXELS",
+        DEFAULT_RENDER_MAX_AGGREGATE_PIXELS,
+        int,
+        "Maximum aggregate native pixels in one render request",
+    ],
 }
 
 
@@ -132,4 +153,21 @@ def roi_max_channels():
 def roi_max_output_bytes():
     return _integer(
         "BIOMERO_ZARR_ROI_MAX_OUTPUT_BYTES", DEFAULT_ROI_MAX_OUTPUT_BYTES
+    )
+
+
+def render_max_panels():
+    return _integer("BIOMERO_ZARR_RENDER_MAX_PANELS", DEFAULT_RENDER_MAX_PANELS)
+
+
+def render_max_overlays():
+    return _integer(
+        "BIOMERO_ZARR_RENDER_MAX_OVERLAYS", DEFAULT_RENDER_MAX_OVERLAYS
+    )
+
+
+def render_max_aggregate_pixels():
+    return _integer(
+        "BIOMERO_ZARR_RENDER_MAX_AGGREGATE_PIXELS",
+        DEFAULT_RENDER_MAX_AGGREGATE_PIXELS,
     )

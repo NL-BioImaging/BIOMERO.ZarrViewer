@@ -1,27 +1,34 @@
 import json
 from io import BytesIO
 
-from django.test import RequestFactory
 import numpy as np
-from PIL import Image
 import zarr
+from django.test import RequestFactory
+from PIL import Image
 
 from biomero_zarr_viewer.tokens import make_read_context
 from biomero_zarr_viewer.views import (
     capabilities,
     data,
     plate_capabilities,
+    render_png,
     roi_png,
     viewer,
 )
 
 from .conftest import write_v2_image
-from .fakes import FakeConnection, FakeImage, FakeOriginalFile, FakeParent, FakeWellSample
+from .fakes import (
+    FakeConnection,
+    FakeImage,
+    FakeOriginalFile,
+    FakeParent,
+    FakeWellSample,
+)
 
 
-def _request(url, group=13, token=None, method="get"):
+def _request(url, group=13, token=None, method="get", **kwargs):
     headers = {"HTTP_X_OMERO_ZARR_CONTEXT": token} if token else {}
-    request = getattr(RequestFactory(), method)(url, **headers)
+    request = getattr(RequestFactory(), method)(url, **kwargs, **headers)
     request.session = {"active_group": group}
     return request
 
@@ -44,6 +51,7 @@ def test_capability_contract(configure_storage):
     assert payload["store"]["context"]
     assert payload["store"]["uuid"] == store_uuid
     assert payload["store"]["roi_url"].endswith("/api/images/42/roi.png")
+    assert payload["store"]["render_url"].endswith("/api/images/42/render.png")
     assert "recorded" not in response.content.decode()
 
 
@@ -127,6 +135,11 @@ def _write_renderable_store(path):
     intensity[1, 2, 1, 2:6, 2:6] = 7
     labels = np.zeros((2, 1, 2, 8, 8), dtype=np.uint32)
     labels[1, 0, 1, 2:6, 2:6] = 7
+    foci = np.zeros((2, 1, 2, 8, 8), dtype=np.uint32)
+    for label_value, (y, x) in zip(
+        (332, 337, 349, 353), ((2, 2), (2, 5), (5, 2), (5, 5))
+    ):
+        foci[1, 0, 1, y, x] = label_value
     root.create_array("0", data=intensity, chunks=(1, 1, 1, 4, 4))
     root.attrs.update(
         {
@@ -157,7 +170,7 @@ def _write_renderable_store(path):
         }
     )
     root.create_group("labels")
-    root["labels"].attrs["labels"] = ["cells"]
+    root["labels"].attrs["labels"] = ["cells", "foci"]
     label_group = root.create_group("labels/cells")
     label_group.attrs.update(
         {
@@ -171,6 +184,19 @@ def _write_renderable_store(path):
         }
     )
     label_group.create_array("0", data=labels, chunks=(1, 1, 1, 4, 4))
+    foci_group = root.create_group("labels/foci")
+    foci_group.attrs.update(
+        {
+            "multiscales": [{
+                "version": "0.4",
+                "name": "Foci",
+                "axes": axes,
+                "datasets": [{"path": "0"}],
+            }],
+            "image-label": {"color": [255, 0, 255, 255]},
+        }
+    )
+    foci_group.create_array("0", data=foci, chunks=(1, 1, 1, 4, 4))
     return store_uuid
 
 
@@ -190,7 +216,7 @@ def test_roi_png_renders_channel_and_selected_label(configure_storage):
     pixels = np.asarray(image)
     assert tuple(pixels[1, 1]) == (255, 255, 0)
     assert pixels[2, 2, 0] > 0
-    assert pixels[2, 2, 1] == 0
+    assert pixels[2, 2, 1] == 255
 
 
 def test_roi_png_supports_an_appended_label_channel(configure_storage):
@@ -231,3 +257,103 @@ def test_roi_png_rejects_store_mismatch_and_invalid_bounds(configure_storage):
     )
     assert invalid.status_code == 400
     assert json.loads(invalid.content)["error"]["code"] == "invalid_roi"
+
+
+def test_render_png_composes_gallery_and_reuses_label_plane(
+    configure_storage, monkeypatch
+):
+    _, mount = configure_storage
+    store_uuid = _write_renderable_store(mount / "sample.zarr")
+    from biomero_zarr_viewer import roi
+
+    original_plane = roi._plane
+    reads = []
+
+    def counted_plane(*args, **kwargs):
+        reads.append((str(getattr(args[0], "path", "")), args[2]))
+        return original_plane(*args, **kwargs)
+
+    monkeypatch.setattr(roi, "_plane", counted_plane)
+    recipe = {
+        "storeUuid": store_uuid,
+        "title": "Top review candidates",
+        "layout": {"columns": 2},
+        "panels": [
+            {
+                "field": ".",
+                "roi": [1, 1, 7, 7],
+                "sourceChannels": [1],
+                "t": 1,
+                "z": 1,
+                "title": "Cell 7",
+                "caption": "foci=4",
+                "overlays": [
+                    {
+                        "labelPath": "labels/cells",
+                        "values": [7],
+                        "mode": "outline",
+                        "color": "#FFFF00",
+                        "outlineWidth": 2,
+                        "name": "cell",
+                    },
+                    {
+                        "labelPath": "labels/foci",
+                        "values": [332, 337, 349, 353],
+                        "mode": "outline-fill",
+                        "color": "#FF00FF",
+                        "opacity": 0.7,
+                        "outlineWidth": 2,
+                        "name": "foci",
+                    },
+                ],
+            },
+            {
+                "field": ".",
+                "roi": [0, 0, 4, 4],
+                "channels": [
+                    {"index": 1, "color": "#FF0000", "low": 0, "high": 255}
+                ],
+                "t": 1,
+                "z": 1,
+                "title": "Peer",
+                "overlays": [],
+            },
+        ],
+    }
+    response = render_png(
+        _request(
+            "/api/images/42/render.png",
+            method="post",
+            data=json.dumps(recipe),
+            content_type="application/json",
+        ),
+        42,
+        conn=_connection(),
+    )
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/png"
+    gallery = Image.open(BytesIO(response.content))
+    assert gallery.width == 12
+    assert gallery.height > 6
+    cell_reads = [item for item in reads if "labels/cells" in item[0]]
+    foci_reads = [item for item in reads if "labels/foci" in item[0]]
+    assert len(cell_reads) == 1
+    assert len(foci_reads) == 1
+
+
+def test_render_png_enforces_gallery_limits(configure_storage):
+    _, mount = configure_storage
+    _write_renderable_store(mount / "sample.zarr")
+    panel = {"roi": [0, 0, 2, 2], "sourceChannels": [1]}
+    response = render_png(
+        _request(
+            "/api/images/42/render.png",
+            method="post",
+            data=json.dumps({"panels": [panel] * 26}),
+            content_type="application/json",
+        ),
+        42,
+        conn=_connection(),
+    )
+    assert response.status_code == 413
+    assert json.loads(response.content)["error"]["code"] == "roi_limit_exceeded"

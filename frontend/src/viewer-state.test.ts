@@ -30,6 +30,14 @@ test("deep-link state round trips", () => {
     sourceChannels: [1],
     labelPath: "A/1/0/labels/cells",
     labelValue: 42,
+    overlays: [{
+      labelPath: "A/1/0/labels/cells",
+      values: [42, 43],
+      mode: "outline",
+      color: "#FFFF00",
+      opacity: 1,
+      outlineWidth: 3,
+    }],
     storeUuid: "3935615d-a18d-41d8-af04-e63cfec3a46c",
     channels,
     labels,
@@ -41,6 +49,14 @@ test("deep-link state round trips", () => {
   expect(parsed.sourceChannels).toEqual([1]);
   expect(parsed.labelPath).toBe("A/1/0/labels/cells");
   expect(parsed.labelValue).toBe(42);
+  expect(parsed.overlays?.[0]).toEqual({
+    labelPath: "A/1/0/labels/cells",
+    values: [42, 43],
+    mode: "outline",
+    color: "#FFFF00",
+    opacity: 1,
+    outlineWidth: 3,
+  });
   expect(parsed.storeUuid).toBe("3935615d-a18d-41d8-af04-e63cfec3a46c");
   expect(parsed.projection).toBe("mean");
   expect(parsed.renderMode).toBe("3d");
