@@ -55,3 +55,18 @@ class InvalidContext(ViewerError):
 class DataNotFound(ViewerError):
     code = "zarr_key_not_found"
     status = 404
+
+
+class InvalidROI(ViewerError):
+    code = "invalid_roi"
+    status = 400
+
+
+class StoreMismatch(ViewerError):
+    code = "store_uuid_mismatch"
+    status = 409
+
+
+class ROILimitExceeded(ViewerError):
+    code = "roi_limit_exceeded"
+    status = 413

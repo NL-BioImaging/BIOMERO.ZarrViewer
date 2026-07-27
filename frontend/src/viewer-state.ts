@@ -1,4 +1,4 @@
-import type { ChannelState, LabelState, ProjectionMode, RenderMode, ViewportState, VolumeCameraState } from "./types";
+import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeCameraState } from "./types";
 
 export interface DeepLinkState {
   viewport?: ViewportState;
@@ -9,6 +9,12 @@ export interface DeepLinkState {
   volumeLevel?: number;
   volumeCamera?: VolumeCameraState;
   field?: string;
+  roi?: RoiBounds;
+  sourceChannels?: number[];
+  labelPath?: string;
+  labelChannel?: number;
+  labelValue?: number;
+  storeUuid?: string;
   channels?: Array<Pick<ChannelState, "index" | "visible" | "color" | "low" | "high">>;
   labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color">>;
 }
@@ -16,6 +22,16 @@ export interface DeepLinkState {
 function finite(value: unknown, fallback: number, min = -Number.MAX_VALUE, max = Number.MAX_VALUE): number {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? Math.max(min, Math.min(max, parsed)) : fallback;
+}
+
+function positiveInteger(value: string | null): number | undefined {
+  return value && /^[1-9]\d*$/.test(value) ? Number(value) : undefined;
+}
+
+function safePath(value: string | null): string | undefined {
+  if (!value || value.includes("\\") || value.includes("\0")) return undefined;
+  const parts = value.split("/");
+  return parts.some((part) => part === "..") || value.startsWith("/") ? undefined : value;
 }
 
 export function parseDeepLink(search = window.location.search): DeepLinkState {
@@ -43,6 +59,25 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
     };
   }
   if (params.get("field")) state.field = params.get("field")!;
+  const roi = (params.get("roi") || "").split(",");
+  if (roi.length === 4 && roi.every((value) => /^\d+$/.test(value))) {
+    const [x0, y0, x1, y1] = roi.map(Number);
+    if (x1 > x0 && y1 > y0) state.roi = { x0, y0, x1, y1 };
+  }
+  const sourceChannels = (params.get("sourceChannels") || "")
+    .split(",")
+    .filter(Boolean)
+    .map((value) => positiveInteger(value));
+  if (sourceChannels.length && sourceChannels.every((value) => value != null)) {
+    state.sourceChannels = [...new Set(sourceChannels as number[])].slice(0, 4);
+  }
+  state.labelPath = safePath(params.get("labelPath"));
+  state.labelChannel = positiveInteger(params.get("labelChannel"));
+  state.labelValue = positiveInteger(params.get("labelValue"));
+  const storeUuid = params.get("storeUuid");
+  if (storeUuid && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(storeUuid)) {
+    state.storeUuid = storeUuid.toLowerCase();
+  }
   for (const [key, target] of [["channels", "channels"], ["labels", "labels"]] as const) {
     const raw = params.get(key);
     if (!raw || raw.length > 20_000) continue;
@@ -71,6 +106,12 @@ export function applyChannelDeepLink(channels: ChannelState[], saved?: DeepLinkS
       high: Math.max(low, high),
     };
   });
+}
+
+export function applySourceChannels(channels: ChannelState[], sourceChannels?: number[]): ChannelState[] {
+  if (!sourceChannels?.length) return channels;
+  const selected = new Set(sourceChannels.map((value) => value - 1));
+  return channels.map((channel) => ({ ...channel, visible: selected.has(channel.index) }));
 }
 
 export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["labels"]): LabelState[] {
@@ -111,7 +152,24 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
     params.set("zoom3d", state.volumeCamera.zoom.toFixed(3));
   }
   if (state.field) params.set("field", state.field);
+  if (state.roi) params.set("roi", [state.roi.x0, state.roi.y0, state.roi.x1, state.roi.y1].join(","));
+  if (state.sourceChannels?.length) params.set("sourceChannels", state.sourceChannels.join(","));
+  if (state.labelPath) params.set("labelPath", state.labelPath);
+  if (state.labelChannel != null) params.set("labelChannel", String(state.labelChannel));
+  if (state.labelValue != null) params.set("labelValue", String(state.labelValue));
+  if (state.storeUuid) params.set("storeUuid", state.storeUuid);
   if (state.channels) params.set("channels", JSON.stringify(state.channels.map(({ index, visible, color, low, high }) => ({ index, visible, color, low, high }))));
   if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color }) => ({ id, visible, opacity, mode, ...(color ? { color } : {}) }))));
   return `${window.location.pathname}?${params.toString()}`;
+}
+
+export function fitRoiViewport(roi: RoiBounds, width: number, height: number): ViewportState {
+  const roiWidth = Math.max(1, roi.x1 - roi.x0);
+  const roiHeight = Math.max(1, roi.y1 - roi.y0);
+  const scale = Math.max(Number.EPSILON, Math.min(width / roiWidth, height / roiHeight) * 0.9);
+  return {
+    x: (roi.x0 + roi.x1) / 2,
+    y: (roi.y0 + roi.y1) / 2,
+    zoom: Math.max(-30, Math.min(30, Math.log2(scale))),
+  };
 }

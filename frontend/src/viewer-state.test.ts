@@ -1,4 +1,11 @@
-import { applyChannelDeepLink, applyLabelDeepLink, parseDeepLink, writeDeepLink } from "./viewer-state";
+import {
+  applyChannelDeepLink,
+  applyLabelDeepLink,
+  applySourceChannels,
+  fitRoiViewport,
+  parseDeepLink,
+  writeDeepLink,
+} from "./viewer-state";
 import type { ChannelState, LabelState } from "./types";
 
 const channels: ChannelState[] = [{ index: 0, label: "DNA", visible: true, color: "#00FF00", low: 10, high: 200, domainMin: 0, domainMax: 255 }];
@@ -19,12 +26,22 @@ test("deep-link state round trips", () => {
     volumeLevel: 2,
     volumeCamera: { orbit: 45, tilt: -20, zoom: -1.5 },
     field: "A/1/0",
+    roi: { x0: 10, y0: 20, x1: 110, y1: 70 },
+    sourceChannels: [1],
+    labelPath: "A/1/0/labels/cells",
+    labelValue: 42,
+    storeUuid: "3935615d-a18d-41d8-af04-e63cfec3a46c",
     channels,
     labels,
   });
   const parsed = parseDeepLink(url.slice(url.indexOf("?")));
   expect(parsed.viewport).toEqual({ x: 12.25, y: 8.5, zoom: -1.25 });
   expect(parsed.field).toBe("A/1/0");
+  expect(parsed.roi).toEqual({ x0: 10, y0: 20, x1: 110, y1: 70 });
+  expect(parsed.sourceChannels).toEqual([1]);
+  expect(parsed.labelPath).toBe("A/1/0/labels/cells");
+  expect(parsed.labelValue).toBe(42);
+  expect(parsed.storeUuid).toBe("3935615d-a18d-41d8-af04-e63cfec3a46c");
   expect(parsed.projection).toBe("mean");
   expect(parsed.renderMode).toBe("3d");
   expect(parsed.volumeLevel).toBe(2);
@@ -46,6 +63,21 @@ test("invalid optional state is ignored and numeric state is clamped", () => {
 test("saved channels are constrained to their domain", () => {
   const result = applyChannelDeepLink(channels, [{ index: 0, visible: false, color: "bad", low: -50, high: 999 }]);
   expect(result[0]).toMatchObject({ visible: false, color: "#00FF00", low: 0, high: 255 });
+});
+
+test("one-based source channels select viewer channels", () => {
+  const result = applySourceChannels([
+    channels[0],
+    { ...channels[0], index: 1, label: "RNA" },
+  ], [2]);
+  expect(result.map((item) => item.visible)).toEqual([false, true]);
+});
+
+test("ROI fitting centers and contains the requested bounds", () => {
+  const result = fitRoiViewport({ x0: 10, y0: 20, x1: 110, y1: 70 }, 1000, 500);
+  expect(result.x).toBe(60);
+  expect(result.y).toBe(45);
+  expect(result.zoom).toBeCloseTo(Math.log2(9));
 });
 
 test("saved label order is restored without losing new layers", () => {

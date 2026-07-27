@@ -15,6 +15,7 @@ import { InstanceColorExtension } from "./instance-color-extension";
 interface LoadedLabel {
   id: string;
   loader: any[];
+  channelIndex?: number;
 }
 
 interface Props {
@@ -85,13 +86,14 @@ export function ViewerCanvas({
         id: `label-${state.id}-#${DETAIL_VIEW_ID}#`,
         viewportId: DETAIL_VIEW_ID,
         loader: loaded.loader,
-        selections: [selection(sourceLabels, 0, z, t)],
+        selections: [selection(sourceLabels, loaded.channelIndex || 0, z, t)],
         channelsVisible: [true],
         contrastLimits: [[0, 1]],
         extensions: [new InstanceColorExtension()],
         opacity: state.opacity,
         labelMode: state.mode,
         labelColor: fixedColor,
+        highlightValue: state.highlightValue || 0,
         interpolation: "nearest",
         refinementStrategy: "no-overlap",
         excludeBackground: true,

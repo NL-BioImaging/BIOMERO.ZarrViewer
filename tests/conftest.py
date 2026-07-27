@@ -71,7 +71,9 @@ def display_metadata():
     }
 
 
-def write_v2_image(root, *, plate=False, invalid_label_dtype=False):
+def write_v2_image(
+    root, *, plate=False, invalid_label_dtype=False, store_uuid=None
+):
     write_json(root / ".zgroup", {"zarr_format": 2})
     if plate:
         write_json(
@@ -87,7 +89,12 @@ def write_v2_image(root, *, plate=False, invalid_label_dtype=False):
                         {"path": "B/2", "rowIndex": 1, "columnIndex": 1},
                     ],
                     "acquisitions": [{"id": 0, "name": "First"}],
-                }
+                },
+                **(
+                    {"cisegmentation": {"output_store_uuid": store_uuid}}
+                    if store_uuid
+                    else {}
+                ),
             },
         )
         write_json(root / "A/1/.zattrs", {"well": {"images": [{"path": "0", "acquisition": 0}]}})
@@ -96,7 +103,15 @@ def write_v2_image(root, *, plate=False, invalid_label_dtype=False):
         write_json(image / ".zgroup", {"zarr_format": 2})
     else:
         image = root
-    attrs = {"multiscales": multiscales("0.4"), "omero": display_metadata()}
+    attrs = {
+        "multiscales": multiscales("0.4"),
+        "omero": display_metadata(),
+        **(
+            {"cisegmentation": {"output_store_uuid": store_uuid}}
+            if store_uuid and not plate
+            else {}
+        ),
+    }
     if plate:
         write_json(image / ".zattrs", attrs)
     else:
@@ -145,4 +160,3 @@ def configure_storage(monkeypatch, tmp_path):
     monkeypatch.setattr("biomero_zarr_viewer.settings.BIOMERO_ZARR_MOUNT_ROOT", str(mount), raising=False)
     monkeypatch.setattr("biomero_zarr_viewer.settings.BIOMERO_ZARR_INTERNAL_PREFIX", "/_protected_zarr/", raising=False)
     return source, mount
-

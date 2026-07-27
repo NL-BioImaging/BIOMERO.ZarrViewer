@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biomero-zarr-viewer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Authenticated OME-Zarr viewer for BIOMERO and OMERO.web"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,7 +19,12 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
-dependencies = ["omero-web>=5.6.0"]
+dependencies = [
+  "omero-web>=5.6.0",
+  "numpy>=1.24,<3",
+  "Pillow>=10,<13",
+  "zarr>=2.18,<4",
+]
 
 [project.optional-dependencies]
 test = [

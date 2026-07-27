@@ -8,6 +8,10 @@ DEFAULT_INTERNAL_PREFIX = "/_biomero_zarr_internal/"
 DEFAULT_CONTEXT_TTL_SECONDS = 900
 DEFAULT_MAX_METADATA_BYTES = 4 * 1024 * 1024
 DEFAULT_MAX_HIERARCHY_ENTRIES = 20_000
+DEFAULT_ROI_MAX_WIDTH = 2048
+DEFAULT_ROI_MAX_HEIGHT = 2048
+DEFAULT_ROI_MAX_CHANNELS = 4
+DEFAULT_ROI_MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 CUSTOM_SETTINGS_MAPPINGS = {
     "omero.web.zarr_viewer.source_root": [
@@ -45,6 +49,30 @@ CUSTOM_SETTINGS_MAPPINGS = {
         DEFAULT_MAX_HIERARCHY_ENTRIES,
         int,
         "Maximum wells, fields, datasets, and labels parsed per store",
+    ],
+    "omero.web.zarr_viewer.roi_max_width": [
+        "BIOMERO_ZARR_ROI_MAX_WIDTH",
+        DEFAULT_ROI_MAX_WIDTH,
+        int,
+        "Maximum native-pixel width of one rendered ROI",
+    ],
+    "omero.web.zarr_viewer.roi_max_height": [
+        "BIOMERO_ZARR_ROI_MAX_HEIGHT",
+        DEFAULT_ROI_MAX_HEIGHT,
+        int,
+        "Maximum native-pixel height of one rendered ROI",
+    ],
+    "omero.web.zarr_viewer.roi_max_channels": [
+        "BIOMERO_ZARR_ROI_MAX_CHANNELS",
+        DEFAULT_ROI_MAX_CHANNELS,
+        int,
+        "Maximum intensity channels in one rendered ROI",
+    ],
+    "omero.web.zarr_viewer.roi_max_output_bytes": [
+        "BIOMERO_ZARR_ROI_MAX_OUTPUT_BYTES",
+        DEFAULT_ROI_MAX_OUTPUT_BYTES,
+        int,
+        "Maximum encoded size of one rendered ROI PNG",
     ],
 }
 
@@ -88,3 +116,20 @@ def max_hierarchy_entries():
         "BIOMERO_ZARR_MAX_HIERARCHY_ENTRIES", DEFAULT_MAX_HIERARCHY_ENTRIES
     )
 
+
+def roi_max_width():
+    return _integer("BIOMERO_ZARR_ROI_MAX_WIDTH", DEFAULT_ROI_MAX_WIDTH)
+
+
+def roi_max_height():
+    return _integer("BIOMERO_ZARR_ROI_MAX_HEIGHT", DEFAULT_ROI_MAX_HEIGHT)
+
+
+def roi_max_channels():
+    return _integer("BIOMERO_ZARR_ROI_MAX_CHANNELS", DEFAULT_ROI_MAX_CHANNELS)
+
+
+def roi_max_output_bytes():
+    return _integer(
+        "BIOMERO_ZARR_ROI_MAX_OUTPUT_BYTES", DEFAULT_ROI_MAX_OUTPUT_BYTES
+    )

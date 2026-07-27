@@ -205,9 +205,34 @@ OME-Zarr store from conventional OMERO pixels.
 - Field, Well, and Plate views with plate-grid navigation and field selection;
 - versioned URL state for viewport, planes, projection, 3D camera and quality,
   channels, labels, and the selected field.
+- measurement-oriented focused links that fit a half-open pixel ROI, select
+  one-based source channels, and outline one label value by stable label path
+  or appended label channel;
+- authenticated native-resolution ROI PNG export using the same focus state.
 
-The viewer is read-only. It does not provide annotation editing,
+The viewer remains read-only. It does not provide annotation editing,
 OMERO.tables, CSV measurements, expression data, or embedding panels.
+
+### Focused links
+
+Focused links extend the existing `v=1` state without breaking older URLs:
+
+```text
+?image=42&v=1
+&field=A/1/0
+&roi=120,80,260,230
+&sourceChannels=1,2
+&labelPath=A/1/0/labels/labels_cells
+&labelValue=17
+&t=0&z=0
+&storeUuid=3935615d-a18d-41d8-af04-e63cfec3a46c
+```
+
+`roi` is `x0,y0,x1,y1` in native level-0 pixels with inclusive minima and
+exclusive maxima. `sourceChannels` and `labelChannel` are one-based;
+`t` and `z` are zero-based. Use `labelPath` for a native label image or
+`labelChannel` for a segmentation stored in the main image, never both.
+When supplied, `storeUuid` must match the output store identity.
 
 ### 3D limitations
 
@@ -242,6 +267,10 @@ Optional limits:
 omero config set omero.web.zarr_viewer.context_ttl_seconds 900
 omero config set omero.web.zarr_viewer.max_metadata_bytes 4194304
 omero config set omero.web.zarr_viewer.max_hierarchy_entries 20000
+omero config set omero.web.zarr_viewer.roi_max_width 2048
+omero config set omero.web.zarr_viewer.roi_max_height 2048
+omero config set omero.web.zarr_viewer.roi_max_channels 4
+omero config set omero.web.zarr_viewer.roi_max_output_bytes 16777216
 ```
 
 ## Development
@@ -292,6 +321,7 @@ GET /?plate=<omero-plate-id>
 
 GET /api/images/<id>/capabilities/
 GET /api/plates/<id>/capabilities/
+GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
 
 GET|HEAD /data/images/<id>/<zarr-key>
 X-OMERO-Zarr-Context: <signed-context>
@@ -300,6 +330,26 @@ X-OMERO-Zarr-Context: <signed-context>
 Unreadable OMERO objects return 404. Unsupported or malformed stores return a
 stable JSON error code. Successful data responses have an empty Django body
 and contain an `X-Accel-Redirect` for Nginx.
+
+The ROI endpoint uses the focused-link parameters documented above and returns
+an 8-bit RGB PNG at native crop resolution. It composes intensity channels
+with NGFF display colors/windows and optionally outlines the selected label
+value. Authentication and active-group resolution are identical to the
+capability endpoint; arbitrary filesystem paths are never accepted.
+
+## AI consumer contract
+
+The catalog-compatible skill is published at
+`_agents/skills/use-omero-zarr-viewer`. A future AnalysisChat adapter should
+provide two typed authenticated capabilities:
+
+1. open ZarrViewer with validated focused-view inputs;
+2. render the bounded ROI PNG and save or attach the returned bytes.
+
+The adapter supplies the active OMERO Image/Plate ID and group. CI Segmentation
+schema-v3 databases supply the portable store UUID, field, label, object value,
+coordinates, and originating channels. The skill never invents an OMERO ID or
+hard-codes a consumer route.
 
 ## Relationship to `ome/omero-web-zarr`
 

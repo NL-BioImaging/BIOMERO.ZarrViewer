@@ -15,6 +15,11 @@ urlpatterns = [
         name="biomero_zarr_viewer_plate_capabilities",
     ),
     path(
+        "api/images/<int:image_id>/roi.png",
+        views.roi_png,
+        name="biomero_zarr_viewer_roi_png",
+    ),
+    path(
         "data/images/<int:image_id>/<path:zarr_key>",
         views.data,
         name="biomero_zarr_viewer_data",

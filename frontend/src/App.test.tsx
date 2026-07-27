@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { RenderModeToggle, ViewerPanel, VolumeControls } from "./App";
-import type { ChannelState, VolumeLevel } from "./types";
+import { focusedLabelStates, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
+import type { Capability, ChannelState, VolumeLevel } from "./types";
 
 const channels: ChannelState[] = [{
   index: 0,
@@ -21,6 +21,40 @@ const levels: VolumeLevel[] = [{
   rawBytes: 524288,
   safe: true,
 }];
+
+const capability: Capability = {
+  schema_version: 1,
+  supported: true,
+  image: { id: 42, name: "Plate" },
+  store: {
+    url: "/data/",
+    context: "signed",
+    expires_at: "later",
+    uuid: "3935615d-a18d-41d8-af04-e63cfec3a46c",
+    roi_url: "/api/images/42/roi.png",
+  },
+  kind: "plate",
+  ngff_version: "0.4",
+  zarr_format: 2,
+  initial_path: "A/1/0",
+  axes: [{ name: "c" }, { name: "y" }, { name: "x" }],
+  channels: [{ index: 0, label: "DNA", active: true }],
+  labels: [{
+    id: "label-0",
+    name: "Cells",
+    path: "A/1/0/labels/cells",
+    axes: [{ name: "c" }, { name: "y" }, { name: "x" }],
+    datasets: [{ path: "0" }],
+  }],
+  plate: {
+    name: "Plate",
+    rows: ["A"],
+    columns: ["1"],
+    acquisitions: [],
+    wells: [{ path: "A/1", row_index: 0, column_index: 0, fields: [{ path: "A/1/0", name: "0" }] }],
+    initial_path: "A/1/0",
+  },
+};
 
 test("the 3D toggle is disabled when no safe level exists", () => {
   const onChange = vi.fn();
@@ -70,4 +104,31 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
   />);
   expect(screen.getByRole("tab", { name: "Labels (1)" })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: "3D volume quality" })).toBeInTheDocument();
+});
+
+test("a stable label path focuses only the selected label value", () => {
+  const labels = focusedLabelStates(capability, "A/1/0", {
+    labelPath: "A/1/0/labels/cells",
+    labelValue: 17,
+  });
+  expect(labels[0]).toMatchObject({
+    visible: true,
+    mode: "outline",
+    opacity: 1,
+    highlightValue: 17,
+  });
+});
+
+test("ROI PNG URL uses one-based visible channels and store identity", () => {
+  const url = new URL(roiPngUrl(capability, {
+    field: "A/1/0",
+    roi: { x0: 1, y0: 2, x1: 11, y1: 12 },
+    labelPath: "A/1/0/labels/cells",
+    labelValue: 17,
+    z: 0,
+    t: 0,
+  }, channels)!);
+  expect(url.searchParams.get("sourceChannels")).toBe("1");
+  expect(url.searchParams.get("storeUuid")).toBe(capability.store.uuid);
+  expect(url.searchParams.get("roi")).toBe("1,2,11,12");
 });

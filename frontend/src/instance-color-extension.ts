@@ -8,6 +8,7 @@ const instanceColorModule = {
     opacity: "f32",
     outlineOnly: "u32",
     fixedColor: "u32",
+    highlightValue: "u32",
     layerColor: "vec3<f32>",
   },
   fs: `
@@ -15,6 +16,7 @@ uniform instanceColorModuleUniforms {
   float opacity;
   uint outlineOnly;
   uint fixedColor;
+  uint highlightValue;
   vec3 layerColor;
 } instanceColorModule;
 
@@ -35,6 +37,7 @@ vec3 biomero_hash_color(uint value) {
 vec4 biomero_label_color(float rawValue) {
   uint value = uint(round(rawValue));
   if (value == 0u) return vec4(0.0);
+  if (instanceColorModule.highlightValue != 0u && value != instanceColorModule.highlightValue) return vec4(0.0);
   vec3 color = instanceColorModule.fixedColor != 0u ? instanceColorModule.layerColor : biomero_hash_color(value);
   return vec4(color, instanceColorModule.opacity);
 }
@@ -57,6 +60,7 @@ export class InstanceColorExtension extends VivLayerExtension {
     opacity: { type: "number", value: 0.3, compare: true },
     labelMode: { type: "string", value: "fill", compare: true },
     labelColor: { type: "array", value: null, compare: true },
+    highlightValue: { type: "number", value: 0, compare: true },
   };
 
   getVivShaderTemplates() {
@@ -70,6 +74,7 @@ export class InstanceColorExtension extends VivLayerExtension {
       opacity: this.props.opacity ?? 0.3,
       outlineOnly: this.props.labelMode === "outline" ? 1 : 0,
       fixedColor: Array.isArray(this.props.labelColor) ? 1 : 0,
+      highlightValue: Math.max(0, Math.floor(this.props.highlightValue || 0)),
       layerColor: color,
     };
     for (const model of this.getModels()) model.shaderInputs.setProps({ [moduleName]: uniforms });

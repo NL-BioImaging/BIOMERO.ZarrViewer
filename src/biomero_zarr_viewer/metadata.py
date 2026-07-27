@@ -3,6 +3,7 @@
 import json
 import re
 from pathlib import Path, PurePosixPath
+from uuid import UUID
 
 from .errors import InvalidMetadata, UnsupportedStore, UnsafePath
 from .settings import max_hierarchy_entries, max_metadata_bytes
@@ -309,12 +310,14 @@ def inspect_store(root, recorded_files=()):
             declared_versions.append(metadata["plate"].get("version"))
         version = next((str(item) for item in declared_versions if item), "0.4")
         zarr_format = 2
+        root_attributes = metadata
     elif (root / "zarr.json").is_file():
         group = _read_json(root / "zarr.json")
         if group.get("zarr_format") != 3 or group.get("node_type") != "group":
             raise UnsupportedStore("The root zarr.json is not a Zarr v3 group")
         attributes = group.get("attributes", {})
-        metadata = attributes.get("ome", {}) if isinstance(attributes, dict) else {}
+        root_attributes = attributes if isinstance(attributes, dict) else {}
+        metadata = root_attributes.get("ome", {})
         if not isinstance(metadata, dict):
             raise InvalidMetadata("OME-Zarr 0.5 metadata must be under attributes.ome")
         version = str(metadata.get("version") or "")
@@ -326,6 +329,19 @@ def inspect_store(root, recorded_files=()):
     if version and version != expected:
         raise UnsupportedStore(f"OME-Zarr {version} is not supported with Zarr v{zarr_format}")
     version = expected
+    cisegmentation = root_attributes.get("cisegmentation", {})
+    store_uuid = (
+        str(cisegmentation.get("output_store_uuid", "")).strip()
+        if isinstance(cisegmentation, dict)
+        else ""
+    )
+    if store_uuid:
+        try:
+            store_uuid = str(UUID(store_uuid))
+        except ValueError as exc:
+            raise InvalidMetadata(
+                "The CI Segmentation output store UUID is invalid"
+            ) from exc
 
     if isinstance(metadata.get("plate"), dict):
         plate = _plate_model(root, metadata["plate"], version, recorded_files)
@@ -340,6 +356,7 @@ def inspect_store(root, recorded_files=()):
             "channels": image["channels"],
             "labels": image["labels"],
             "plate": plate,
+            "store_uuid": store_uuid or None,
         }
     if isinstance(metadata.get("multiscales"), list):
         image = _image_model(root, ".", version)
@@ -352,5 +369,6 @@ def inspect_store(root, recorded_files=()):
             "datasets": image["datasets"],
             "channels": image["channels"],
             "labels": image["labels"],
+            "store_uuid": store_uuid or None,
         }
     raise UnsupportedStore("The Zarr root is neither an OME multiscale image nor a plate")

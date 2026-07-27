@@ -21,6 +21,7 @@ except ImportError:  # Allows isolated tests without a full OMERO.web installati
 from .errors import DataNotFound, UnsupportedStore, UnsafePath, ViewerError
 from .metadata import inspect_store
 from .resolver import resolve_image_store, resolve_plate_store
+from .roi import render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
 
@@ -103,6 +104,11 @@ def _capability_response(request, conn, store, *, require_plate=False):
         kwargs={"image_id": store.image_id, "zarr_key": sentinel},
     )
     data_url = data_url[: -len(sentinel)]
+    roi_url = reverse(
+        "biomero_zarr_viewer_roi_png",
+        kwargs={"image_id": store.image_id},
+    )
+    store_uuid = model.pop("store_uuid", None)
     return JsonResponse(
         {
             "schema_version": 1,
@@ -112,10 +118,27 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "url": data_url,
                 "context": token,
                 "expires_at": expires_at.isoformat(),
+                "uuid": store_uuid,
+                "roi_url": roi_url,
             },
             **model,
         }
     )
+
+
+@require_GET
+@login_required(setGroupContext=True)
+@api_errors
+def roi_png(request, image_id, conn=None, **kwargs):
+    store = resolve_image_store(conn, image_id)
+    model = inspect_store(store.path, store.recorded_files)
+    rendered = render_roi_png(store.path, model, request.GET)
+    response = HttpResponse(rendered.content, content_type="image/png")
+    response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
+    response["Content-Length"] = str(len(rendered.content))
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 def _safe_data_path(store_relative, zarr_key):

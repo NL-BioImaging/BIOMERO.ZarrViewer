@@ -16,7 +16,15 @@ import type {
   VolumeCameraState,
   VolumeLevel,
 } from "./types";
-import { applyChannelDeepLink, applyLabelDeepLink, parseDeepLink, writeDeepLink } from "./viewer-state";
+import {
+  applyChannelDeepLink,
+  applyLabelDeepLink,
+  applySourceChannels,
+  fitRoiViewport,
+  parseDeepLink,
+  writeDeepLink,
+  type DeepLinkState,
+} from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
 import { OverviewGrid } from "./OverviewGrid";
@@ -32,7 +40,7 @@ import {
 interface LoadedData {
   path: string;
   image: any[];
-  labels: Array<{ id: string; loader: any[] }>;
+  labels: Array<{ id: string; loader: any[]; channelIndex?: number }>;
   sizeZ: number;
   sizeT: number;
   sizeC: number;
@@ -142,6 +150,59 @@ export function fieldLabelPath(labelPath: string, initialPath: string, fieldPath
     : labelPath;
 }
 
+export function focusedLabelStates(
+  capability: Capability,
+  field: string,
+  focus: Pick<DeepLinkState, "labelPath" | "labelChannel" | "labelValue">,
+): LabelState[] {
+  const states = labelStates(capability);
+  if (focus.labelChannel != null) {
+    return [
+      ...states.map((state) => ({ ...state, visible: false })),
+      {
+        id: `focused-channel-${focus.labelChannel}`,
+        name: `Label channel ${focus.labelChannel}`,
+        path: `${field}:channel:${focus.labelChannel}`,
+        visible: true,
+        opacity: 1,
+        mode: "outline",
+        color: "#FFFF00",
+        highlightValue: focus.labelValue,
+      },
+    ];
+  }
+  if (!focus.labelPath) return states;
+  return states.map((state) => {
+    const matches = fieldLabelPath(state.path, capability.initial_path, field) === focus.labelPath;
+    return {
+      ...state,
+      visible: matches,
+      ...(matches ? { opacity: 1, mode: "outline" as const, highlightValue: focus.labelValue } : {}),
+    };
+  });
+}
+
+export function roiPngUrl(
+  capability: Capability,
+  state: DeepLinkState & { field?: string; z: number; t: number },
+  visibleChannels: ChannelState[],
+): string | undefined {
+  if (!capability.store.roi_url || !state.roi) return undefined;
+  const url = new URL(capability.store.roi_url, window.location.href);
+  url.searchParams.set("field", state.field || capability.initial_path);
+  url.searchParams.set("roi", [state.roi.x0, state.roi.y0, state.roi.x1, state.roi.y1].join(","));
+  url.searchParams.set("z", String(state.z));
+  url.searchParams.set("t", String(state.t));
+  const selected = visibleChannels.filter((channel) => channel.visible).map((channel) => channel.index + 1);
+  if (selected.length) url.searchParams.set("sourceChannels", selected.join(","));
+  if (state.labelPath) url.searchParams.set("labelPath", state.labelPath);
+  if (state.labelChannel != null) url.searchParams.set("labelChannel", String(state.labelChannel));
+  if (state.labelValue != null) url.searchParams.set("labelValue", String(state.labelValue));
+  const storeUuid = state.storeUuid || capability.store.uuid;
+  if (storeUuid) url.searchParams.set("storeUuid", storeUuid);
+  return url.toString();
+}
+
 export default function App() {
   const imageId = useMemo(() => selectedImageId(), []);
   const deepLink = useMemo(() => parseDeepLink(), []);
@@ -169,6 +230,7 @@ export default function App() {
   const [showScale, setShowScale] = useState(true);
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
   const initializedZ = useRef(false);
+  const fittedRoi = useRef("");
   const analyzedProjection = useRef<ProjectionMode>(projection);
   const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
   const currentLoaded = loaded?.path === field ? loaded : null;
@@ -200,9 +262,19 @@ export default function App() {
   const refreshCapability = useCallback(async () => {
     if (!imageId) throw new ViewerApiError("missing_image", "No OMERO image was selected", 400);
     const value = await fetchCapabilities(imageId);
+    if (
+      deepLink.storeUuid
+      && value.store.uuid?.toLowerCase() !== deepLink.storeUuid.toLowerCase()
+    ) {
+      throw new ViewerApiError(
+        "store_uuid_mismatch",
+        "This link targets a different CI Segmentation output store",
+        409,
+      );
+    }
     setCapability(value);
     return value;
-  }, [imageId]);
+  }, [imageId, deepLink.storeUuid]);
 
   useEffect(() => {
     if (!imageId) {
@@ -236,7 +308,16 @@ export default function App() {
       const next: LoadedData = {
         path: field,
         image: imageLoader,
-        labels: labelResults.filter((item): item is PromiseFulfilledResult<any> => item.status === "fulfilled").map((item) => item.value),
+        labels: [
+          ...labelResults.filter((item): item is PromiseFulfilledResult<any> => item.status === "fulfilled").map((item) => item.value),
+          ...(deepLink.labelChannel != null && deepLink.labelChannel <= axisSize(imageLoader, "c")
+            ? [{
+                id: `focused-channel-${deepLink.labelChannel}`,
+                loader: imageLoader,
+                channelIndex: deepLink.labelChannel - 1,
+              }]
+            : []),
+        ],
         sizeC: axisSize(imageResult.data, "c"),
         sizeZ: axisSize(imageResult.data, "z"),
         sizeT: axisSize(imageResult.data, "t"),
@@ -254,8 +335,16 @@ export default function App() {
       analyzedProjection.current = projection;
       setLoaded(next);
       setChannelAnalyses(analyses);
-      setChannels((current) => applyChannelDeepLink(scaled, current.length ? current : deepLink.channels));
-      setLabels((current) => applyLabelDeepLink(labelStates(capability), current.length ? current : deepLink.labels));
+      setChannels((current) => {
+        const restored = applyChannelDeepLink(scaled, current.length ? current : deepLink.channels);
+        return !current.length && !deepLink.channels
+          ? applySourceChannels(restored, deepLink.sourceChannels)
+          : restored;
+      });
+      setLabels((current) => {
+        const defaults = focusedLabelStates(capability, field, deepLink);
+        return applyLabelDeepLink(defaults, current.length ? current : deepLink.labels);
+      });
       setZIndex(nextZ);
       setTIndex(nextT);
       setStatus(labelResults.some((item) => item.status === "rejected") ? "Image ready; one or more label layers are unavailable for this field." : "Ready");
@@ -263,6 +352,14 @@ export default function App() {
     load().catch((reason) => setError(reason instanceof Error ? reason.message : "The OME-Zarr image could not be opened"));
     return () => { cancelled = true; };
   }, [capability, authStore, field]);
+
+  useEffect(() => {
+    if (!deepLink.roi || !field || viewerSize.width <= 0 || viewerSize.height <= 0) return;
+    const key = `${field}:${viewerSize.width}:${viewerSize.height}`;
+    if (fittedRoi.current === key) return;
+    fittedRoi.current = key;
+    setViewport(fitRoiViewport(deepLink.roi, viewerSize.width, viewerSize.height));
+  }, [deepLink.roi, field, viewerSize.width, viewerSize.height]);
 
   useEffect(() => {
     if (renderMode !== "3d" || !currentLoaded || maxTextureSize == null) return;
@@ -320,6 +417,12 @@ export default function App() {
         volumeLevel: selectedVolumeLevel?.index,
         volumeCamera,
         field,
+        roi: deepLink.roi,
+        sourceChannels: deepLink.sourceChannels,
+        labelPath: deepLink.labelPath,
+        labelChannel: deepLink.labelChannel,
+        labelValue: deepLink.labelValue,
+        storeUuid: deepLink.storeUuid,
         channels,
         labels,
       });
@@ -348,6 +451,16 @@ export default function App() {
           {currentLoaded && viewMode === "field" && effectiveRenderMode === "2d" && <>
             <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Show Navigator</button>
             <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Show Scale</button>
+            {deepLink.roi && capability && <a
+              className="toolbar-button"
+              href={roiPngUrl(capability, {
+                ...deepLink,
+                field,
+                z: zIndex,
+                t: tIndex,
+              }, channels)}
+              download
+            >Download ROI PNG</a>}
           </>}
           {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
             <button onClick={() => {

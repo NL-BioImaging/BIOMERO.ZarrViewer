@@ -53,7 +53,13 @@ export interface Capability {
   schema_version: 1;
   supported: true;
   image: { id: number; name: string };
-  store: { url: string; context: string; expires_at: string };
+  store: {
+    url: string;
+    context: string;
+    expires_at: string;
+    uuid?: string | null;
+    roi_url?: string;
+  };
   kind: "image" | "plate";
   ngff_version: "0.4" | "0.5";
   zarr_format: 2 | 3;
@@ -93,6 +99,14 @@ export interface LabelState {
   opacity: number;
   mode: LabelMode;
   color?: string;
+  highlightValue?: number;
+}
+
+export interface RoiBounds {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 export interface ViewportState {
