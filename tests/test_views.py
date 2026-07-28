@@ -113,9 +113,18 @@ def test_data_requires_context(configure_storage):
     assert response.status_code == 401
 
 
+def _create_test_array(group, name, *, data, chunks):
+    if hasattr(group, "create_array"):
+        return group.create_array(name, data=data, chunks=chunks)
+    return group.create_dataset(name, data=data, chunks=chunks)
+
+
 def _write_renderable_store(path):
     store_uuid = "3935615d-a18d-41d8-af04-e63cfec3a46c"
-    root = zarr.open_group(str(path), mode="w", zarr_format=2)
+    if int(zarr.__version__.partition(".")[0]) >= 3:
+        root = zarr.open_group(str(path), mode="w", zarr_format=2)
+    else:
+        root = zarr.open_group(str(path), mode="w")
     axes = [
         {"name": "t", "type": "time"},
         {"name": "c", "type": "channel"},
@@ -140,7 +149,7 @@ def _write_renderable_store(path):
         (332, 337, 349, 353), ((2, 2), (2, 5), (5, 2), (5, 5))
     ):
         foci[1, 0, 1, y, x] = label_value
-    root.create_array("0", data=intensity, chunks=(1, 1, 1, 4, 4))
+    _create_test_array(root, "0", data=intensity, chunks=(1, 1, 1, 4, 4))
     root.attrs.update(
         {
             "multiscales": image_multiscales,
@@ -183,7 +192,7 @@ def _write_renderable_store(path):
             "image-label": {"color": [255, 255, 0, 255]},
         }
     )
-    label_group.create_array("0", data=labels, chunks=(1, 1, 1, 4, 4))
+    _create_test_array(label_group, "0", data=labels, chunks=(1, 1, 1, 4, 4))
     foci_group = root.create_group("labels/foci")
     foci_group.attrs.update(
         {
@@ -196,7 +205,7 @@ def _write_renderable_store(path):
             "image-label": {"color": [255, 0, 255, 255]},
         }
     )
-    foci_group.create_array("0", data=foci, chunks=(1, 1, 1, 4, 4))
+    _create_test_array(foci_group, "0", data=foci, chunks=(1, 1, 1, 4, 4))
     return store_uuid
 
 
