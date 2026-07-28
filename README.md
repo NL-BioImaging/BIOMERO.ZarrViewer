@@ -376,6 +376,20 @@ labels, and HCS metadata. OMERO authorizes access, but Nginx serves the stored
 bytes directly. `ome/omero-web-zarr` is therefore complementary rather than a
 dependency of this viewer.
 
+## Source provenance
+
+See [`docs/open-source-provenance.md`](docs/open-source-provenance.md) for the
+runtime dependencies, adapted OMERO.JupyterLite lineage, reference-only
+projects, license distinctions, and functionality implemented specifically for
+BIOMERO OME-Zarr Viewer. Copyright and adaptation information is recorded in
+[`NOTICE`](NOTICE); bundled browser dependency licenses are recorded in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
+
 ## License
 
+Copyright (C) 2026 NL-BioImaging contributors.
+
 GNU Affero General Public License v3.0 or later. See [`LICENSE`](LICENSE).
+Users of the network application can obtain the corresponding source from the
+[`NL-BioImaging/BIOMERO.ZarrViewer`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer)
+repository.

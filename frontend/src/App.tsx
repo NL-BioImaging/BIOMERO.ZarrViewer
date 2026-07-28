@@ -678,7 +678,12 @@ export function ViewerPanel(props: ViewerPanelProps) {
         </> : <LabelPanel labels={props.labels} onChange={props.onLabels} />}
       </div>
     </>}
-    {capability && <div className="source-strip"><span>NGFF {capability.ngff_version}</span><span>Zarr v{capability.zarr_format}</span><span>{capability.kind}</span></div>}
+    {capability && <div className="source-strip">
+      <span>NGFF {capability.ngff_version}</span>
+      <span>Zarr v{capability.zarr_format}</span>
+      <span>{capability.kind}</span>
+      <a href="https://github.com/NL-BioImaging/BIOMERO.ZarrViewer" target="_blank" rel="noreferrer">Source · AGPL</a>
+    </div>}
   </aside>;
 }
 

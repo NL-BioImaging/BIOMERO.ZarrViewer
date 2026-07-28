@@ -76,25 +76,34 @@ vec4 biomero_label_color(float rawValue) {
   inject: {
     "fs:DECKGL_PROCESS_INTENSITY": "intensity = intensity;",
     "fs:DECKGL_MUTATE_COLOR": `
-      uint biomeroValue = uint(round(intensity[0]));
-      bool biomeroVisible = biomero_selected(biomeroValue);
-      bool biomeroBoundary = biomeroVisible;
-      if (instanceColorModule.outlineOnly != 0u && biomeroVisible) {
-        biomeroBoundary = false;
-        vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
-        for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
-          if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
-          vec2 delta = biomeroScreenStep * float(biomeroRadius);
-          uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-          uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-          uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-          uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-          if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
-            biomeroBoundary = true;
+      rgba = biomero_label_color(intensity[0]);
+    `,
+    // Viv declares channel0 in its application shader, after module functions
+    // have been emitted. Texture sampling in DECKGL_MUTATE_COLOR therefore
+    // fails on strict GLSL compilers because channel0 is not yet in scope.
+    // A main-end injection is emitted after the sampler declaration and keeps
+    // neighbourhood sampling available for outline rendering.
+    "fs:#main-end": `
+      if (instanceColorModule.outlineOnly != 0u) {
+        uint biomeroValue = uint(round(intensity[0]));
+        bool biomeroVisible = biomero_selected(biomeroValue);
+        bool biomeroBoundary = false;
+        if (biomeroVisible) {
+          vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
+          for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
+            if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
+            vec2 delta = biomeroScreenStep * float(biomeroRadius);
+            uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
+              biomeroBoundary = true;
+            }
           }
         }
+        fragColor = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
       }
-      rgba = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
     `,
   },
 };

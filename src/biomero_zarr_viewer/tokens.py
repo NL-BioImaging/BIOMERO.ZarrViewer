@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 NL-BioImaging contributors
+# Adapted from NL-BioImaging/OMERO.JupyterLite for signed OME-Zarr reads.
+
 from datetime import datetime, timedelta, timezone
 
 from django.core import signing
@@ -66,4 +70,3 @@ def validate_read_context(request, conn, image_id):
     if "read" not in claims.get("operations", []):
         raise InvalidContext("The Zarr context does not allow reads")
     return claims
-

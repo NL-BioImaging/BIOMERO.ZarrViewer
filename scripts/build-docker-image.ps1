@@ -94,7 +94,7 @@ if (-not $SkipBuild) {
             Remove-Item -LiteralPath $resolvedBuild -Recurse -Force
         }
 
-        & $python -m build --wheel --no-isolation
+        & $python -m build --wheel
         if ($LASTEXITCODE -ne 0) { throw "Wheel build failed." }
     }
     finally {

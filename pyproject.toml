@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,13 @@ version = "0.4.0"
 description = "Authenticated OME-Zarr viewer for BIOMERO and OMERO.web"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "AGPL-3.0-or-later"
+license-files = [
+  "LICENSE",
+  "NOTICE",
+  "THIRD_PARTY_NOTICES.md",
+  "docs/open-source-provenance.md",
+]
 authors = [{ name = "NL-BioImaging" }]
 classifiers = [
   "Development Status :: 3 - Alpha",

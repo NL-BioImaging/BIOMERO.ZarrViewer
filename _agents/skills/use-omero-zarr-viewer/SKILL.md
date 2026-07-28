@@ -2,9 +2,9 @@
 name: use-omero-zarr-viewer
 description: Open measured CI Segmentation objects in OMERO ZarrViewer and render bounded ROI PNGs through authenticated host capabilities. Use when a user asks to show a specific HCS field, focus a measured cell or other label object, select its originating image channels, highlight its label value, or save a PNG crop from an active OMERO OME-Zarr Image or Plate.
 metadata:
-  version: "2"
+  version: "3"
   biomero-purpose: "application-operation"
-  biomero-consumers: "omero-analysis-chat"
+  biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
   biomero-required-resources: "references/REFERENCE.md"
   biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1"

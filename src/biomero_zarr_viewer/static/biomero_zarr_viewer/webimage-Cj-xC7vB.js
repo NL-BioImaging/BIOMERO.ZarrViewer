@@ -1,4 +1,4 @@
-import { B as r } from "./main-kshsG2rV.js";
+import { B as r } from "./main-BQJ9s3pC.js";
 class s extends r {
   constructor() {
     if (super(), typeof createImageBitmap > "u")

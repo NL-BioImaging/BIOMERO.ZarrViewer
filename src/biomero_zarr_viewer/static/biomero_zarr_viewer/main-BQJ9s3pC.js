@@ -38825,19 +38825,19 @@ const t0 = {
 function jn(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => Nk.set(i, e));
 }
-jn([void 0, 1], () => import("./raw-B7HZ6QA0.js").then((t) => t.default));
-jn(5, () => import("./lzw-D36WQodC.js").then((t) => t.default));
+jn([void 0, 1], () => import("./raw-0iML200g.js").then((t) => t.default));
+jn(5, () => import("./lzw-CpkpDYoU.js").then((t) => t.default));
 jn(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-jn(7, () => import("./jpeg-B2_MWf9J.js").then((t) => t.default));
-jn([8, 32946], () => import("./deflate-DJAeRxQC.js").then((t) => t.default));
-jn(32773, () => import("./packbits-BVAqJeoZ.js").then((t) => t.default));
+jn(7, () => import("./jpeg-F-Sfp2y8.js").then((t) => t.default));
+jn([8, 32946], () => import("./deflate-Bnc5ZqZd.js").then((t) => t.default));
+jn(32773, () => import("./packbits-CZo-JaFO.js").then((t) => t.default));
 jn(
   34887,
-  () => import("./lerc-8Mr06eu8.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-DykhGrym.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-jn(50001, () => import("./webimage-DwE0OGcR.js").then((t) => t.default));
+jn(50001, () => import("./webimage-Cj-xC7vB.js").then((t) => t.default));
 function Pk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -52401,25 +52401,34 @@ vec4 biomero_label_color(float rawValue) {
   inject: {
     "fs:DECKGL_PROCESS_INTENSITY": "intensity = intensity;",
     "fs:DECKGL_MUTATE_COLOR": `
-      uint biomeroValue = uint(round(intensity[0]));
-      bool biomeroVisible = biomero_selected(biomeroValue);
-      bool biomeroBoundary = biomeroVisible;
-      if (instanceColorModule.outlineOnly != 0u && biomeroVisible) {
-        biomeroBoundary = false;
-        vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
-        for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
-          if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
-          vec2 delta = biomeroScreenStep * float(biomeroRadius);
-          uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-          uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-          uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-          uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-          if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
-            biomeroBoundary = true;
+      rgba = biomero_label_color(intensity[0]);
+    `,
+    // Viv declares channel0 in its application shader, after module functions
+    // have been emitted. Texture sampling in DECKGL_MUTATE_COLOR therefore
+    // fails on strict GLSL compilers because channel0 is not yet in scope.
+    // A main-end injection is emitted after the sampler declaration and keeps
+    // neighbourhood sampling available for outline rendering.
+    "fs:#main-end": `
+      if (instanceColorModule.outlineOnly != 0u) {
+        uint biomeroValue = uint(round(intensity[0]));
+        bool biomeroVisible = biomero_selected(biomeroValue);
+        bool biomeroBoundary = false;
+        if (biomeroVisible) {
+          vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
+          for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
+            if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
+            vec2 delta = biomeroScreenStep * float(biomeroRadius);
+            uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
+              biomeroBoundary = true;
+            }
           }
         }
+        fragColor = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
       }
-      rgba = biomeroBoundary ? biomero_label_color(intensity[0]) : vec4(0.0);
     `
   }
 };
@@ -53373,7 +53382,8 @@ function IY(t) {
         "Zarr v",
         o.zarr_format
       ] }),
-      /* @__PURE__ */ D.jsx("span", { children: o.kind })
+      /* @__PURE__ */ D.jsx("span", { children: o.kind }),
+      /* @__PURE__ */ D.jsx("a", { href: "https://github.com/NL-BioImaging/BIOMERO.ZarrViewer", target: "_blank", rel: "noreferrer", children: "Source · AGPL" })
     ] })
   ] });
 }

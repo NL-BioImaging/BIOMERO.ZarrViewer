@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "clean": "node scripts/clean-output.mjs",
-    "build": "npm run clean && tsc --noEmit && vite build",
+    "licenses": "node scripts/generate-third-party-notices.mjs",
+    "build": "npm run licenses && npm run clean && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 NL-BioImaging contributors
+# Adapted from NL-BioImaging/OMERO.JupyterLite for this OMERO.web extension.
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)]
@@ -57,7 +61,7 @@ function Build-Wheel {
             if ($LASTEXITCODE -ne 0) { throw "Frontend build or validation failed." }
             $buildDirectory = Join-Path $RepoRoot "build"
             if (Test-Path $buildDirectory) { Remove-Item -LiteralPath $buildDirectory -Recurse -Force }
-            & $python -m build --wheel --no-isolation
+            & $python -m build --wheel
             if ($LASTEXITCODE -ne 0) { throw "Wheel build failed." }
         } finally { Pop-Location }
     }

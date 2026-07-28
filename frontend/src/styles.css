@@ -76,6 +76,8 @@ h2 { margin: 0 0 .7rem; font-size: .78rem; letter-spacing: .08em; color: #cbd0e4
 h3 { margin: 0 0 .3rem; font-size: .76rem; color: #c8cee1; }
 .muted { margin: .35rem 0; color: var(--muted); font-size: .78rem; }
 .source-strip { display: flex; justify-content: space-between; gap: .5rem; padding: .55rem 1rem; border-top: 1px solid var(--line); color: #8f97b4; font-size: .68rem; text-transform: uppercase; letter-spacing: .04em; }
+.source-strip a { color: #aeb8da; text-decoration: none; }
+.source-strip a:hover, .source-strip a:focus-visible { color: #fff; text-decoration: underline; }
 
 .settings-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; padding: .65rem .75rem; border: 1px solid var(--line); border-radius: 5px; text-transform: uppercase; font-size: .72rem; letter-spacing: .07em; }
 .settings-row span { color: var(--muted); text-transform: none; letter-spacing: 0; }
