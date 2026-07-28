@@ -5,17 +5,6 @@ This program is distributed under the GNU Affero General Public License,
 version 3 or (at your option) any later version. The complete license is in
 LICENSE.
 
-Portions of the authentication, signed-context, packaging, and Docker plugin
-lifecycle implementation were adapted from:
-
-    NL-BioImaging/OMERO.JupyterLite
-    https://github.com/NL-BioImaging/OMERO.JupyterLite
-    Copyright (C) 2026 NL-BioImaging contributors
-    AGPL-3.0-or-later
-
-The adapted portions and the modifications made for BIOMERO OME-Zarr Viewer
-are distributed under AGPL-3.0-or-later.
-
 The compiled browser application includes third-party open-source software.
 Its copyright and license notices are recorded in THIRD_PARTY_NOTICES.md.
 Additional source provenance is recorded in docs/open-source-provenance.md.

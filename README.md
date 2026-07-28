@@ -84,7 +84,7 @@ The script uses the currently deployed OMERO.web image as its base by default,
 so plugins already baked into that image are retained. It refuses to continue
 when it detects plugin configuration files that exist only in the running
 container and would therefore disappear after recreation. This protects
-co-installed extensions such as OMERO.JupyterLite.
+other co-installed OMERO.web extensions.
 
 Never update this viewer by rebuilding directly from the vendor OMERO.web
 image when the deployment already uses a combined plugin image. Layer the
@@ -379,9 +379,9 @@ dependency of this viewer.
 ## Source provenance
 
 See [`docs/open-source-provenance.md`](docs/open-source-provenance.md) for the
-runtime dependencies, adapted OMERO.JupyterLite lineage, reference-only
-projects, license distinctions, and functionality implemented specifically for
-BIOMERO OME-Zarr Viewer. Copyright and adaptation information is recorded in
+runtime dependencies, reference-only projects, license distinctions, and
+functionality implemented specifically for BIOMERO OME-Zarr Viewer. Copyright
+information is recorded in
 [`NOTICE`](NOTICE); bundled browser dependency licenses are recorded in
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 

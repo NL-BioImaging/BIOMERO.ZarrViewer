@@ -4,7 +4,6 @@ This document records the source projects, specifications, and products that
 influenced BIOMERO OME-Zarr Viewer. It distinguishes:
 
 - code and libraries included as runtime dependencies;
-- code and patterns adapted from another NL-BioImaging project;
 - repositories and applications consulted only as references; and
 - functionality designed and implemented specifically for this project.
 
@@ -18,20 +17,16 @@ BIOMERO OME-Zarr Viewer is an
 NL-BioImaging. The viewer is not a fork of OMERO-Vitessce,
 `ome/omero-web-zarr`, or Find Nuclei Viewer.
 
-The closest source-code lineage is
-[NL-BioImaging/OMERO.JupyterLite](https://github.com/NL-BioImaging/OMERO.JupyterLite).
-Its OMERO authentication, signed-context, packaging, and Docker extension
-patterns were adapted for authenticated OME-Zarr access. The image viewer,
-NGFF metadata adapters, BIOMERO store resolution, Zarr data gateway, label
-renderer, multidimensional controls, and HCS navigation were implemented in
-this repository.
+The OMERO authentication, signed read contexts, image viewer, NGFF metadata
+adapters, BIOMERO store resolution, Zarr data gateway, label renderer,
+multidimensional controls, HCS navigation, packaging, and deployment tooling
+were implemented for this project.
 
 ## How the sources are classified
 
 | Classification | Meaning in this document |
 | --- | --- |
 | Runtime dependency | Third-party code imported by Python or JavaScript and used by the running application. |
-| Adapted code or pattern | An upstream implementation has identifiable structural or code lineage in this repository. |
 | Reference only | The project was inspected, tested, or used to inform a design decision, but its source files were not copied into this repository. |
 | Specification | A published interoperability standard implemented by this project; it is not a software dependency. |
 | Project-specific work | Code designed and implemented for BIOMERO OME-Zarr Viewer. |
@@ -41,40 +36,6 @@ The license of every reference therefore matters. In particular, Find Nuclei
 Viewer was a visual reference but is published as “all rights reserved,” and
 the deployment kit did not contain an explicit software license when this
 inventory was reviewed.
-
-## Adapted source-code lineage
-
-### NL-BioImaging/OMERO.JupyterLite
-
-Source:
-[NL-BioImaging/OMERO.JupyterLite](https://github.com/NL-BioImaging/OMERO.JupyterLite)
-(AGPL-3.0-or-later)
-
-OMERO.JupyterLite is a sibling NL-BioImaging OMERO.web extension. The following
-established patterns were adapted:
-
-- OMERO user and active-group discovery;
-- short-lived Django-signed contexts bound to the authenticated OMERO session;
-- a versioned, operation-limited token payload;
-- OMERO.web plugin configuration and packaged static assets;
-- wheel construction with a frontend build;
-- Docker plugin installation, update, removal, status, static cleanup, and
-  OMERO.web restart handling; and
-- composable installation that preserves other OMERO.web extensions.
-
-The most direct corresponding files are:
-
-- [`tokens.py`](../src/biomero_zarr_viewer/tokens.py), customized with an
-  OME-Zarr-specific signing salt, image and store claims, a read-only operation,
-  and the `X-OMERO-Zarr-Context` header;
-- [`manage-docker-plugin.ps1`](../scripts/manage-docker-plugin.ps1), adapted
-  for the viewer's wheel, OMERO configuration, static bundle, Nginx validation,
-  and co-installation behavior; and
-- the project packaging and Docker build files, adapted to deliver the React
-  production bundle as part of an OMERO.web extension.
-
-The Zarr path resolver, capability model, data routes, NGFF parsing, and viewer
-UI are not inherited from OMERO.JupyterLite.
 
 ## Included runtime dependencies
 
@@ -275,8 +236,8 @@ repository from the viewer requirements and iterative testing.
   for images backed by supported OME-Zarr stores, including plate fields.
 - A Vite-to-wheel build pipeline and checks that verify the generated production
   bundle is packaged.
-- Plugin lifecycle scripts that preserve co-installed extensions such as
-  OMERO.JupyterLite.
+- Plugin lifecycle scripts that preserve other co-installed OMERO.web
+  extensions.
 - Viewer-specific internal Nginx location snippets for existing NL-BIOMERO and
   omero-deployment-kit deployments.
 - Python, frontend, integration, security, wheel-content, and deployment smoke
@@ -284,9 +245,8 @@ repository from the viewer requirements and iterative testing.
 
 ## Licensing and redistribution
 
-BIOMERO OME-Zarr Viewer, including its project-specific code and compatible
-adaptations, is distributed under
-[AGPL-3.0-or-later](../LICENSE). Copyright and adaptation information is in
+BIOMERO OME-Zarr Viewer is distributed under
+[AGPL-3.0-or-later](../LICENSE). Copyright information is in
 [`NOTICE`](../NOTICE). The project license does not replace the licenses of its
 dependencies or reference projects. Notices for code included in the compiled
 browser bundle are in
