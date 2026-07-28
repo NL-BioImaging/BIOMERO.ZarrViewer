@@ -8,7 +8,7 @@ influenced BIOMERO OME-Zarr Viewer. It distinguishes:
 - repositories and applications consulted only as references; and
 - functionality designed and implemented specifically for this project.
 
-The inventory describes version `0.4.0` and was reviewed on 28 July 2026.
+The inventory describes version `0.4.1` and was reviewed on 28 July 2026.
 The dependency manifests and lock files remain authoritative for exact versions.
 
 ## Summary
