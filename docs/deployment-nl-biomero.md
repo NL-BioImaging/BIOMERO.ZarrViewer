@@ -81,9 +81,43 @@ If the repositories are elsewhere, set
 `BIOMERO_ZARR_VIEWER_REPO` to the ZarrViewer checkout before running Compose.
 Set `BIOMERO_ZARR_VIEWER_PROXY_PORT` to change the host port from 4081.
 
+When running a Compose file from the `deployment_scenarios` directory, set the
+in-place storage path explicitly. This avoids resolving a relative value from
+`.env` below the scenario directory instead of the NL-BIOMERO checkout:
+
+```powershell
+$env:INPLACE_STORAGE_HOST_PATH = (Resolve-Path ..\web\L-Drive).Path
+```
+
+Port 4081 lets the proxy run alongside an existing frontend or a directly
+published OMERO.web port. To make the new proxy the only frontend on the usual
+development port 4080, first stop and remove the container currently publishing
+that port, then set:
+
+```powershell
+$env:BIOMERO_ZARR_VIEWER_PROXY_PORT = "4080"
+```
+
+For example, the `docker-compose-from-dockerhub.yml` scenario may have an old
+`nginx` service on port 4080. Remove only that frontend with:
+
+```powershell
+docker compose rm --stop --force nginx
+```
+
+Retain OMERO Server, databases, workers, and importer.
+The scenario's `omeroweb` service has no host port, so the lightweight proxy can
+then bind port 4080. In a Compose variant that publishes OMERO.web directly on
+4080, keep the proxy on 4081 unless that direct port mapping is removed with a
+local override.
+
 Open OMERO.web through <http://localhost:4081>. Port 4080 remains a direct
 OMERO.web endpoint for diagnostics, but it cannot deliver viewer metadata or
 chunks because it bypasses Nginx.
+
+If the lightweight proxy replaces the previous frontend on port 4080, open
+<http://localhost:4080> instead; there is no separate direct OMERO.web endpoint
+in that layout.
 
 Do not expose `/data` with a normal public Nginx location. The supplied proxy
 configuration marks `/_biomero_zarr_internal/` as `internal`, so Django must
