@@ -1,0 +1,15 @@
+services:
+  omeroweb:
+    image: "${BIOMERO_ZARR_VIEWER_WEB_IMAGE:-local/nl-biomero-omeroweb-zarr:dev}"
+
+  zarrviewer-nginx:
+    image: nginx:alpine
+    ports:
+      - "${BIOMERO_ZARR_VIEWER_PROXY_PORT:-4081}:4080"
+    networks:
+      - omero
+    volumes:
+      - "${BIOMERO_ZARR_VIEWER_REPO:-../OMERO.ZarrViewer}/docker/nginx-local-proxy.conf:/etc/nginx/nginx.conf:ro"
+      - "${INPLACE_STORAGE_HOST_PATH}:/data:ro"
+    depends_on:
+      - omeroweb

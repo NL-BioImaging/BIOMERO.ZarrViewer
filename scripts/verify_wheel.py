@@ -12,6 +12,11 @@ REQUIRED = {
     str(STATIC / "app.css"),
     str(STATIC / "openwith-v2.js"),
     "biomero_zarr_viewer/templates/biomero_zarr_viewer/viewer.html",
+    "biomero_zarr_viewer/analysis_skills/use-omero-zarr-viewer/SKILL.md",
+    (
+        "biomero_zarr_viewer/analysis_skills/use-omero-zarr-viewer/"
+        "references/REFERENCE.md"
+    ),
 }
 REQUIRED_LICENSE_FILES = {
     "LICENSE",

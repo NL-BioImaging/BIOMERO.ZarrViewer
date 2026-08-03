@@ -12,18 +12,24 @@ OME-Zarr data first.
 
 ## Install into OMERO.web
 
-The viewer uses the Nginx that already fronts the selected OMERO deployment.
-It does not require a second proxy:
+The viewer requires an Nginx endpoint to process authenticated
+`X-Accel-Redirect` responses:
 
 - [`omero-deployment-kit` instructions](docs/deployment-omero-deployment-kit.md):
   extend the host Nginx installed by its Ansible role;
-- [`NL-BIOMERO` instructions](docs/deployment-nl-biomero.md): extend the
-  existing Nginx container in its production SSL scenario.
+- [`NL-BIOMERO` instructions](docs/deployment-nl-biomero.md): add the supplied
+  lightweight HTTP-only proxy for Windows development, or extend the existing
+  Nginx container in the production SSL scenario.
 
 Both deployment paths install the same wheel and
 [`docker/90-biomero-zarr-viewer.omero`](docker/90-biomero-zarr-viewer.omero)
-configuration. They differ only in how the existing Nginx sees the in-place
+configuration. They differ only in how Nginx is provided and sees the in-place
 storage.
+
+The wheel also serves its bundled `use-omero-zarr-viewer` Analysis skill from
+authenticated `/biomero_zarr_viewer/api/analysis-skills/` endpoints. This
+keeps ZarrViewer operations independent from BIOMERO.WorkflowSkills; Analysis
+discovers the provider only when ZarrViewer is installed and enabled.
 
 ### Prerequisites
 

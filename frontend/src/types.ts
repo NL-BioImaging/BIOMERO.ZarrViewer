@@ -58,6 +58,7 @@ export interface Capability {
     context: string;
     expires_at: string;
     uuid?: string | null;
+    name?: string;
     roi_url?: string;
     render_url?: string;
   };

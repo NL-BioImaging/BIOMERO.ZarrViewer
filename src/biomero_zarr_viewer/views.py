@@ -32,8 +32,26 @@ from .resolver import resolve_image_store, resolve_plate_store
 from .roi import render_recipe_png, render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
+from .analysis_skill_provider import catalog_payload, package_payload, SKILL_NAME
 
 logger = logging.getLogger(__name__)
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def analysis_skills(request, conn=None, **kwargs):
+    return JsonResponse(catalog_payload())
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def analysis_skill(request, skill_name, conn=None, **kwargs):
+    if skill_name != SKILL_NAME:
+        return JsonResponse(
+            {"error": {"code": "skill_not_found", "message": "Skill not found"}},
+            status=404,
+        )
+    return JsonResponse(package_payload())
 
 
 def api_errors(function):
@@ -131,6 +149,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "context": token,
                 "expires_at": expires_at.isoformat(),
                 "uuid": store_uuid,
+                "name": store.relative.name,
                 "roi_url": roi_url,
                 "render_url": render_url,
             },

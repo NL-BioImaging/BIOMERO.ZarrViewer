@@ -5,6 +5,16 @@ from . import views
 urlpatterns = [
     path("", views.viewer, name="biomero_zarr_viewer_index"),
     path(
+        "api/analysis-skills/",
+        views.analysis_skills,
+        name="biomero_zarr_viewer_analysis_skills",
+    ),
+    path(
+        "api/analysis-skills/<str:skill_name>/",
+        views.analysis_skill,
+        name="biomero_zarr_viewer_analysis_skill",
+    ),
+    path(
         "api/images/<int:image_id>/capabilities/",
         views.capabilities,
         name="biomero_zarr_viewer_capabilities",

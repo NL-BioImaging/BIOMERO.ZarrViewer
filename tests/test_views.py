@@ -8,6 +8,8 @@ from PIL import Image
 
 from biomero_zarr_viewer.tokens import make_read_context
 from biomero_zarr_viewer.views import (
+    analysis_skill,
+    analysis_skills,
     capabilities,
     data,
     plate_capabilities,
@@ -38,6 +40,28 @@ def _connection(store_name="sample.zarr"):
     return FakeConnection(image)
 
 
+def test_analysis_skill_provider_is_versioned_and_hashes_every_file():
+    response = analysis_skills(_request("/api/analysis-skills/"), conn=FakeConnection())
+    payload = json.loads(response.content)
+    assert response.status_code == 200
+    assert payload["schema"] == "nl.bioimaging.analysis-skill-provider.v1"
+    assert payload["provider"]["name"] == "BIOMERO.ZarrViewer"
+    assert payload["skills"][0]["name"] == "use-omero-zarr-viewer"
+    assert payload["skills"][0]["required_resources"] == ["references/REFERENCE.md"]
+
+    response = analysis_skill(
+        _request("/api/analysis-skills/use-omero-zarr-viewer/"),
+        "use-omero-zarr-viewer",
+        conn=FakeConnection(),
+    )
+    package = json.loads(response.content)
+    assert {item["path"] for item in package["files"]} == {
+        "SKILL.md",
+        "references/REFERENCE.md",
+    }
+    assert all(len(item["sha256"]) == 64 for item in package["files"])
+
+
 def test_capability_contract(configure_storage):
     _, mount = configure_storage
     store_uuid = "3935615d-a18d-41d8-af04-e63cfec3a46c"
@@ -50,6 +74,7 @@ def test_capability_contract(configure_storage):
     assert payload["store"]["url"].endswith("/data/images/42/")
     assert payload["store"]["context"]
     assert payload["store"]["uuid"] == store_uuid
+    assert payload["store"]["name"] == "sample.zarr"
     assert payload["store"]["roi_url"].endswith("/api/images/42/roi.png")
     assert payload["store"]["render_url"].endswith("/api/images/42/render.png")
     assert "recorded" not in response.content.decode()
