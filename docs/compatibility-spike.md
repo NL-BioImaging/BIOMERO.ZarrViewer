@@ -43,7 +43,7 @@ Run each row first in OMERO-Vitessce as a reference and then in this viewer:
 | Store | Image | 3D intensity | Labels | Plate navigation | Result |
 |---|---|---|---|---|---|
 | 0.4 / Zarr v2 | multiscale C/Z/T | field at selected T | multiple integer labels in 2D | n/a | pending deployment |
-| 0.4 / Zarr v2 | HCS field | selected field and T | field labels in 2D | sparse wells/FOVs | pending deployment |
+| 0.4 / Zarr v2 | HCS field | selected field and T | field labels in 2D | sparse wells/FOVs | verified locally: complete, canonical, and shallow Plates; Well entry |
 | 0.5 / Zarr v3 | multiscale C/Z/T | field at selected T | multiple integer labels in 2D | n/a | pending deployment |
 | 0.5 / Zarr v3 | HCS field | selected field and T | field labels in 2D | sparse wells/FOVs | pending deployment |
 

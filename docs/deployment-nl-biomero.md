@@ -1,10 +1,12 @@
 # Deploy with `NL-BIOMERO`
 
 [`NL-BioImaging/NL-BIOMERO`](https://github.com/NL-BioImaging/NL-BIOMERO)
-has two relevant Compose paths:
+has three relevant Compose paths:
 
-- the default Windows/development stack exposes OMERO.web directly on port
-  4080 and does not start Nginx;
+- the beta.7 integration branch starts `zarrviewer-nginx` as its only
+  browser-facing OMERO.web endpoint on port 4080;
+- older Windows/development branches expose OMERO.web directly and can use the
+  compatibility overlay below while testing the viewer;
 - `deployment_scenarios/docker-compose-for-ubuntu-with-SSL.yml` includes an
   `nginx:alpine` service for a production-style HTTPS deployment.
 
@@ -12,8 +14,9 @@ The current viewer data backend requires Nginx to process
 `X-Accel-Redirect`. Django authorizes every metadata or chunk request but
 deliberately returns an empty body; Nginx reads the approved file from the
 in-place store. This is also required for a single-user development install.
-Development does not require TLS or the Ubuntu SSL scenario: use the small
-HTTP-only overlay below.
+Development does not require TLS or the Ubuntu SSL scenario. Use the integrated
+port-4080 proxy on the beta.7 branch. The small HTTP-only overlay below remains
+available for older branches that do not yet include that service.
 
 ## 1. Build the viewer OMERO.web image
 
@@ -49,13 +52,16 @@ The resulting image includes the Python package, compiled frontend, Open With
 registration, `/data` viewer defaults, and the plugins already present in its
 base image.
 
-## 2. Windows development: add the HTTP-only proxy
+## 2. Older Windows branches: add the HTTP-only proxy
 
 The supplied
 [`deploy/nl-biomero/docker-compose-windows-dev.yml`](../deploy/nl-biomero/docker-compose-windows-dev.yml)
 adds one lightweight `nginx:alpine` container. It serves HTTP on port 4081,
 proxies ordinary requests to `omeroweb:4080`, and mounts the same in-place
 store read-only at `/data`.
+
+Skip this overlay on the beta.7 integration branch: its root Compose file
+already provides the equivalent proxy on port 4080 and keeps Gunicorn internal.
 
 These commands assume sibling checkouts named `NL-BIOMERO` and
 `OMERO.ZarrViewer`:
@@ -198,9 +204,10 @@ mapping.
 
 ## 5. Verify either deployment
 
-1. Sign in through the Nginx endpoint: port 4081 for Windows development or
-   the HTTPS endpoint for the SSL scenario.
-2. Select a BIOMERO-imported OME-Zarr Image or Plate.
+1. Sign in through the Nginx endpoint: port 4080 for the integrated Windows
+   stack, port 4081 only for the older compatibility overlay, or the HTTPS
+   endpoint for the SSL scenario.
+2. Select a BIOMERO-imported OME-Zarr Image, Plate, or Well.
 3. Open **Open With → OME-Zarr Viewer**.
 4. Confirm `/biomero_zarr_viewer/data/images/...` requests return 200 or 206
    with a non-empty response body.

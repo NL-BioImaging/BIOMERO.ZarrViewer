@@ -124,7 +124,7 @@ The roots may differ, but the relative suffix
 ### Verify the installation
 
 1. Sign in to OMERO.web.
-2. Select a BIOMERO-imported OME-Zarr Image or Plate.
+2. Select a BIOMERO-imported OME-Zarr Image, Plate, or Well.
 3. Open **Open With → OME-Zarr Viewer**.
 4. Confirm that image requests below
    `/biomero_zarr_viewer/data/images/...` return HTTP 200 or 206.
@@ -228,6 +228,8 @@ OME-Zarr store from conventional OMERO pixels.
 - deterministic GPU label colors without a JavaScript color table
   proportional to the number of label IDs;
 - Field, Well, and Plate views with plate-grid navigation and field selection;
+- intensity-only Well and Plate overview thumbnails; open a Field to display
+  and control its segmentation label overlays;
 - versioned URL state for viewport, planes, projection, 3D camera and quality,
   channels, labels, and the selected field.
 - measurement-oriented focused links that fit a half-open pixel ROI, select
@@ -276,7 +278,8 @@ overview modes remain 2D.
 ## Security model
 
 1. OMERO.web supplies an authenticated OMERO connection and active group.
-2. The backend resolves the selected readable Image or Plate to one store.
+2. The backend resolves the selected readable Image, Plate, or Well entry to
+   one store. Wells resolve through a readable WellSample Image.
 3. Canonical path checks reject traversal, ambiguous roots, and symlink
    escapes outside the configured mount.
 4. The capability endpoint reads only bounded JSON metadata and returns a
