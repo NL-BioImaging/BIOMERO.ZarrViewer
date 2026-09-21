@@ -53,10 +53,14 @@ export class AuthenticatedZarrStore {
     return capability;
   }
 
-  private requestWithContext(request: Request): Request {
+  private requestWithContext(request: Request, bypassCache = false): Request {
     const headers = new Headers(request.headers);
     headers.set("X-OMERO-Zarr-Context", this.capability.store.context);
-    return new Request(request, { headers, credentials: "same-origin" });
+    return new Request(request, {
+      headers,
+      credentials: "same-origin",
+      cache: bypassCache ? "no-store" : request.cache,
+    });
   }
 
   private async authorizedFetch(request: Request): Promise<Response> {
@@ -64,7 +68,10 @@ export class AuthenticatedZarrStore {
     let serverRetries = 0;
 
     while (true) {
-      const response = await fetch(this.requestWithContext(request));
+      // A browser may reuse an error response for an identical request. Force
+      // attempts after the first 5xx back to Nginx so each retry can recover
+      // from a transient shared-filesystem read error.
+      const response = await fetch(this.requestWithContext(request, serverRetries > 0));
       if ((response.status === 401 || response.status === 403) && !refreshed) {
         await discard(response);
         await this.refresh();

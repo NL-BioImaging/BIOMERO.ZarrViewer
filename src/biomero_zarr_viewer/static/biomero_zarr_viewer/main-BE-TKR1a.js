@@ -38732,19 +38732,19 @@ const i0 = {
 function jn(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => Ik.set(i, e));
 }
-jn([void 0, 1], () => import("./raw-Dao8otDX.js").then((t) => t.default));
-jn(5, () => import("./lzw-B3WhHp9v.js").then((t) => t.default));
+jn([void 0, 1], () => import("./raw-HYXMyZHR.js").then((t) => t.default));
+jn(5, () => import("./lzw-GJlkAUpB.js").then((t) => t.default));
 jn(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-jn(7, () => import("./jpeg-CNj6F91f.js").then((t) => t.default));
-jn([8, 32946], () => import("./deflate-k9zA-Dhw.js").then((t) => t.default));
-jn(32773, () => import("./packbits-miIkShqr.js").then((t) => t.default));
+jn(7, () => import("./jpeg-BssOc7aO.js").then((t) => t.default));
+jn([8, 32946], () => import("./deflate-CszoD8f4.js").then((t) => t.default));
+jn(32773, () => import("./packbits-FkEl6Df3.js").then((t) => t.default));
 jn(
   34887,
-  () => import("./lerc-BuJdTyck.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-DLbSqbaS.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-jn(50001, () => import("./webimage-AxJVR6Yo.js").then((t) => t.default));
+jn(50001, () => import("./webimage-DO85CQBr.js").then((t) => t.default));
 function Bk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -51985,14 +51985,18 @@ class IY {
     const e = await this.refreshing;
     return this.update(e), e;
   }
-  requestWithContext(e) {
-    const i = new Headers(e.headers);
-    return i.set("X-OMERO-Zarr-Context", this.capability.store.context), new Request(e, { headers: i, credentials: "same-origin" });
+  requestWithContext(e, i = !1) {
+    const n = new Headers(e.headers);
+    return n.set("X-OMERO-Zarr-Context", this.capability.store.context), new Request(e, {
+      headers: n,
+      credentials: "same-origin",
+      cache: i ? "no-store" : e.cache
+    });
   }
   async authorizedFetch(e) {
     let i = !1, n = 0;
     for (; ; ) {
-      const s = await fetch(this.requestWithContext(e));
+      const s = await fetch(this.requestWithContext(e, n > 0));
       if ((s.status === 401 || s.status === 403) && !i) {
         await Wg(s), await this.refresh(), i = !0;
         continue;

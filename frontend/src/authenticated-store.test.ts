@@ -52,9 +52,11 @@ test("retries transient server errors with bounded backoff without refreshing co
   vi.useFakeTimers();
   vi.spyOn(Math, "random").mockReturnValue(0);
   const statuses = [500, 502, 504, 200];
-  const fetchMock = vi.fn(async () => new Response(
-    new Uint8Array([1]), { status: statuses.shift() },
-  ));
+  const caches: RequestCache[] = [];
+  const fetchMock = vi.fn(async (request: Request) => {
+    caches.push(request.cache);
+    return new Response(new Uint8Array([1]), { status: statuses.shift() });
+  });
   vi.stubGlobal("fetch", fetchMock);
   const refresh = vi.fn(async () => capability("fresh"));
 
@@ -64,6 +66,7 @@ test("retries transient server errors with bounded backoff without refreshing co
   await result;
 
   expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(caches).toEqual(["default", "no-store", "no-store", "no-store"]);
   expect(refresh).not.toHaveBeenCalled();
   vi.useRealTimers();
   vi.restoreAllMocks();
