@@ -352,6 +352,8 @@ All routes are below the standard `/biomero_zarr_viewer/` application mount.
 GET /?image=<omero-image-id>
 GET /?plate=<omero-plate-id>
 
+GET /api/images/<id>/eligibility/
+GET /api/plates/<id>/eligibility/
 GET /api/images/<id>/capabilities/
 GET /api/plates/<id>/capabilities/
 GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
@@ -361,9 +363,16 @@ GET|HEAD /data/images/<id>/<zarr-key>
 X-OMERO-Zarr-Context: <signed-context>
 ```
 
-Unreadable OMERO objects return 404. Unsupported or malformed stores return a
-stable JSON error code. Successful data responses have an empty Django body
-and contain an `X-Accel-Redirect` for Nginx.
+The Open With integration calls the eligibility routes first. They validate
+the OMERO Fileset or official `biomero.import` /
+`biomero.zarr.plate-source` registration metadata without reading the Zarr
+store. This keeps menu feedback quick while preserving a truthful first gate.
+The capability routes perform full path, shallow-manifest, and NGFF metadata
+validation when the viewer opens.
+
+Unreadable OMERO objects return 404 from full capabilities. Unsupported or
+malformed stores return a stable JSON error code. Successful data responses
+have an empty Django body and contain an `X-Accel-Redirect` for Nginx.
 
 The ROI endpoint uses the focused-link parameters documented above and returns
 an 8-bit RGB PNG at native crop resolution. It composes intensity channels

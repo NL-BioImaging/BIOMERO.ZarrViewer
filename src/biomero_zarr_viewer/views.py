@@ -28,7 +28,12 @@ from .errors import (
     ViewerError,
 )
 from .metadata import inspect_label, inspect_store
-from .resolver import resolve_image_store, resolve_plate_store
+from .resolver import (
+    image_store_registered,
+    plate_store_registered,
+    resolve_image_store,
+    resolve_plate_store,
+)
 from .roi import render_recipe_png, render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
@@ -115,6 +120,18 @@ def capabilities(request, image_id, conn=None, **kwargs):
 def plate_capabilities(request, plate_id, conn=None, **kwargs):
     store = resolve_plate_store(conn, plate_id)
     return _capability_response(request, conn, store, require_plate=True)
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def image_eligibility(request, image_id, conn=None, **kwargs):
+    return JsonResponse({"supported": image_store_registered(conn, image_id)})
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def plate_eligibility(request, plate_id, conn=None, **kwargs):
+    return JsonResponse({"supported": plate_store_registered(conn, plate_id)})
 
 
 def _capability_response(request, conn, store, *, require_plate=False):

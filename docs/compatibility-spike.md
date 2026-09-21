@@ -27,7 +27,9 @@ route loaded the production React bundle and the packaged Open With entry was
 verified against Image 539. BIOMERO had removed the `.ome.zarr` suffix from
 the OMERO Image name and recorded the source in a `biomero.import` annotation;
 the provenance fallback resolved it as OME-Zarr 0.4/Zarr v2 and the
-asynchronous menu check enabled the entry. Nginx served image and label chunks
+asynchronous menu check enabled the entry. The menu check now uses a dedicated
+registration-only endpoint, leaving filesystem and NGFF inspection to the
+viewer capability request. Nginx served image and label chunks
 successfully through authenticated `/data/images/539/...` requests, and a
 direct request to the internal storage location returned 404. A Viv 0.22
 shader incompatibility exposed by the first successful chunk load was fixed by

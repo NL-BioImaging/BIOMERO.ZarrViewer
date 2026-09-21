@@ -15,7 +15,9 @@ from biomero_zarr_viewer.views import (
     analysis_skills,
     capabilities,
     data,
+    image_eligibility,
     plate_capabilities,
+    plate_eligibility,
     render_png,
     roi_png,
     viewer,
@@ -23,6 +25,7 @@ from biomero_zarr_viewer.views import (
 
 from .conftest import write_v2_image
 from .fakes import (
+    FakeAnnotation,
     FakeConnection,
     FakeImage,
     FakeOriginalFile,
@@ -89,6 +92,36 @@ def test_capability_hides_unreadable_image(configure_storage):
     assert json.loads(response.content)["error"]["code"] == "image_not_found"
 
 
+def test_image_eligibility_uses_registration_without_reading_store():
+    response = image_eligibility(
+        _request("/api/images/42/eligibility/"), 42, conn=_connection()
+    )
+    assert response.status_code == 200
+    assert json.loads(response.content) == {"supported": True}
+
+    response = image_eligibility(
+        _request("/api/images/1/eligibility/"), 1, conn=FakeConnection()
+    )
+    assert json.loads(response.content) == {"supported": False}
+
+
+def test_eligibility_accepts_official_biomero_import_metadata():
+    annotation = FakeAnnotation("biomero.import", {
+        "Filepath": "/recorded/not-mounted/sample.ome.zarr",
+        "UUID": "3935615d-a18d-41d8-af04-e63cfec3a46c",
+        "DestinationType": "plate",
+        "Files": "1",
+    })
+    image = FakeImage(42, "A/1/0", [], annotations=[annotation])
+    conn = FakeConnection(image=image)
+
+    response = image_eligibility(
+        _request("/api/images/42/eligibility/"), 42, conn=conn
+    )
+
+    assert json.loads(response.content) == {"supported": True}
+
+
 def test_plate_capability_and_viewer_redirect(configure_storage):
     _, mount = configure_storage
     write_v2_image(mount / "plate.zarr", plate=True)
@@ -112,6 +145,11 @@ def test_plate_capability_and_viewer_redirect(configure_storage):
     redirect = viewer(redirect_request, conn=conn)
     assert redirect.status_code == 302
     assert redirect["Location"].endswith("?image=42")
+
+    eligible = plate_eligibility(
+        _request("/api/plates/9/eligibility/"), 9, conn=conn
+    )
+    assert json.loads(eligible.content) == {"supported": True}
 
 
 def test_shallow_plate_capability_combines_canonical_pixels_and_result_labels(

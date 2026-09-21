@@ -148,6 +148,82 @@ def _biomero_annotation_paths(image):
     return paths
 
 
+def _has_canonical_annotation(image):
+    """Return whether an object ancestry declares a canonical BIOMERO store.
+
+    This validates the registration contract only. It deliberately avoids
+    resolving storage mappings or touching the filesystem so Open With can use
+    it as a quick first gate.
+    """
+    for owner, values in _ancestry_annotations(image, CANONICAL_PLATE_SOURCE_NAMESPACE):
+        try:
+            if (
+                int(values.get("schema", 0)) == 2
+                and int(values.get("sourceObjectId", 0)) > 0
+                and int(values.get("sourceObjectId", 0)) == int(_string_value(owner, "getId"))
+                and int(values.get("sourceGeneration", 0)) > 0
+                and int(values.get("imageCount", 0)) > 0
+                and int(values.get("labelCount", 0)) >= 0
+                and values.get("interchangeProfile")
+                and values.get("storageRoot")
+                and values.get("relativePath")
+            ):
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _has_registered_store(obj):
+    """Check OMERO registration metadata without reading the Zarr store."""
+    recorded = _recorded_paths(obj)
+    if any(zarr_ancestor(value) is not None for value in recorded):
+        return True
+    if any(zarr_ancestor(value) is not None for value in _biomero_annotation_paths(obj)):
+        return True
+    return _has_canonical_annotation(obj)
+
+
+def image_store_registered(conn, image_id):
+    """Return whether an Image is registered as an in-place OME-Zarr store."""
+    try:
+        image_id = int(image_id)
+    except (TypeError, ValueError):
+        return False
+    image = conn.getObject("Image", image_id)
+    return image is not None and _has_registered_store(image)
+
+
+def plate_store_registered(conn, plate_id):
+    """Return whether a Plate or one of its fields is registered as OME-Zarr."""
+    try:
+        plate_id = int(plate_id)
+    except (TypeError, ValueError):
+        return False
+    plate = conn.getObject("Plate", plate_id)
+    if plate is None:
+        return False
+    if _has_registered_store(plate):
+        return True
+
+    # Legacy in-place plate imports may only retain Fileset registration on
+    # their field Images. Stop at the first registered field and never inspect
+    # Zarr metadata or storage here.
+    wells = getattr(plate, "listChildren", None)
+    if not callable(wells):
+        return False
+    for well in wells():
+        samples = getattr(well, "listChildren", None)
+        if not callable(samples):
+            continue
+        for sample in samples():
+            get_image = getattr(sample, "getImage", None)
+            image = get_image() if callable(get_image) else None
+            if image is not None and _has_registered_store(image):
+                return True
+    return False
+
+
 def zarr_ancestor(recorded_path):
     path = PurePosixPath("/" + str(recorded_path).replace("\\", "/").lstrip("/"))
     parts = path.parts
