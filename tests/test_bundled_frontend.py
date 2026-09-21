@@ -20,6 +20,7 @@ def test_open_with_script_is_bundled():
     assert "setOpenWithEnabledHandler" in script
     assert "setOpenWithUrlProvider" in script
     assert '"plate"' in script
+    assert "window.fetch" not in script
 
 
 def assert_wheel_frontend(wheel):

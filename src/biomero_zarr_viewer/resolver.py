@@ -281,6 +281,14 @@ def _manifest_routes(shallow_relative):
 
     primary = None
     routes = []
+    managed_sources = {}
+
+    def managed(source):
+        key = (str(source.get("storageRoot") or ""), str(source.get("relativePath") or ""))
+        if key not in managed_sources:
+            managed_sources[key] = _managed_relative(*key)
+        return managed_sources[key]
+
     for image in images:
         if not isinstance(image, dict):
             raise StoreNotFound("The shallow manifest has an invalid image entry")
@@ -298,7 +306,7 @@ def _manifest_routes(shallow_relative):
             valid_source = False
         if not valid_source:
             raise StoreNotFound("A shallow image has no canonical source")
-        source_base = _managed_relative(source.get("storageRoot"), source.get("relativePath"))
+        source_base = managed(source)
         source_node = _safe_relative(source.get("nodePath"), allow_dot=True)
         if source_node != image_node:
             raise StoreNotFound("A shallow image source does not match its logical node")
@@ -338,12 +346,13 @@ def _manifest_routes(shallow_relative):
                     valid_label_source = False
                 if not valid_label_source:
                     raise StoreNotFound("A shallow label source is invalid")
-                base = _managed_relative(label_source.get("storageRoot"), label_source.get("relativePath"))
+                base = managed(label_source)
                 physical = base / _safe_relative(label_source.get("nodePath"))
             else:
                 raise StoreNotFound("A shallow label source is invalid")
-            # Resolve now so signed routes can never authorize an escaping path.
-            _contained_directory(physical)
+            # The managed base was resolved and contained above. Individual
+            # declared label nodes are checked when metadata or data is read,
+            # avoiding dozens of redundant bind-mount stats during Open With.
             routes.append(StoreRoute(logical, physical))
     return primary, tuple(routes)
 
