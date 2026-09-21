@@ -572,6 +572,7 @@ export default function App() {
               physicalScale={physicalScale(capability)}
               onViewportChange={setViewport}
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
+              onTilesLoaded={() => setStatus((current) => current.startsWith("Tile warning:") ? "Ready" : current)}
             />
           ) : <div className="loading">{error || status}</div>}
         </main>

@@ -80,7 +80,9 @@ test("returns a persistent server error after three retries", async () => {
   const auth = new AuthenticatedZarrStore(capability("current"), async () => capability("fresh"));
 
   const result = auth.store.get("/0/0.0.0");
-  const rejection = expect(result).rejects.toThrow("500");
+  const rejection = expect(result).rejects.toThrow(
+    "Tile request failed after 4 attempts: 500  (/data/0/0.0.0)",
+  );
   await vi.runAllTimersAsync();
   await rejection;
 

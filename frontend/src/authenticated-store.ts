@@ -77,6 +77,13 @@ export class AuthenticatedZarrStore {
         serverRetries += 1;
         continue;
       }
+      if (isRetryableServerError(response)) {
+        const path = new URL(request.url).pathname;
+        await discard(response);
+        throw new Error(
+          `Tile request failed after ${serverRetries + 1} attempts: ${response.status} ${response.statusText} (${path})`,
+        );
+      }
       return response;
     }
   }

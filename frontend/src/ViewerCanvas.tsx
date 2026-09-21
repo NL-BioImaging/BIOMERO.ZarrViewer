@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ColorPaletteExtension,
   DetailView,
@@ -33,6 +33,7 @@ interface Props {
   physicalScale?: { size: number; unit: string };
   onViewportChange: (state: ViewportState) => void;
   onTileError: (message: string) => void;
+  onTilesLoaded: () => void;
 }
 
 function hexToRgb(value: string): [number, number, number] {
@@ -63,7 +64,20 @@ export function ViewerCanvas({
   physicalScale,
   onViewportChange,
   onTileError,
+  onTilesLoaded,
 }: Props) {
+  const failedLayers = useRef(new Set<string>());
+  const reportTileError = useCallback((layerId: string, error: unknown) => {
+    failedLayers.current.add(layerId);
+    onTileError(error instanceof Error ? error.message : "A tile failed to load");
+  }, [onTileError]);
+  const reportViewportLoad = useCallback((layerId: string) => {
+    failedLayers.current.delete(layerId);
+    if (!failedLayers.current.size) onTilesLoaded();
+  }, [onTilesLoaded]);
+  useEffect(() => {
+    failedLayers.current.clear();
+  }, [loader, labels, z, t]);
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
   const baseLabels = loader[0]?.labels || [];
   const baseSelections = channels.map((channel) => selection(baseLabels, channel.index, z, t));
@@ -98,7 +112,8 @@ export function ViewerCanvas({
         interpolation: "nearest",
         refinementStrategy: "no-overlap",
         excludeBackground: true,
-        onTileError: (error: unknown) => onTileError(error instanceof Error ? error.message : "A label tile failed to load"),
+        onTileError: (error: unknown) => reportTileError(`label:${state.id}`, error),
+        onViewportLoad: () => reportViewportLoad(`label:${state.id}`),
       } as any);
     });
 
@@ -109,7 +124,8 @@ export function ViewerCanvas({
     colors: channels.map((channel) => hexToRgb(channel.color)),
     contrastLimits: channels.map((channel) => [channel.low, channel.high]),
     extensions: [new ColorPaletteExtension()],
-    onTileError: (error: unknown) => onTileError(error instanceof Error ? error.message : "An image tile failed to load"),
+    onTileError: (error: unknown) => reportTileError("image", error),
+    onViewportLoad: () => reportViewportLoad("image"),
   }];
 
   if (showMinimap) {
