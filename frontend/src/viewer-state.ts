@@ -1,6 +1,7 @@
 import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeCameraState } from "./types";
 
 export interface DeepLinkState {
+  view?: "field" | "well" | "plate";
   viewport?: ViewportState;
   z?: number;
   t?: number;
@@ -50,6 +51,8 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const version = params.get("v");
   if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
+  const view = params.get("view");
+  if (view === "field" || view === "well" || view === "plate") state.view = view;
   if (params.has("x") || params.has("y") || params.has("zoom")) {
     state.viewport = {
       x: finite(params.get("x"), 0),
@@ -183,6 +186,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   const params = new URLSearchParams();
   params.set("image", String(imageId));
   params.set("v", "2");
+  if (state.view && state.view !== "field") params.set("view", state.view);
   if (state.viewport) {
     params.set("x", state.viewport.x.toFixed(2));
     params.set("y", state.viewport.y.toFixed(2));

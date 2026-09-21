@@ -351,9 +351,11 @@ All routes are below the standard `/biomero_zarr_viewer/` application mount.
 ```text
 GET /?image=<omero-image-id>
 GET /?plate=<omero-plate-id>
+GET /?well=<omero-well-id>
 
 GET /api/images/<id>/eligibility/
 GET /api/plates/<id>/eligibility/
+GET /api/wells/<id>/eligibility/
 GET /api/images/<id>/capabilities/
 GET /api/plates/<id>/capabilities/
 GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
@@ -369,6 +371,11 @@ the OMERO Fileset or official `biomero.import` /
 store. This keeps menu feedback quick while preserving a truthful first gate.
 The capability routes perform full path, shallow-manifest, and NGFF metadata
 validation when the viewer opens.
+
+Opening an OMERO Well resolves its first readable WellSample Image, retains
+that field as the selected NGFF path, and starts in Well overview mode so all
+fields from the selected well are visible. Image and Plate entry points retain
+their existing behavior.
 
 Unreadable OMERO objects return 404 from full capabilities. Unsupported or
 malformed stores return a stable JSON error code. Successful data responses

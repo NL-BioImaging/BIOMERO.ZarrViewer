@@ -33,6 +33,8 @@ from .resolver import (
     plate_store_registered,
     resolve_image_store,
     resolve_plate_store,
+    resolve_well_store,
+    well_store_registered,
 )
 from .roi import render_recipe_png, render_roi_png
 from .settings import internal_prefix, mount_root
@@ -91,6 +93,18 @@ def api_errors(function):
 @require_GET
 @login_required(setGroupContext=True)
 def viewer(request, conn=None, **kwargs):
+    well_id = request.GET.get("well")
+    if well_id and not request.GET.get("image"):
+        try:
+            store = resolve_well_store(conn, well_id)
+            query = request.GET.copy()
+            query.pop("well", None)
+            query["image"] = str(store.image_id)
+            query["v"] = "2"
+            query["view"] = "well"
+            return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
+        except ViewerError:
+            pass
     plate_id = request.GET.get("plate")
     if plate_id and not request.GET.get("image"):
         try:
@@ -132,6 +146,12 @@ def image_eligibility(request, image_id, conn=None, **kwargs):
 @login_required(setGroupContext=True)
 def plate_eligibility(request, plate_id, conn=None, **kwargs):
     return JsonResponse({"supported": plate_store_registered(conn, plate_id)})
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def well_eligibility(request, well_id, conn=None, **kwargs):
+    return JsonResponse({"supported": well_store_registered(conn, well_id)})
 
 
 def _capability_response(request, conn, store, *, require_plate=False):

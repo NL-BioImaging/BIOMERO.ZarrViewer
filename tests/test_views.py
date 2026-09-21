@@ -21,6 +21,7 @@ from biomero_zarr_viewer.views import (
     render_png,
     roi_png,
     viewer,
+    well_eligibility,
 )
 
 from .conftest import write_v2_image
@@ -150,6 +151,29 @@ def test_plate_capability_and_viewer_redirect(configure_storage):
         _request("/api/plates/9/eligibility/"), 9, conn=conn
     )
     assert json.loads(eligible.content) == {"supported": True}
+
+
+def test_well_eligibility_and_viewer_redirect_to_well_overview(configure_storage):
+    _, mount = configure_storage
+    write_v2_image(mount / "plate.zarr", plate=True)
+    image = FakeImage(42, "A/1/0", [
+        FakeOriginalFile("/recorded/plate.zarr/A/1/0/", ".zattrs")
+    ])
+    well = FakeParent(2351)
+    well.listChildren = lambda: [FakeWellSample(7, image)]
+    conn = FakeConnection(image=image, well=well)
+
+    eligible = well_eligibility(
+        _request("/api/wells/2351/eligibility/"), 2351, conn=conn
+    )
+    assert json.loads(eligible.content) == {"supported": True}
+
+    request = _request("/?well=2351")
+    request.GET = request.GET.copy()
+    request.GET["well"] = "2351"
+    redirect = viewer(request, conn=conn)
+    assert redirect.status_code == 302
+    assert redirect["Location"].endswith("?image=42&v=2&view=well")
 
 
 def test_shallow_plate_capability_combines_canonical_pixels_and_result_labels(

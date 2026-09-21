@@ -6,7 +6,14 @@ import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from .errors import AmbiguousStore, ObjectNotFound, PlateNotFound, StoreNotFound, UnsafePath
+from .errors import (
+    AmbiguousStore,
+    ObjectNotFound,
+    PlateNotFound,
+    StoreNotFound,
+    UnsafePath,
+    WellNotFound,
+)
 from .settings import mount_root, source_root
 
 BIOMERO_IMPORT_NAMESPACE = "biomero.import"
@@ -221,6 +228,26 @@ def plate_store_registered(conn, plate_id):
             image = get_image() if callable(get_image) else None
             if image is not None and _has_registered_store(image):
                 return True
+    return False
+
+
+def well_store_registered(conn, well_id):
+    """Return whether a Well contains a registered OME-Zarr field Image."""
+    try:
+        well_id = int(well_id)
+    except (TypeError, ValueError):
+        return False
+    well = conn.getObject("Well", well_id)
+    if well is None:
+        return False
+    samples = getattr(well, "listChildren", None)
+    if not callable(samples):
+        return False
+    for sample in samples():
+        get_image = getattr(sample, "getImage", None)
+        image = get_image() if callable(get_image) else None
+        if image is not None and _has_registered_store(image):
+            return True
     return False
 
 
@@ -525,3 +552,29 @@ def resolve_plate_store(conn, plate_id):
             except (ObjectNotFound, StoreNotFound):
                 continue
     raise StoreNotFound("The plate contains no readable in-place OME-Zarr fields")
+
+
+def resolve_well_store(conn, well_id):
+    """Resolve an OMERO Well through its first readable field Image."""
+    try:
+        well_id = int(well_id)
+    except (TypeError, ValueError) as exc:
+        raise WellNotFound("Well not found") from exc
+    well = conn.getObject("Well", well_id)
+    if well is None:
+        raise WellNotFound("Well not found")
+
+    samples = getattr(well, "listChildren", None)
+    if not callable(samples):
+        raise StoreNotFound("The well contains no readable OME-Zarr fields")
+    for sample in samples():
+        get_image = getattr(sample, "getImage", None)
+        image = get_image() if callable(get_image) else None
+        image_id = _string_value(image, "getId") if image is not None else ""
+        if not image_id:
+            continue
+        try:
+            return resolve_image_store(conn, image_id)
+        except (ObjectNotFound, StoreNotFound):
+            continue
+    raise StoreNotFound("The well contains no readable in-place OME-Zarr fields")

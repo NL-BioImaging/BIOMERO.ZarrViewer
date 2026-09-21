@@ -38732,19 +38732,19 @@ const i0 = {
 function jn(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => Ik.set(i, e));
 }
-jn([void 0, 1], () => import("./raw-HYXMyZHR.js").then((t) => t.default));
-jn(5, () => import("./lzw-GJlkAUpB.js").then((t) => t.default));
+jn([void 0, 1], () => import("./raw-t5uE_bPx.js").then((t) => t.default));
+jn(5, () => import("./lzw-MZkQFqoG.js").then((t) => t.default));
 jn(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-jn(7, () => import("./jpeg-BssOc7aO.js").then((t) => t.default));
-jn([8, 32946], () => import("./deflate-CszoD8f4.js").then((t) => t.default));
-jn(32773, () => import("./packbits-FkEl6Df3.js").then((t) => t.default));
+jn(7, () => import("./jpeg-8j9TpiXU.js").then((t) => t.default));
+jn([8, 32946], () => import("./deflate-4WShtk6P.js").then((t) => t.default));
+jn(32773, () => import("./packbits-CRDYTxvg.js").then((t) => t.default));
 jn(
   34887,
-  () => import("./lerc-DLbSqbaS.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-wdZo19rQ.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-jn(50001, () => import("./webimage-DO85CQBr.js").then((t) => t.default));
+jn(50001, () => import("./webimage-CNtncyJx.js").then((t) => t.default));
 function Bk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -52242,54 +52242,54 @@ function Gx(t) {
 function LY(t = window.location.search) {
   const e = new URLSearchParams(t), i = e.get("v");
   if (i !== "1" && i !== "2") return {};
-  const n = {};
-  (e.has("x") || e.has("y") || e.has("zoom")) && (n.viewport = {
+  const n = {}, s = e.get("view");
+  (s === "field" || s === "well" || s === "plate") && (n.view = s), (e.has("x") || e.has("y") || e.has("zoom")) && (n.viewport = {
     x: Ht(e.get("x"), 0),
     y: Ht(e.get("y"), 0),
     zoom: Ht(e.get("zoom"), 0, -30, 30)
   }), e.has("z") && (n.z = Math.floor(Ht(e.get("z"), 0, 0))), e.has("t") && (n.t = Math.floor(Ht(e.get("t"), 0, 0)));
-  const s = e.get("projection");
-  (s === "mip" || s === "mean" || s === "min") && (n.projection = s), e.get("render") === "3d" && (n.renderMode = "3d"), e.has("volumeLevel") && (n.volumeLevel = Math.floor(Ht(e.get("volumeLevel"), 0, 0, 1024))), (e.has("orbit") || e.has("tilt") || e.has("zoom3d")) && (n.volumeCamera = {
+  const o = e.get("projection");
+  (o === "mip" || o === "mean" || o === "min") && (n.projection = o), e.get("render") === "3d" && (n.renderMode = "3d"), e.has("volumeLevel") && (n.volumeLevel = Math.floor(Ht(e.get("volumeLevel"), 0, 0, 1024))), (e.has("orbit") || e.has("tilt") || e.has("zoom3d")) && (n.volumeCamera = {
     orbit: Ht(e.get("orbit"), 0, -360, 360),
     tilt: Ht(e.get("tilt"), 0, -90, 90),
     zoom: Ht(e.get("zoom3d"), 0, -30, 30)
   }), e.get("field") && (n.field = e.get("field"));
-  const o = (e.get("roi") || "").split(",");
-  if (o.length === 4 && o.every((f) => /^\d+$/.test(f))) {
-    const [f, d, A, p] = o.map(Number);
-    A > f && p > d && (n.roi = { x0: f, y0: d, x1: A, y1: p });
+  const l = (e.get("roi") || "").split(",");
+  if (l.length === 4 && l.every((d) => /^\d+$/.test(d))) {
+    const [d, A, p, m] = l.map(Number);
+    p > d && m > A && (n.roi = { x0: d, y0: A, x1: p, y1: m });
   }
-  const l = (e.get("sourceChannels") || "").split(",").filter(Boolean).map((f) => _l(f));
-  if (l.length && l.every((f) => f != null) && (n.sourceChannels = [...new Set(l)].slice(0, 4)), n.labelPath = Gx(e.get("labelPath")), n.labelChannel = _l(e.get("labelChannel")), n.labelValue = _l(e.get("labelValue")), i === "2") {
-    const f = e.get("overlays");
-    if (f && f.length <= 2e4)
+  const u = (e.get("sourceChannels") || "").split(",").filter(Boolean).map((d) => _l(d));
+  if (u.length && u.every((d) => d != null) && (n.sourceChannels = [...new Set(u)].slice(0, 4)), n.labelPath = Gx(e.get("labelPath")), n.labelChannel = _l(e.get("labelChannel")), n.labelValue = _l(e.get("labelValue")), i === "2") {
+    const d = e.get("overlays");
+    if (d && d.length <= 2e4)
       try {
-        const d = JSON.parse(f);
-        Array.isArray(d) && (n.overlays = d.slice(0, 8).flatMap((A) => {
-          if (!A || typeof A != "object") return [];
-          const p = A, m = Gx(typeof p.labelPath == "string" ? p.labelPath : null), y = _l(p.labelChannel == null ? null : String(p.labelChannel));
-          if (!!m == !!y) return [];
-          const v = Array.isArray(p.values) ? p.values : [], C = [...new Set(v.map((w) => _l(String(w))).filter((w) => w != null))].slice(0, 8), S = p.mode === "fill" || p.mode === "outline-fill" ? p.mode : "outline", b = typeof p.color == "string" && /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : void 0;
+        const A = JSON.parse(d);
+        Array.isArray(A) && (n.overlays = A.slice(0, 8).flatMap((p) => {
+          if (!p || typeof p != "object") return [];
+          const m = p, y = Gx(typeof m.labelPath == "string" ? m.labelPath : null), v = _l(m.labelChannel == null ? null : String(m.labelChannel));
+          if (!!y == !!v) return [];
+          const C = Array.isArray(m.values) ? m.values : [], S = [...new Set(C.map((I) => _l(String(I))).filter((I) => I != null))].slice(0, 8), b = m.mode === "fill" || m.mode === "outline-fill" ? m.mode : "outline", w = typeof m.color == "string" && /^#[0-9a-f]{6}$/i.test(m.color) ? m.color : void 0;
           return [{
-            ...m ? { labelPath: m } : { labelChannel: y },
-            ...C.length ? { values: C } : {},
-            mode: S,
-            color: b,
-            opacity: Ht(p.opacity, S === "fill" ? 0.3 : 1, 0, 1),
-            outlineWidth: Math.floor(Ht(p.outlineWidth, 2, 1, 8))
+            ...y ? { labelPath: y } : { labelChannel: v },
+            ...S.length ? { values: S } : {},
+            mode: b,
+            color: w,
+            opacity: Ht(m.opacity, b === "fill" ? 0.3 : 1, 0, 1),
+            outlineWidth: Math.floor(Ht(m.outlineWidth, 2, 1, 8))
           }];
         }));
       } catch {
       }
   }
-  const u = e.get("storeUuid");
-  u && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(u) && (n.storeUuid = u.toLowerCase());
-  for (const [f, d] of [["channels", "channels"], ["labels", "labels"]]) {
-    const A = e.get(f);
-    if (!(!A || A.length > 2e4))
+  const f = e.get("storeUuid");
+  f && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(f) && (n.storeUuid = f.toLowerCase());
+  for (const [d, A] of [["channels", "channels"], ["labels", "labels"]]) {
+    const p = e.get(d);
+    if (!(!p || p.length > 2e4))
       try {
-        const p = JSON.parse(A);
-        Array.isArray(p) && (n[d] = p);
+        const m = JSON.parse(p);
+        Array.isArray(m) && (n[A] = m);
       } catch {
       }
   }
@@ -52333,7 +52333,7 @@ function VY(t, e) {
 }
 function HY(t, e) {
   const i = new URLSearchParams();
-  return i.set("image", String(t)), i.set("v", "2"), e.viewport && (i.set("x", e.viewport.x.toFixed(2)), i.set("y", e.viewport.y.toFixed(2)), i.set("zoom", e.viewport.zoom.toFixed(3))), i.set("z", String(Math.max(0, Math.floor(e.z)))), i.set("t", String(Math.max(0, Math.floor(e.t)))), e.projection && e.projection !== "slice" && i.set("projection", e.projection), e.renderMode === "3d" && i.set("render", "3d"), e.renderMode === "3d" && e.volumeLevel != null && i.set("volumeLevel", String(Math.max(0, Math.floor(e.volumeLevel)))), e.renderMode === "3d" && e.volumeCamera && (i.set("orbit", e.volumeCamera.orbit.toFixed(2)), i.set("tilt", e.volumeCamera.tilt.toFixed(2)), i.set("zoom3d", e.volumeCamera.zoom.toFixed(3))), e.field && i.set("field", e.field), e.roi && i.set("roi", [e.roi.x0, e.roi.y0, e.roi.x1, e.roi.y1].join(",")), e.sourceChannels?.length && i.set("sourceChannels", e.sourceChannels.join(",")), e.labelPath && i.set("labelPath", e.labelPath), e.labelChannel != null && i.set("labelChannel", String(e.labelChannel)), e.labelValue != null && i.set("labelValue", String(e.labelValue)), e.storeUuid && i.set("storeUuid", e.storeUuid), e.overlays?.length && i.set("overlays", JSON.stringify(e.overlays.slice(0, 8))), e.channels && i.set("channels", JSON.stringify(e.channels.map(({ index: n, visible: s, color: o, low: l, high: u }) => ({ index: n, visible: s, color: o, low: l, high: u })))), e.labels && i.set("labels", JSON.stringify(e.labels.map(({ id: n, visible: s, opacity: o, mode: l, color: u, outlineWidth: f, highlightValues: d }) => ({ id: n, visible: s, opacity: o, mode: l, outlineWidth: f, ...u ? { color: u } : {}, ...d?.length ? { highlightValues: d } : {} })))), `${window.location.pathname}?${i.toString()}`;
+  return i.set("image", String(t)), i.set("v", "2"), e.view && e.view !== "field" && i.set("view", e.view), e.viewport && (i.set("x", e.viewport.x.toFixed(2)), i.set("y", e.viewport.y.toFixed(2)), i.set("zoom", e.viewport.zoom.toFixed(3))), i.set("z", String(Math.max(0, Math.floor(e.z)))), i.set("t", String(Math.max(0, Math.floor(e.t)))), e.projection && e.projection !== "slice" && i.set("projection", e.projection), e.renderMode === "3d" && i.set("render", "3d"), e.renderMode === "3d" && e.volumeLevel != null && i.set("volumeLevel", String(Math.max(0, Math.floor(e.volumeLevel)))), e.renderMode === "3d" && e.volumeCamera && (i.set("orbit", e.volumeCamera.orbit.toFixed(2)), i.set("tilt", e.volumeCamera.tilt.toFixed(2)), i.set("zoom3d", e.volumeCamera.zoom.toFixed(3))), e.field && i.set("field", e.field), e.roi && i.set("roi", [e.roi.x0, e.roi.y0, e.roi.x1, e.roi.y1].join(",")), e.sourceChannels?.length && i.set("sourceChannels", e.sourceChannels.join(",")), e.labelPath && i.set("labelPath", e.labelPath), e.labelChannel != null && i.set("labelChannel", String(e.labelChannel)), e.labelValue != null && i.set("labelValue", String(e.labelValue)), e.storeUuid && i.set("storeUuid", e.storeUuid), e.overlays?.length && i.set("overlays", JSON.stringify(e.overlays.slice(0, 8))), e.channels && i.set("channels", JSON.stringify(e.channels.map(({ index: n, visible: s, color: o, low: l, high: u }) => ({ index: n, visible: s, color: o, low: l, high: u })))), e.labels && i.set("labels", JSON.stringify(e.labels.map(({ id: n, visible: s, opacity: o, mode: l, color: u, outlineWidth: f, highlightValues: d }) => ({ id: n, visible: s, opacity: o, mode: l, outlineWidth: f, ...u ? { color: u } : {}, ...d?.length ? { highlightValues: d } : {} })))), `${window.location.pathname}?${i.toString()}`;
 }
 function jY(t, e, i) {
   const n = Math.max(1, t.x1 - t.x0), s = Math.max(1, t.y1 - t.y0), o = Math.max(Number.EPSILON, Math.min(e / n, i / s) * 0.9);
@@ -53109,7 +53109,7 @@ function BW(t, e, i) {
   return o && n.searchParams.set("storeUuid", o), n.toString();
 }
 function wW() {
-  const t = ie.useMemo(() => xY(), []), e = ie.useMemo(() => LY(), []), [i, n] = ie.useState(null), [s, o] = ie.useState(null), [l, u] = ie.useState(null), [f, d] = ie.useState("Loading image metadata…"), [A, p] = ie.useState(null), [m, y] = ie.useState(e.field), [v, C] = ie.useState([]), [S, b] = ie.useState([]), [w, I] = ie.useState([]), [N, U] = ie.useState(e.z || 0), [L, z] = ie.useState(e.t || 0), [q, Y] = ie.useState(e.projection || "slice"), [Z, ee] = ie.useState(e.viewport), [oe, $] = ie.useState(e.renderMode || "2d"), [le, me] = ie.useState(e.volumeLevel), [x, B] = ie.useState(e.volumeCamera), [M, H] = ie.useState(0), [V, R] = ie.useState(null), [O, F] = ie.useState("field"), [J, re] = ie.useState(0), [ce, de] = ie.useState(!0), [ye, Me] = ie.useState(!0), [ke, it] = vW(), yi = ie.useRef(!1), Yn = ie.useRef(""), Kt = ie.useRef(q), Be = ie.useMemo(() => l ? Jx(l.image, q) : null, [l, q]), ve = l?.path === m ? l : null, Yi = ie.useMemo(() => Hb(v), [v]), js = ie.useMemo(
+  const t = ie.useMemo(() => xY(), []), e = ie.useMemo(() => LY(), []), [i, n] = ie.useState(null), [s, o] = ie.useState(null), [l, u] = ie.useState(null), [f, d] = ie.useState("Loading image metadata…"), [A, p] = ie.useState(null), [m, y] = ie.useState(e.field), [v, C] = ie.useState([]), [S, b] = ie.useState([]), [w, I] = ie.useState([]), [N, U] = ie.useState(e.z || 0), [L, z] = ie.useState(e.t || 0), [q, Y] = ie.useState(e.projection || "slice"), [Z, ee] = ie.useState(e.viewport), [oe, $] = ie.useState(e.renderMode || "2d"), [le, me] = ie.useState(e.volumeLevel), [x, B] = ie.useState(e.volumeCamera), [M, H] = ie.useState(0), [V, R] = ie.useState(null), [O, F] = ie.useState(e.view || "field"), [J, re] = ie.useState(0), [ce, de] = ie.useState(!0), [ye, Me] = ie.useState(!0), [ke, it] = vW(), yi = ie.useRef(!1), Yn = ie.useRef(""), Kt = ie.useRef(q), Be = ie.useMemo(() => l ? Jx(l.image, q) : null, [l, q]), ve = l?.path === m ? l : null, Yi = ie.useMemo(() => Hb(v), [v]), js = ie.useMemo(
     () => ve && V != null ? tW(ve.image, Yi.length, V) : [],
     [ve, Yi.length, V]
   ), ua = ie.useMemo(() => jb(js), [js]), wt = ie.useMemo(
@@ -53220,6 +53220,7 @@ function wW() {
     if (!t || !l) return;
     const Ce = window.setTimeout(() => {
       const ri = HY(t, {
+        view: O,
         viewport: Z,
         z: N,
         t: L,
@@ -53241,7 +53242,7 @@ function wW() {
       window.history.replaceState(null, "", ri);
     }, 250);
     return () => window.clearTimeout(Ce);
-  }, [t, l, i, Z, N, L, q, ln, wt, x, m, v, w]), A && !i ? /* @__PURE__ */ D.jsxs("main", { className: "fatal", children: [
+  }, [t, l, i, O, Z, N, L, q, ln, wt, x, m, v, w]), A && !i ? /* @__PURE__ */ D.jsxs("main", { className: "fatal", children: [
     /* @__PURE__ */ D.jsx("h1", { children: "OME-Zarr Viewer" }),
     /* @__PURE__ */ D.jsx("p", { children: A })
   ] }) : /* @__PURE__ */ D.jsxs("div", { className: "app-shell", children: [

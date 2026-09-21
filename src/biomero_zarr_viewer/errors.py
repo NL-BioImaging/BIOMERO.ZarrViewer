@@ -17,6 +17,11 @@ class PlateNotFound(ViewerError):
     status = 404
 
 
+class WellNotFound(ViewerError):
+    code = "well_not_found"
+    status = 404
+
+
 class StoreNotFound(ViewerError):
     code = "zarr_store_not_found"
     status = 422

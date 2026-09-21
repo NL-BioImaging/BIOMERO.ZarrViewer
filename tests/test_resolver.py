@@ -4,7 +4,12 @@ from pathlib import Path
 import pytest
 
 from biomero_zarr_viewer.errors import AmbiguousStore, ObjectNotFound, UnsafePath
-from biomero_zarr_viewer.resolver import resolve_image_store, resolve_plate_store, zarr_ancestor
+from biomero_zarr_viewer.resolver import (
+    resolve_image_store,
+    resolve_plate_store,
+    resolve_well_store,
+    zarr_ancestor,
+)
 
 from .fakes import FakeAnnotation, FakeConnection, FakeImage, FakeOriginalFile, FakeParent, FakeWellSample
 
@@ -157,6 +162,22 @@ def test_resolves_selected_plate_through_first_field(configure_storage):
     plate.listChildren = lambda: [well]
 
     resolved = resolve_plate_store(FakeConnection(image=image, plate=plate), 9)
+
+    assert resolved.image_id == 42
+    assert resolved.path == store.resolve()
+
+
+def test_resolves_selected_well_through_first_field(configure_storage):
+    _, mount = configure_storage
+    store = mount / "plates/cells.ome.zarr"
+    store.mkdir(parents=True)
+    plate = FakeParent(9, annotations=[biomero_annotation("/recorded/plates/cells.ome.zarr")])
+    well = FakeParent(2351, parents=[plate])
+    image = FakeImage(42, "A/1/0", [], parents=[well])
+    sample = FakeWellSample(7, image, parents=[well])
+    well.listChildren = lambda: [sample]
+
+    resolved = resolve_well_store(FakeConnection(image=image, well=well), 2351)
 
     assert resolved.image_id == 42
     assert resolved.path == store.resolve()

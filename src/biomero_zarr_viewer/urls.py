@@ -35,6 +35,11 @@ urlpatterns = [
         name="biomero_zarr_viewer_plate_eligibility",
     ),
     path(
+        "api/wells/<int:well_id>/eligibility/",
+        views.well_eligibility,
+        name="biomero_zarr_viewer_well_eligibility",
+    ),
+    path(
         "api/images/<int:image_id>/roi.png",
         views.roi_png,
         name="biomero_zarr_viewer_roi_png",
