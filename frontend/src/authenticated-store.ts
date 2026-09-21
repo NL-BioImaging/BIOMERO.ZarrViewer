@@ -3,6 +3,28 @@ import type { Capability } from "./types";
 
 type RefreshCapability = () => Promise<Capability>;
 
+const SERVER_RETRY_DELAYS_MS = [75, 200, 500];
+
+function isRetryableServerError(response: Response): boolean {
+  return response.status >= 500 && response.status <= 504;
+}
+
+async function discard(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // A response body may already be closed by the browser. Retrying the
+    // authorized request remains safe and bounded.
+  }
+}
+
+function waitBeforeRetry(baseDelayMs: number): Promise<void> {
+  // Jitter prevents a viewport full of failed chunks from retrying in lockstep
+  // against Docker Desktop, NFS, or another busy shared filesystem.
+  const delayMs = baseDelayMs + Math.floor(Math.random() * baseDelayMs);
+  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+}
+
 export class AuthenticatedZarrStore {
   private capability: Capability;
   private refreshCapability: RefreshCapability;
@@ -38,16 +60,25 @@ export class AuthenticatedZarrStore {
   }
 
   private async authorizedFetch(request: Request): Promise<Response> {
-    let response = await fetch(this.requestWithContext(request));
-    if (response.status === 401 || response.status === 403) {
-      await this.refresh();
-      response = await fetch(this.requestWithContext(request));
-    } else if (response.status >= 500 && response.status <= 504) {
-      // Docker/NFS-backed read-only mounts can occasionally return a transient
-      // I/O error for a chunk that is immediately readable on the next call.
-      response = await fetch(this.requestWithContext(request));
+    let refreshed = false;
+    let serverRetries = 0;
+
+    while (true) {
+      const response = await fetch(this.requestWithContext(request));
+      if ((response.status === 401 || response.status === 403) && !refreshed) {
+        await discard(response);
+        await this.refresh();
+        refreshed = true;
+        continue;
+      }
+      if (isRetryableServerError(response) && serverRetries < SERVER_RETRY_DELAYS_MS.length) {
+        await discard(response);
+        await waitBeforeRetry(SERVER_RETRY_DELAYS_MS[serverRetries]);
+        serverRetries += 1;
+        continue;
+      }
+      return response;
     }
-    return response;
   }
 }
 
