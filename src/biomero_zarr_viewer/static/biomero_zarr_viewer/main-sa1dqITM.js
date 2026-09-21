@@ -38825,19 +38825,19 @@ const t0 = {
 function jn(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => Nk.set(i, e));
 }
-jn([void 0, 1], () => import("./raw-0iML200g.js").then((t) => t.default));
-jn(5, () => import("./lzw-CpkpDYoU.js").then((t) => t.default));
+jn([void 0, 1], () => import("./raw-a5FVc6Ct.js").then((t) => t.default));
+jn(5, () => import("./lzw-CvMbr4hS.js").then((t) => t.default));
 jn(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-jn(7, () => import("./jpeg-F-Sfp2y8.js").then((t) => t.default));
-jn([8, 32946], () => import("./deflate-Bnc5ZqZd.js").then((t) => t.default));
-jn(32773, () => import("./packbits-CZo-JaFO.js").then((t) => t.default));
+jn(7, () => import("./jpeg-CSQTxzXK.js").then((t) => t.default));
+jn([8, 32946], () => import("./deflate-BBMnK_p5.js").then((t) => t.default));
+jn(32773, () => import("./packbits-BOWR6xt4.js").then((t) => t.default));
 jn(
   34887,
-  () => import("./lerc-DykhGrym.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-rkxHejbj.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-jn(50001, () => import("./webimage-Cj-xC7vB.js").then((t) => t.default));
+jn(50001, () => import("./webimage-BUtB81KP.js").then((t) => t.default));
 function Pk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -51977,7 +51977,7 @@ class TW {
   }
   async authorizedFetch(e) {
     let i = await fetch(this.requestWithContext(e));
-    return (i.status === 401 || i.status === 403) && (await this.refresh(), i = await fetch(this.requestWithContext(e))), i;
+    return i.status === 401 || i.status === 403 ? (await this.refresh(), i = await fetch(this.requestWithContext(e))) : i.status >= 500 && i.status <= 504 && (i = await fetch(this.requestWithContext(e))), i;
   }
 }
 class r_ {

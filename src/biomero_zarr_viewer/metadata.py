@@ -232,6 +232,35 @@ def _labels(root, image_path, version):
     return result
 
 
+def inspect_label(root, logical_path, version, *, label_id=0):
+    """Inspect one label group whose physical and logical locations differ."""
+    root = Path(root)
+    metadata = _metadata_at(root, ".", version)
+    multiscales = metadata.get("multiscales")
+    if not isinstance(multiscales, list) or not multiscales:
+        raise InvalidMetadata(f"Label image '{logical_path}' has no multiscales metadata")
+    datasets = _datasets(multiscales[0])
+    dtype = _array_dtype(root, datasets[0]["path"], version)
+    if not _is_integer_dtype(dtype):
+        raise InvalidMetadata(f"Label image '{logical_path}' does not use integer pixels")
+    display = metadata.get("image-label", {})
+    if not isinstance(display, dict):
+        display = {}
+    item = {
+        "id": f"label-{label_id}",
+        "name": str(display.get("name") or PurePosixPath(logical_path).name),
+        "path": str(logical_path),
+        "axes": _axes(multiscales[0]),
+        "datasets": datasets,
+    }
+    color = _normalize_color(display.get("color"))
+    if color:
+        item["color"] = color
+    if isinstance(display.get("opacity"), (int, float)):
+        item["opacity"] = max(0.0, min(1.0, float(display["opacity"])))
+    return item
+
+
 def _plate_model(root, plate, version, recorded_files):
     rows = plate.get("rows", [])
     columns = plate.get("columns", [])

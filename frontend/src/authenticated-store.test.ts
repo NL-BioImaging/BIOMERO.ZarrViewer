@@ -47,3 +47,19 @@ test("resolves a same-origin relative data gateway URL", async () => {
   ]);
   vi.unstubAllGlobals();
 });
+
+test("retries one transient server error without refreshing context", async () => {
+  const statuses = [500, 200];
+  const fetchMock = vi.fn(async () => new Response(
+    new Uint8Array([1]), { status: statuses.shift() },
+  ));
+  vi.stubGlobal("fetch", fetchMock);
+  const refresh = vi.fn(async () => capability("fresh"));
+
+  const auth = new AuthenticatedZarrStore(capability("current"), refresh);
+  await auth.store.get("/0/0.0.0");
+
+  expect(fetchMock).toHaveBeenCalledTimes(2);
+  expect(refresh).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
+});

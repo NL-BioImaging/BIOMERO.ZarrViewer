@@ -163,10 +163,29 @@ The viewer can locate a store in either of these ways:
 2. the Image or its readable Dataset/Plate/Screen ancestry has a structured
    `biomero.import` map annotation containing `UUID`, `Filepath`,
    `DestinationType`, and `Files`.
+3. a readable Plate has a BIOMERO schema-2 `biomero.zarr.plate-source`
+   annotation that identifies its canonical managed OME-Zarr store.
 
 The BIOMERO importer produces the second form for in-place imports, including
 plate imports whose individual OMERO Images are named with NGFF field paths
 such as `A/1/0`.
+
+### Canonical and shallow BIOMERO stores
+
+The viewer reconstructs BIOMERO RFC-8 shallow results as one logical store.
+Intensity pixels and plate metadata come from the canonical source recorded in
+`.biomero-shallow.json`; label subtrees retained in the shallow result remain
+at their result paths. This permits labels such as
+`A/1/0/labels/labels_nuclei` to be displayed over canonical `A/1/0` pixels
+without copying the intensity pyramid.
+
+Managed locators such as `group-3-data` are resolved only through the trusted
+BIOMERO group mapping. Set `OMERO_BIOMERO_GROUP_MAPPINGS_FILE` to the JSON
+mapping used by the importer, or set `OMERO_BIOMERO_CONFIG_FILE` to a BIOMERO
+configuration containing `group_mappings`. Both the canonical store and every
+declared label route must resolve below `mount_root`; unsafe, missing, invalid,
+or ambiguous routes are rejected. Existing complete OME-Zarr stores continue
+to use the Fileset and `biomero.import` resolution paths unchanged.
 
 Another importer can therefore be used, but it must provide one of those
 links. Its recorded store path must be below `source_root`, and the matching

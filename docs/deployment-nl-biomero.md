@@ -180,6 +180,22 @@ omero config set omero.web.zarr_viewer.mount_root /data
 
 Nginx's `alias` must expose the same relative tree and needs read-only access.
 
+Canonical Plate annotations and shallow-result manifests use managed storage
+roots such as `group-0-data`. Keep the same read-only group mapping available
+to OMERO.web:
+
+```yaml
+environment:
+  OMERO_BIOMERO_GROUP_MAPPINGS_FILE: /opt/omero/web/OMERO.web/var/group-mappings.json
+volumes:
+  - ./web/group-mappings.json:/opt/omero/web/OMERO.web/var/group-mappings.json:ro
+```
+
+The viewer also accepts `group_mappings` from `OMERO_BIOMERO_CONFIG_FILE`.
+NL-BIOMERO already supplies both files. An installation that only views
+complete, directly imported OME-Zarr stores does not need this additional
+mapping.
+
 ## 5. Verify either deployment
 
 1. Sign in through the Nginx endpoint: port 4081 for Windows development or

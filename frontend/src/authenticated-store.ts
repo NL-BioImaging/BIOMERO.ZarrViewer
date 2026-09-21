@@ -42,6 +42,10 @@ export class AuthenticatedZarrStore {
     if (response.status === 401 || response.status === 403) {
       await this.refresh();
       response = await fetch(this.requestWithContext(request));
+    } else if (response.status >= 500 && response.status <= 504) {
+      // Docker/NFS-backed read-only mounts can occasionally return a transient
+      // I/O error for a chunk that is immediately readable on the next call.
+      response = await fetch(this.requestWithContext(request));
     }
     return response;
   }

@@ -30,7 +30,7 @@ def active_group_id(request, conn):
     return int(group_id)
 
 
-def make_read_context(request, conn, image_id, store_relative):
+def make_read_context(request, conn, image_id, store_relative, routes=()):
     issued_at = datetime.now(timezone.utc)
     claims = {
         "v": TOKEN_VERSION,
@@ -40,6 +40,11 @@ def make_read_context(request, conn, image_id, store_relative):
         "store": str(store_relative).replace("\\", "/").strip("/"),
         "operations": ["read"],
     }
+    if routes:
+        claims["routes"] = [
+            [str(route.logical).replace("\\", "/"), str(route.physical).replace("\\", "/")]
+            for route in routes
+        ]
     token = signing.dumps(claims, salt=TOKEN_SALT, compress=True)
     expires = issued_at + timedelta(seconds=context_ttl_seconds())
     return token, expires
