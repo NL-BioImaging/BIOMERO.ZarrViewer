@@ -1,0 +1,53 @@
+site_name: BIOMERO OME-Zarr Viewer
+site_description: Authenticated viewing of BIOMERO-managed OME-Zarr data in OMERO.web
+site_url: https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/
+repo_url: https://github.com/NL-BioImaging/BIOMERO.ZarrViewer
+repo_name: NL-BioImaging/BIOMERO.ZarrViewer
+edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  logo: assets/biomero-logo.svg
+  favicon: assets/biomero-logo.svg
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: teal
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: teal
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Viewer guide: viewer-guide.md
+  - Deployment:
+      - NL-BIOMERO: deployment-nl-biomero.md
+      - OMERO deployment kit: deployment-omero-deployment-kit.md
+  - Development:
+      - Compatibility matrix: compatibility-spike.md
+      - Open-source provenance: open-source-provenance.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - tables
+  - toc:
+      permalink: true
+
+strict: true

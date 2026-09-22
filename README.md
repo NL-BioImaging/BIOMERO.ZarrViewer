@@ -1,4 +1,17 @@
-# BIOMERO OME-Zarr Viewer
+# <img src="docs/assets/biomero-logo.svg" alt="BIOMERO" height="28" style="height:28px; width:auto; vertical-align:middle;"> BIOMERO OME-Zarr Viewer
+
+[![CI](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/actions/workflows/ci.yml/badge.svg)](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/actions/workflows/ci.yml)
+[![Documentation](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/actions/workflows/docs.yml/badge.svg)](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/)
+[![PyPI](https://img.shields.io/pypi/v/biomero-zarr-viewer)](https://pypi.org/project/biomero-zarr-viewer/)
+[![License: AGPL v3+](https://img.shields.io/badge/License-AGPL_v3%2B-blue.svg)](LICENSE)
+
+> [!IMPORTANT]
+> **This package is part of the [BIOMERO ecosystem](https://github.com/NL-BioImaging).**
+> For a complete deployment with OMERO, import, analysis, provenance, shared
+> storage, and the required authenticated Nginx route, start with the
+> [NL-BIOMERO documentation](https://nl-bioimaging.github.io/NL-BIOMERO/).
+> Installing this Python package alone does not provide a working standalone
+> viewer.
 
 BIOMERO OME-Zarr Viewer is a read-only
 [OMERO.web](https://omero.readthedocs.io/en/stable/developers/Web.html)
@@ -12,19 +25,24 @@ OME-Zarr data first.
 
 ## Install into OMERO.web
 
-The viewer requires an Nginx endpoint to process authenticated
-`X-Accel-Redirect` responses:
+The recommended installation is the integrated
+[`NL-BIOMERO`](https://github.com/NL-BioImaging/NL-BIOMERO) deployment. Its
+local HTTP and Ubuntu HTTPS configurations install the viewer, register it
+when explicitly enabled, mount the OME-Zarr store read-only in Nginx, and keep
+Nginx as the single browser-facing OMERO.web endpoint. See the
+[`NL-BIOMERO` deployment guide](docs/deployment-nl-biomero.md).
 
-- [`omero-deployment-kit` instructions](docs/deployment-omero-deployment-kit.md):
-  extend the host Nginx installed by its Ansible role;
-- [`NL-BIOMERO` instructions](docs/deployment-nl-biomero.md): add the supplied
-  lightweight HTTP-only proxy for Windows development, or extend the existing
-  Nginx container in the production SSL scenario.
+Maintainers of another OMERO deployment can follow the
+[`omero-deployment-kit` guide](docs/deployment-omero-deployment-kit.md) to add
+the same application, storage mapping, and authenticated Nginx route.
 
-Both deployment paths install the same wheel and
+The viewer requires Nginx to process authenticated `X-Accel-Redirect`
+responses. Both deployment paths install the same wheel and
 [`docker/90-biomero-zarr-viewer.omero`](docker/90-biomero-zarr-viewer.omero)
-configuration. They differ only in how Nginx is provided and sees the in-place
-storage.
+configuration; they differ in how Nginx and the storage mount are managed.
+
+The complete documentation is published at
+[nl-bioimaging.github.io/BIOMERO.ZarrViewer](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/).
 
 The wheel also serves its bundled `use-omero-zarr-viewer` Analysis skill from
 authenticated `/biomero_zarr_viewer/api/analysis-skills/` endpoints. This

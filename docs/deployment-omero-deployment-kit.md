@@ -79,12 +79,12 @@ In `roles/docker/tasks/main.yml`, after the task that creates the remote
 ## 4. Install and configure the OMERO.web app
 
 Add
-[`deploy/omero-deployment-kit/Dockerfile-web.fragment`](../deploy/omero-deployment-kit/Dockerfile-web.fragment)
+[`deploy/omero-deployment-kit/Dockerfile-web.fragment`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/deploy/omero-deployment-kit/Dockerfile-web.fragment)
 after `FROM` and before `omero web syncmedia` in
 `roles/docker/templates/Dockerfile-web.j2`.
 
 Append
-[`deploy/omero-deployment-kit/web-config.omero.j2`](../deploy/omero-deployment-kit/web-config.omero.j2)
+[`deploy/omero-deployment-kit/web-config.omero.j2`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/deploy/omero-deployment-kit/web-config.omero.j2)
 to `roles/docker/templates/web_conf.omero.j2`.
 
 Mount the store read-only into the `omeroweb` service in
@@ -102,7 +102,7 @@ Keep the existing web configuration and static volume entries.
 ## 5. Extend the existing host Nginx
 
 Insert
-[`deploy/omero-deployment-kit/nginx-location.conf.j2`](../deploy/omero-deployment-kit/nginx-location.conf.j2)
+[`deploy/omero-deployment-kit/nginx-location.conf.j2`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/deploy/omero-deployment-kit/nginx-location.conf.j2)
 inside the HTTPS `server` block in
 `roles/base/templates/omero.conf.j2`.
 

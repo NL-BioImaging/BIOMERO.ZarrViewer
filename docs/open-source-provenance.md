@@ -7,13 +7,13 @@ influenced BIOMERO OME-Zarr Viewer. It distinguishes:
 - repositories and applications consulted only as references; and
 - functionality designed and implemented specifically for this project.
 
-The inventory describes version `0.4.1` and was reviewed on 28 July 2026.
-The dependency manifests and lock files remain authoritative for exact versions.
+The inventory was reviewed in July 2026. The dependency manifests and lock
+files remain authoritative for exact versions.
 
 ## Summary
 
 BIOMERO OME-Zarr Viewer is an
-[AGPL-3.0-or-later](../LICENSE) OMERO.web application developed by
+[AGPL-3.0-or-later](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/LICENSE) OMERO.web application developed by
 NL-BioImaging. The viewer is not a fork of OMERO-Vitessce,
 `ome/omero-web-zarr`, or Find Nuclei Viewer.
 
@@ -41,7 +41,7 @@ inventory was reviewed.
 
 These are direct application dependencies. Each remains subject to its own
 upstream license. Transitive frontend dependencies and their resolved versions
-are recorded in [`frontend/package-lock.json`](../frontend/package-lock.json).
+are recorded in [`frontend/package-lock.json`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/frontend/package-lock.json).
 
 ### Python and OMERO
 
@@ -67,7 +67,7 @@ views, responses, configuration, templates, and cryptographic signing.
 
 Vite, TypeScript, Vitest, Testing Library, and jsdom are development and test
 tools. They are declared in
-[`frontend/package.json`](../frontend/package.json), but are not required on
+[`frontend/package.json`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/frontend/package.json), but are not required on
 the production OMERO.web host after the bundle and wheel have been built.
 
 Nginx is deployment infrastructure rather than a packaged application
@@ -246,20 +246,20 @@ repository from the viewer requirements and iterative testing.
 ## Licensing and redistribution
 
 BIOMERO OME-Zarr Viewer is distributed under
-[AGPL-3.0-or-later](../LICENSE). Copyright information is in
-[`NOTICE`](../NOTICE). The project license does not replace the licenses of its
+[AGPL-3.0-or-later](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/LICENSE). Copyright information is in
+[`NOTICE`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/NOTICE). The project license does not replace the licenses of its
 dependencies or reference projects. Notices for code included in the compiled
 browser bundle are in
-[`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
+[`THIRD_PARTY_NOTICES.md`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/THIRD_PARTY_NOTICES.md).
 
 When producing or redistributing a wheel or container:
 
 1. retain this repository's `LICENSE`, `NOTICE`,
    `THIRD_PARTY_NOTICES.md`, and provenance document;
 2. retain third-party license notices included by the Python and npm packages;
-3. use [`pyproject.toml`](../pyproject.toml),
-   [`frontend/package.json`](../frontend/package.json), and
-   [`frontend/package-lock.json`](../frontend/package-lock.json) as the
+3. use [`pyproject.toml`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/pyproject.toml),
+   [`frontend/package.json`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/frontend/package.json), and
+   [`frontend/package-lock.json`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/frontend/package-lock.json) as the
    authoritative dependency inventory; and
 4. update this document if code is later copied, vendored, or substantially
    adapted from another source.
