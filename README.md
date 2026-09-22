@@ -5,13 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/biomero-zarr-viewer)](https://pypi.org/project/biomero-zarr-viewer/)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL_v3%2B-blue.svg)](LICENSE)
 
-> [!IMPORTANT]
-> **This package is part of the [BIOMERO ecosystem](https://github.com/NL-BioImaging).**
-> For a complete deployment with OMERO, import, analysis, provenance, shared
-> storage, and the required authenticated Nginx route, start with the
-> [NL-BIOMERO documentation](https://nl-bioimaging.github.io/NL-BIOMERO/).
-> Installing this Python package alone does not provide a working standalone
-> viewer.
+> 🚀 **This package is part of <img src="https://raw.githubusercontent.com/NL-BioImaging/OMERO.biomero/refs/tags/v1.2.1/webapp/src/img/biomero-logo.svg" alt="BIOMERO" height="16" style="height:16px; width:auto; vertical-align:middle;"> BIOMERO 2.0** — For complete deployment and FAIR infrastructure setup, start with the [**NL-BIOMERO Documentation**](https://nl-bioimaging.github.io/NL-BIOMERO/) 📖
 
 BIOMERO OME-Zarr Viewer is a read-only
 [OMERO.web](https://omero.readthedocs.io/en/stable/developers/Web.html)

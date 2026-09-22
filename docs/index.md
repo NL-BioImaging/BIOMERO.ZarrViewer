@@ -1,19 +1,9 @@
 # BIOMERO OME-Zarr Viewer
 
-![BIOMERO leaf-circuit icon](assets/biomero-logo.svg){ width="72" }
-
 BIOMERO OME-Zarr Viewer is the read-only OME-Zarr viewer for the
 [BIOMERO ecosystem](https://github.com/NL-BioImaging). It opens physical
 OME-Zarr images and HCS plates registered in OMERO, with multichannel display,
 Z/T navigation, label overlays, and Field, Well, and Plate navigation.
-
-!!! important "Part of NL-BIOMERO"
-
-    Use [NL-BIOMERO](https://nl-bioimaging.github.io/NL-BIOMERO/) for the
-    complete deployment. It supplies OMERO, the viewer package, feature
-    registration, shared storage, and the authenticated Nginx route required
-    to deliver Zarr metadata and chunks. Installing the viewer package alone
-    does not create a standalone application.
 
 ## Start here
 
