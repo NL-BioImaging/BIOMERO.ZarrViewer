@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from biomero_zarr_viewer.roi import _inside_outline
+from biomero_zarr_viewer.roi import InvalidROI, _inside_outline, _outline_width
 
 
 def test_circular_outlines_are_complete_and_have_requested_width():
@@ -32,3 +33,11 @@ def test_outline_is_continuous_across_artificial_tile_boundaries():
     assert outline[8:56, 8:10].all()
     assert outline[8:56, 54:56].all()
     assert not outline[30:34, 30:34].any()
+
+
+def test_outline_width_accepts_the_viewer_range():
+    assert _outline_width(None) == 2
+    assert _outline_width("20") == 20
+    for value in ("0", "21", "2.5", "wide"):
+        with pytest.raises(InvalidROI):
+            _outline_width(value)

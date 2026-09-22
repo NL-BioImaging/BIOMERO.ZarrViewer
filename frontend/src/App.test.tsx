@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { focusedLabelStates, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
+import { FullscreenButton, focusedLabelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
 import type { Capability, ChannelState, VolumeLevel } from "./types";
 
 const channels: ChannelState[] = [{
@@ -132,4 +132,61 @@ test("ROI PNG URL uses one-based visible channels and store identity", () => {
   expect(url.searchParams.get("sourceChannels")).toBe("1");
   expect(url.searchParams.get("storeUuid")).toBe(capability.store.uuid);
   expect(url.searchParams.get("roi")).toBe("1,2,11,12");
+});
+
+test("label controls offer multicolor and the ordered monochrome palette", () => {
+  const onChange = vi.fn();
+  render(<LabelPanel labels={[{
+    id: "cells",
+    name: "Cells",
+    path: "labels/cells",
+    visible: true,
+    opacity: 0.3,
+    mode: "outline",
+    outlineWidth: 2,
+  }]} onChange={onChange} />);
+
+  const colors = screen.getByRole("combobox", { name: "Cells color mode" });
+  expect(Array.from(colors.querySelectorAll("option")).map((option) => option.textContent)).toEqual([
+    "Multicolor", "Cyan", "Magenta", "Yellow", "Red", "Green", "Blue",
+  ]);
+  fireEvent.change(colors, { target: { value: "#00FFFF" } });
+  expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: "#00FFFF" })]);
+  fireEvent.change(colors, { target: { value: "" } });
+  expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ color: undefined })]);
+
+  const width = screen.getByRole("slider", { name: "Cells outline width" });
+  expect(width).toHaveAttribute("max", "20");
+  fireEvent.change(width, { target: { value: "20" } });
+  expect(onChange).toHaveBeenCalledWith([expect.objectContaining({ outlineWidth: 20 })]);
+});
+
+test("fullscreen control becomes an exit control while fullscreen is active", () => {
+  const originalElement = Object.getOwnPropertyDescriptor(document, "fullscreenElement");
+  const originalRequest = document.documentElement.requestFullscreen;
+  const originalExit = document.exitFullscreen;
+  let fullscreenElement: Element | null = null;
+  Object.defineProperty(document, "fullscreenElement", { configurable: true, get: () => fullscreenElement });
+  document.documentElement.requestFullscreen = vi.fn(async () => {
+    fullscreenElement = document.documentElement;
+    document.dispatchEvent(new Event("fullscreenchange"));
+  });
+  document.exitFullscreen = vi.fn(async () => {
+    fullscreenElement = null;
+    document.dispatchEvent(new Event("fullscreenchange"));
+  });
+
+  try {
+    render(<FullscreenButton />);
+    fireEvent.click(screen.getByRole("button", { name: "Enter fullscreen" }));
+    expect(document.documentElement.requestFullscreen).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Exit fullscreen" }));
+    expect(document.exitFullscreen).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Enter fullscreen" })).toBeInTheDocument();
+  } finally {
+    if (originalElement) Object.defineProperty(document, "fullscreenElement", originalElement);
+    else delete (document as any).fullscreenElement;
+    document.documentElement.requestFullscreen = originalRequest;
+    document.exitFullscreen = originalExit;
+  }
 });

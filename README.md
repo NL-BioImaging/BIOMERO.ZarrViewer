@@ -224,9 +224,12 @@ OME-Zarr store from conventional OMERO pixels.
   coarsest safe multiscale level, and rejects levels above a 256 MiB raw-payload
   budget or the browser's WebGL 3D-texture limit;
 - multiple independently visible and reordered label layers with 30% default
-  opacity, nearest-neighbor sampling, and fill or outline display;
+  opacity, nearest-neighbor sampling, fill or outline display, and optional
+  cyan, magenta, yellow, red, green, or blue monochrome coloring;
 - deterministic GPU label colors without a JavaScript color table
   proportional to the number of label IDs;
+- hover inspection that reports the instance ID in every visible label layer
+  under the pointer, including overlapping segmentations;
 - Field, Well, and Plate views with plate-grid navigation and field selection;
 - intensity-only Well and Plate overview thumbnails; open a Field to display
   and control its segmentation label overlays;
@@ -263,7 +266,7 @@ exclusive maxima. `sourceChannels` and `labelChannel` are one-based;
 `labelChannel` for a segmentation stored in the main image, never both.
 When supplied, `storeUuid` must match the output store identity.
 Overlay entries support multiple label values, `outline`, `fill`, or
-`outline-fill`, opacity, color, and a 1–8 px outline width. The default
+`outline-fill`, opacity, color, and a 1–20 px outline width. The default
 focused-object outline is 2 screen pixels.
 
 ### 3D limitations

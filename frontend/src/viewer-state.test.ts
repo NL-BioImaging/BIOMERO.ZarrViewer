@@ -37,7 +37,7 @@ test("deep-link state round trips", () => {
       mode: "outline",
       color: "#FFFF00",
       opacity: 1,
-      outlineWidth: 3,
+      outlineWidth: 20,
     }],
     storeUuid: "3935615d-a18d-41d8-af04-e63cfec3a46c",
     channels,
@@ -57,7 +57,7 @@ test("deep-link state round trips", () => {
     mode: "outline",
     color: "#FFFF00",
     opacity: 1,
-    outlineWidth: 3,
+    outlineWidth: 20,
   });
   expect(parsed.storeUuid).toBe("3935615d-a18d-41d8-af04-e63cfec3a46c");
   expect(parsed.projection).toBe("mean");
@@ -99,7 +99,8 @@ test("ROI fitting centers and contains the requested bounds", () => {
 });
 
 test("saved label order is restored without losing new layers", () => {
-  const result = applyLabelDeepLink(labels, [{ id: "b", visible: true, opacity: 2, mode: "outline" }]);
+  const result = applyLabelDeepLink(labels, [{ id: "b", visible: true, opacity: 2, mode: "outline", outlineWidth: 99 }]);
   expect(result.map((item) => item.id)).toEqual(["b", "a"]);
   expect(result[0].opacity).toBe(1);
+  expect(result[0].outlineWidth).toBe(20);
 });

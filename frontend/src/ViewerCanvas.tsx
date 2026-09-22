@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ColorPaletteExtension,
   DetailView,
@@ -11,11 +11,14 @@ import {
 import type { ChannelState, LabelState, ViewportState } from "./types";
 import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
+import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
 
-interface LoadedLabel {
-  id: string;
-  loader: any[];
-  channelIndex?: number;
+interface LabelTooltip {
+  screenX: number;
+  screenY: number;
+  imageX: number;
+  imageY: number;
+  hits: LabelHit[];
 }
 
 interface Props {
@@ -67,6 +70,9 @@ export function ViewerCanvas({
   onTilesLoaded,
 }: Props) {
   const failedLayers = useRef(new Set<string>());
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hoverRequest = useRef(0);
+  const [labelTooltip, setLabelTooltip] = useState<LabelTooltip | undefined>(undefined);
   const reportTileError = useCallback((layerId: string, error: unknown) => {
     failedLayers.current.add(layerId);
     onTileError(error instanceof Error ? error.message : "A tile failed to load");
@@ -78,6 +84,15 @@ export function ViewerCanvas({
   useEffect(() => {
     failedLayers.current.clear();
   }, [loader, labels, z, t]);
+  useEffect(() => () => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverRequest.current += 1;
+  }, []);
+  useEffect(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverRequest.current += 1;
+    setLabelTooltip(undefined);
+  }, [labels, labelStates, z, t]);
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
   const baseLabels = loader[0]?.labels || [];
   const baseSelections = channels.map((channel) => selection(baseLabels, channel.index, z, t));
@@ -112,6 +127,7 @@ export function ViewerCanvas({
         interpolation: "nearest",
         refinementStrategy: "no-overlap",
         excludeBackground: true,
+        pickable: true,
         onTileError: (error: unknown) => reportTileError(`label:${state.id}`, error),
         onViewportLoad: () => reportViewportLoad(`label:${state.id}`),
       } as any);
@@ -136,6 +152,30 @@ export function ViewerCanvas({
 
   const zoom = Number(viewStates[0].zoom || 0);
   const scaleBar = physicalScale ? scaleBarSize(physicalScale.size, zoom) : undefined;
+  const inspectHover = useCallback((info: any) => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    const coordinate = info.viewport?.id === DETAIL_VIEW_ID ? info.coordinate : undefined;
+    if (!coordinate || coordinate.length < 2) {
+      hoverRequest.current += 1;
+      setLabelTooltip(undefined);
+      return;
+    }
+    const imageX = Math.floor(Number(coordinate[0]));
+    const imageY = Math.floor(Number(coordinate[1]));
+    const request = ++hoverRequest.current;
+    hoverTimer.current = setTimeout(() => {
+      void inspectLabelPixel(labels, labelStates, imageX, imageY, z, t).then((hits) => {
+        if (request !== hoverRequest.current) return;
+        setLabelTooltip(hits.length ? {
+          screenX: Number(info.x),
+          screenY: Number(info.y),
+          imageX,
+          imageY,
+          hits,
+        } : undefined);
+      });
+    }, 80);
+  }, [labels, labelStates, z, t]);
 
   return <>
     <VivViewer
@@ -149,8 +189,21 @@ export function ViewerCanvas({
       }}
       deckProps={{
         layers: labelLayers,
+        onHover: inspectHover,
       }}
     />
+    {labelTooltip && <div
+      className="label-tooltip"
+      role="status"
+      style={{
+        left: labelTooltip.screenX + (labelTooltip.screenX > width - 240 ? -14 : 14),
+        top: labelTooltip.screenY + (labelTooltip.screenY > height - 110 ? -14 : 14),
+        transform: `translate(${labelTooltip.screenX > width - 240 ? "-100%" : "0"}, ${labelTooltip.screenY > height - 110 ? "-100%" : "0"})`,
+      }}
+    >
+      {labelTooltip.hits.map((hit) => <div key={hit.id} title={hit.path}><strong>{hit.name}</strong><span>mask #{hit.value}</span></div>)}
+      <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · z {z} · t {t}</small>
+    </div>}
     {showScale && scaleBar && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit}`}>
       <span style={{ width: `${scaleBar.pixels}px` }} />
       <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
