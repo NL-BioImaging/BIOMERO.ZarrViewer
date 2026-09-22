@@ -90,14 +90,14 @@ vec4 biomero_label_color(float rawValue) {
         bool biomeroBoundary = false;
         if (biomeroVisible) {
           vec2 biomeroScreenStep = max(abs(dFdx(vTexCoord)), abs(dFdy(vTexCoord)));
-          for (int biomeroRadius = 1; biomeroRadius <= 8; biomeroRadius++) {
+          for (int biomeroRadius = 1; biomeroRadius <= 20; biomeroRadius++) {
             if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
             vec2 delta = biomeroScreenStep * float(biomeroRadius);
-            uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-            uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
-            uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-            uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
-            if (!biomero_selected(leftValue) || !biomero_selected(rightValue) || !biomero_selected(upValue) || !biomero_selected(downValue)) {
+            uint leftValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
+            uint rightValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
+            uint upValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
+            uint downValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
+            if (leftValue != biomeroValue || rightValue != biomeroValue || upValue != biomeroValue || downValue != biomeroValue) {
               biomeroBoundary = true;
             }
           }
@@ -133,7 +133,7 @@ export class InstanceColorExtension extends VivLayerExtension {
       outlineOnly: this.props.labelMode === "outline" ? 1 : 0,
       fixedColor: Array.isArray(this.props.labelColor) ? 1 : 0,
       highlightCount: highlights.length,
-      outlineWidth: Math.max(1, Math.min(8, Math.floor(this.props.outlineWidth || 2))),
+      outlineWidth: Math.max(1, Math.min(20, Math.floor(this.props.outlineWidth || 2))),
       layerColor: color,
     };
     for (let index = 0; index < 8; index++) uniforms[`highlight${index}`] = highlights[index] || 0;

@@ -156,7 +156,7 @@ needed:
 
 Each overlay uses either `labelPath` or one-based `labelChannel`. `values` may
 select multiple positive label values from the same label array. Modes are
-`outline`, `fill`, and `outline-fill`. Outline width is 1–8 output/screen
+`outline`, `fill`, and `outline-fill`. Outline width is 1–20 output/screen
 pixels and defaults to 2. Fill-only opacity defaults to 30%.
 
 `zarr-gallery-v1` uses the same endpoint with 2–25 panels. It opens the store

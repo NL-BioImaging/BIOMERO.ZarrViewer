@@ -111,7 +111,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
               mode,
               color,
               opacity: finite(record.opacity, mode === "fill" ? 0.3 : 1, 0, 1),
-              outlineWidth: Math.floor(finite(record.outlineWidth, 2, 1, 8)),
+              outlineWidth: Math.floor(finite(record.outlineWidth, 2, 1, 20)),
             }];
           });
         }
@@ -172,7 +172,7 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
       opacity: finite(value.opacity, item.opacity, 0, 1),
       mode: value.mode === "outline" ? "outline" : "fill",
       color: /^#[0-9a-f]{6}$/i.test(value.color || "") ? value.color : item.color,
-      outlineWidth: Math.floor(finite(value.outlineWidth, item.outlineWidth || 2, 1, 8)),
+      outlineWidth: Math.floor(finite(value.outlineWidth, item.outlineWidth || 2, 1, 20)),
       highlightValues: Array.isArray(value.highlightValues)
         ? [...new Set(value.highlightValues.map((item) => Math.floor(finite(item, 0, 0))).filter(Boolean))].slice(0, 8)
         : item.highlightValues,

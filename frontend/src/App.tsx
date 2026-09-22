@@ -74,6 +74,14 @@ function dtypeDomain(dtype: string): [number, number] {
 }
 
 const palette = ["#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF", "#FFFF00", "#FF0000"];
+const labelPalette = [
+  { name: "Cyan", value: "#00FFFF" },
+  { name: "Magenta", value: "#FF00FF" },
+  { name: "Yellow", value: "#FFFF00" },
+  { name: "Red", value: "#FF0000" },
+  { name: "Green", value: "#00FF00" },
+  { name: "Blue", value: "#0000FF" },
+];
 
 function channelStates(capability: Capability, loader: any[]): ChannelState[] {
   const source = loader[0];
@@ -133,6 +141,23 @@ export function RenderModeToggle({
     <button className={mode === "2d" ? "active" : ""} aria-pressed={mode === "2d"} onClick={() => onChange("2d")}>2D</button>
     <button className={mode === "3d" ? "active" : ""} aria-pressed={mode === "3d"} disabled={disabled3d} title={disabled3d ? "No safe 3D level is available" : undefined} onClick={() => onChange("3d")}>3D</button>
   </div>;
+}
+
+export function FullscreenButton() {
+  const [active, setActive] = useState(Boolean(document.fullscreenElement));
+  useEffect(() => {
+    const update = () => setActive(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+  const toggle = () => active
+    ? document.exitFullscreen()
+    : document.documentElement.requestFullscreen();
+  return <button
+    aria-label={active ? "Exit fullscreen" : "Enter fullscreen"}
+    title={active ? "Exit fullscreen" : "Enter fullscreen"}
+    onClick={() => void toggle()}
+  >{active ? "Exit Fullscreen" : "Fullscreen"}</button>;
 }
 
 function physicalScale(capability: Capability | null): { size: number; unit: string } | undefined {
@@ -515,7 +540,7 @@ export default function App() {
               setVolumeCamera(undefined);
               setVolumeReset((value) => value + 1);
             }}>Reset 3D View</button>}
-          <button onClick={() => void document.documentElement.requestFullscreen()}>Fullscreen</button>
+          <FullscreenButton />
         </div>
       </header>
       <div className="workspace">
@@ -809,13 +834,13 @@ export function VolumeControls({
   </section>;
 }
 
-function LabelPanel({ labels, onChange }: { labels: LabelState[]; onChange: (value: LabelState[]) => void }) {
+export function LabelPanel({ labels, onChange }: { labels: LabelState[]; onChange: (value: LabelState[]) => void }) {
   const update = (id: string, patch: Partial<LabelState>) => onChange(labels.map((item) => item.id === id ? { ...item, ...patch } : item));
   const move = (index: number, delta: number) => { const copy = [...labels]; const target = index + delta; if (target < 0 || target >= copy.length) return; [copy[index], copy[target]] = [copy[target], copy[index]]; onChange(copy); };
   return <section className="panel-section label-panel">{labels.length === 0 && <div className="empty-state"><strong>No NGFF label images</strong><p>This field has no segmentation layers advertised in its label-group metadata.</p></div>}{labels.map((label, index) => <div className="layer-card" key={label.id}>
-    <label className="layer-heading"><input type="checkbox" checked={label.visible} onChange={(e) => update(label.id, { visible: e.target.checked })}/><strong>{label.name}</strong>{label.color && <input aria-label={`${label.name} fixed color`} type="color" value={label.color} onChange={(e) => update(label.id, { color: e.target.value })}/>}</label>
+    <label className="layer-heading"><input type="checkbox" checked={label.visible} onChange={(e) => update(label.id, { visible: e.target.checked })}/><strong>{label.name}</strong><select className="label-color-select" aria-label={`${label.name} color mode`} value={label.color || ""} onChange={(e) => update(label.id, { color: e.target.value || undefined })}><option value="">Multicolor</option>{label.color && !labelPalette.some((color) => color.value === label.color?.toUpperCase()) && <option value={label.color}>Custom</option>}{labelPalette.map((color) => <option key={color.value} value={color.value}>{color.name}</option>)}</select></label>
     <label className="slider">Opacity<input type="range" min="0" max="1" step="0.05" value={label.opacity} onChange={(e) => update(label.id, { opacity: Number(e.target.value) })}/><output>{Math.round(label.opacity * 100)}%</output></label>
-    {label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="8" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
+    {label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="20" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
     <div className="label-actions">
       <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
         <button className={label.mode === "fill" ? "active" : ""} aria-pressed={label.mode === "fill"} onClick={() => update(label.id, { mode: "fill" })}>Fill</button>

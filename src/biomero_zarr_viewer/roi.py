@@ -547,9 +547,10 @@ def _opacity(value: Any, fallback: float) -> float:
 def _outline_width(value: Any) -> int:
     if value in (None, ""):
         return 2
-    if not re.fullmatch(r"[1-8]", str(value)):
-        raise InvalidROI("outlineWidth must be an integer from 1 through 8")
-    return int(value)
+    text = str(value)
+    if not re.fullmatch(r"\d+", text) or not 1 <= int(text) <= 20:
+        raise InvalidROI("outlineWidth must be an integer from 1 through 20")
+    return int(text)
 
 
 def _color_text(value: Any) -> str | None:
