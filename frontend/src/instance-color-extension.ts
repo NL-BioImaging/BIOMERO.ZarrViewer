@@ -93,10 +93,10 @@ vec4 biomero_label_color(float rawValue) {
           for (int biomeroRadius = 1; biomeroRadius <= 20; biomeroRadius++) {
             if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
             vec2 delta = biomeroScreenStep * float(biomeroRadius);
-            uint leftValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
-            uint rightValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
-            uint upValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
-            uint downValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
+            uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
             if (leftValue != biomeroValue || rightValue != biomeroValue || upValue != biomeroValue || downValue != biomeroValue) {
               biomeroBoundary = true;
             }

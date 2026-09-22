@@ -17,4 +17,5 @@ test("outlines boundaries between different adjacent instance IDs up to 20 pixel
   expect(shader).toContain("rightValue != biomeroValue");
   expect(shader).toContain("upValue != biomeroValue");
   expect(shader).toContain("downValue != biomeroValue");
+  expect(shader).not.toContain("round(texture(channel0");
 });

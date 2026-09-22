@@ -38732,19 +38732,19 @@ const i0 = {
 function jn(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => Bk.set(i, e));
 }
-jn([void 0, 1], () => import("./raw-BxQzJtzn.js").then((t) => t.default));
-jn(5, () => import("./lzw-DVNpTmyT.js").then((t) => t.default));
+jn([void 0, 1], () => import("./raw-CoAUEvrB.js").then((t) => t.default));
+jn(5, () => import("./lzw-CDD-neOx.js").then((t) => t.default));
 jn(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-jn(7, () => import("./jpeg-DJk1SIjN.js").then((t) => t.default));
-jn([8, 32946], () => import("./deflate-CyGVhOcv.js").then((t) => t.default));
-jn(32773, () => import("./packbits-CbEgAzKS.js").then((t) => t.default));
+jn(7, () => import("./jpeg-B7LcPqCt.js").then((t) => t.default));
+jn([8, 32946], () => import("./deflate-BsTpoNja.js").then((t) => t.default));
+jn(32773, () => import("./packbits-CjEIb1tF.js").then((t) => t.default));
 jn(
   34887,
-  () => import("./lerc-CHz8bfbq.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-Dv3G85Ij.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-jn(50001, () => import("./webimage-BtbA2wjB.js").then((t) => t.default));
+jn(50001, () => import("./webimage-DtxvpvOp.js").then((t) => t.default));
 function wk(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -52453,10 +52453,10 @@ vec4 biomero_label_color(float rawValue) {
           for (int biomeroRadius = 1; biomeroRadius <= 20; biomeroRadius++) {
             if (uint(biomeroRadius) > instanceColorModule.outlineWidth) break;
             vec2 delta = biomeroScreenStep * float(biomeroRadius);
-            uint leftValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
-            uint rightValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r));
-            uint upValue = uint(round(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
-            uint downValue = uint(round(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r));
+            uint leftValue = uint(texture(channel0, clamp(vTexCoord - vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint rightValue = uint(texture(channel0, clamp(vTexCoord + vec2(delta.x, 0.0), vec2(0.0), vec2(1.0))).r);
+            uint upValue = uint(texture(channel0, clamp(vTexCoord - vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
+            uint downValue = uint(texture(channel0, clamp(vTexCoord + vec2(0.0, delta.y), vec2(0.0), vec2(1.0))).r);
             if (leftValue != biomeroValue || rightValue != biomeroValue || upValue != biomeroValue || downValue != biomeroValue) {
               biomeroBoundary = true;
             }
