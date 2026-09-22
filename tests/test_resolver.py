@@ -1,9 +1,15 @@
+import json
 from pathlib import Path
 
 import pytest
 
 from biomero_zarr_viewer.errors import AmbiguousStore, ObjectNotFound, UnsafePath
-from biomero_zarr_viewer.resolver import resolve_image_store, resolve_plate_store, zarr_ancestor
+from biomero_zarr_viewer.resolver import (
+    resolve_image_store,
+    resolve_plate_store,
+    resolve_well_store,
+    zarr_ancestor,
+)
 
 from .fakes import FakeAnnotation, FakeConnection, FakeImage, FakeOriginalFile, FakeParent, FakeWellSample
 
@@ -18,6 +24,13 @@ def biomero_annotation(path):
             "Files": repr([path]),
         },
     )
+
+
+def managed_storage(monkeypatch, tmp_path, mount):
+    mapping = tmp_path / "group-mappings.json"
+    mapping.write_text(json.dumps({"13": {"folder": "Project A"}}), encoding="utf-8")
+    monkeypatch.setenv("OMERO_BIOMERO_GROUP_MAPPINGS_FILE", str(mapping))
+    (mount / "Project A").mkdir()
 
 
 def test_zarr_ancestor_handles_nested_files():
@@ -65,6 +78,58 @@ def test_resolves_biomero_annotation_from_plate_ancestry(configure_storage):
     assert resolved.recorded_files[-1].endswith("cells.ome.zarr/A/1/0")
 
 
+def test_resolves_compact_canonical_plate_annotation(configure_storage, monkeypatch, tmp_path):
+    _, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    canonical = mount / "Project A/canonical/cells.ome.zarr"
+    canonical.mkdir(parents=True)
+    annotation = FakeAnnotation(
+        "biomero.zarr.plate-source",
+        {
+            "schema": "2", "storageRoot": "group-13-data",
+            "relativePath": "canonical/cells.ome.zarr", "sourceObjectId": "9",
+            "sourceGeneration": "1", "interchangeProfile": "ngff-0.4-zarr-v2",
+            "imageCount": "1", "labelCount": "0",
+        },
+    )
+    plate = FakeParent(9, annotations=[annotation])
+    image = FakeImage(42, "A/1/0", [], parents=[plate])
+
+    resolved = resolve_image_store(FakeConnection(image), 42)
+
+    assert resolved.path == canonical.resolve()
+    assert str(resolved.relative) == "Project A/canonical/cells.ome.zarr"
+
+
+def test_resolves_shallow_labels_over_canonical_pixels(configure_storage, monkeypatch, tmp_path):
+    source, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    canonical = mount / "Project A/canonical/cells.ome.zarr"
+    canonical.mkdir(parents=True)
+    shallow = mount / "Project A/results/cells.ome.zarr"
+    label = shallow / "A/1/0/labels/nuclei"
+    label.mkdir(parents=True)
+    (shallow / ".biomero-shallow.json").write_text(json.dumps({
+        "schema": 1, "model": "rfc8-shallow-copy",
+        "workflowId": "00000000-0000-4000-8000-000000000001",
+        "transferArtifact": "cells.ome.zarr",
+        "interchangeProfile": "ngff-0.4-zarr-v2", "images": [{
+            "imageNodePath": "A/1/0",
+            "source": {"schema": 1, "storageRoot": "group-13-data", "relativePath": "canonical/cells.ome.zarr", "nodePath": "A/1/0", "sourceObjectId": 9, "sourceGeneration": 1, "interchangeProfile": "ngff-0.4-zarr-v2"},
+            "labelNodePaths": ["A/1/0/labels/nuclei"],
+            "labelComponents": [{"logicalNodePath": "A/1/0/labels/nuclei", "source": None}],
+        }],
+    }), encoding="utf-8")
+    image = FakeImage(42, "A/1/0", [FakeOriginalFile(f"{source}/Project A/results/cells.ome.zarr/", ".zattrs")])
+
+    resolved = resolve_image_store(FakeConnection(image), 42)
+
+    assert resolved.shallow is True
+    assert resolved.path == canonical.resolve()
+    assert str(resolved.routes[0].logical) == "A/1/0/labels/nuclei"
+    assert str(resolved.routes[0].physical) == "Project A/results/cells.ome.zarr/A/1/0/labels/nuclei"
+
+
 def test_skips_wellsample_annotation_api_and_resolves_screen_ancestry(configure_storage):
     _, mount = configure_storage
     store = mount / "plates/cells.ome.zarr"
@@ -97,6 +162,22 @@ def test_resolves_selected_plate_through_first_field(configure_storage):
     plate.listChildren = lambda: [well]
 
     resolved = resolve_plate_store(FakeConnection(image=image, plate=plate), 9)
+
+    assert resolved.image_id == 42
+    assert resolved.path == store.resolve()
+
+
+def test_resolves_selected_well_through_first_field(configure_storage):
+    _, mount = configure_storage
+    store = mount / "plates/cells.ome.zarr"
+    store.mkdir(parents=True)
+    plate = FakeParent(9, annotations=[biomero_annotation("/recorded/plates/cells.ome.zarr")])
+    well = FakeParent(2351, parents=[plate])
+    image = FakeImage(42, "A/1/0", [], parents=[well])
+    sample = FakeWellSample(7, image, parents=[well])
+    well.listChildren = lambda: [sample]
+
+    resolved = resolve_well_store(FakeConnection(image=image, well=well), 2351)
 
     assert resolved.image_id == 42
     assert resolved.path == store.resolve()

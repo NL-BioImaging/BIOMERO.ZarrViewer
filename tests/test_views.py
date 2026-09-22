@@ -1,5 +1,7 @@
 import json
+import shutil
 from io import BytesIO
+from pathlib import PurePosixPath
 
 import numpy as np
 import zarr
@@ -7,19 +9,24 @@ from django.test import RequestFactory
 from PIL import Image
 
 from biomero_zarr_viewer.tokens import make_read_context
+from biomero_zarr_viewer.resolver import StoreRoute
 from biomero_zarr_viewer.views import (
     analysis_skill,
     analysis_skills,
     capabilities,
     data,
+    image_eligibility,
     plate_capabilities,
+    plate_eligibility,
     render_png,
     roi_png,
     viewer,
+    well_eligibility,
 )
 
 from .conftest import write_v2_image
 from .fakes import (
+    FakeAnnotation,
     FakeConnection,
     FakeImage,
     FakeOriginalFile,
@@ -86,6 +93,36 @@ def test_capability_hides_unreadable_image(configure_storage):
     assert json.loads(response.content)["error"]["code"] == "image_not_found"
 
 
+def test_image_eligibility_uses_registration_without_reading_store():
+    response = image_eligibility(
+        _request("/api/images/42/eligibility/"), 42, conn=_connection()
+    )
+    assert response.status_code == 200
+    assert json.loads(response.content) == {"supported": True}
+
+    response = image_eligibility(
+        _request("/api/images/1/eligibility/"), 1, conn=FakeConnection()
+    )
+    assert json.loads(response.content) == {"supported": False}
+
+
+def test_eligibility_accepts_official_biomero_import_metadata():
+    annotation = FakeAnnotation("biomero.import", {
+        "Filepath": "/recorded/not-mounted/sample.ome.zarr",
+        "UUID": "3935615d-a18d-41d8-af04-e63cfec3a46c",
+        "DestinationType": "plate",
+        "Files": "1",
+    })
+    image = FakeImage(42, "A/1/0", [], annotations=[annotation])
+    conn = FakeConnection(image=image)
+
+    response = image_eligibility(
+        _request("/api/images/42/eligibility/"), 42, conn=conn
+    )
+
+    assert json.loads(response.content) == {"supported": True}
+
+
 def test_plate_capability_and_viewer_redirect(configure_storage):
     _, mount = configure_storage
     write_v2_image(mount / "plate.zarr", plate=True)
@@ -110,6 +147,86 @@ def test_plate_capability_and_viewer_redirect(configure_storage):
     assert redirect.status_code == 302
     assert redirect["Location"].endswith("?image=42")
 
+    eligible = plate_eligibility(
+        _request("/api/plates/9/eligibility/"), 9, conn=conn
+    )
+    assert json.loads(eligible.content) == {"supported": True}
+
+
+def test_well_eligibility_and_viewer_redirect_to_well_overview(configure_storage):
+    _, mount = configure_storage
+    write_v2_image(mount / "plate.zarr", plate=True)
+    image = FakeImage(42, "A/1/0", [
+        FakeOriginalFile("/recorded/plate.zarr/A/1/0/", ".zattrs")
+    ])
+    well = FakeParent(2351)
+    well.listChildren = lambda: [FakeWellSample(7, image)]
+    conn = FakeConnection(image=image, well=well)
+
+    eligible = well_eligibility(
+        _request("/api/wells/2351/eligibility/"), 2351, conn=conn
+    )
+    assert json.loads(eligible.content) == {"supported": True}
+
+    request = _request("/?well=2351")
+    request.GET = request.GET.copy()
+    request.GET["well"] = "2351"
+    redirect = viewer(request, conn=conn)
+    assert redirect.status_code == 302
+    assert redirect["Location"].endswith("?image=42&v=2&view=well")
+
+
+def test_shallow_plate_capability_combines_canonical_pixels_and_result_labels(
+    configure_storage, monkeypatch, tmp_path
+):
+    source, mount = configure_storage
+    mapping = tmp_path / "groups.json"
+    mapping.write_text(json.dumps({"13": {"folder": "Project A"}}), encoding="utf-8")
+    monkeypatch.setenv("OMERO_BIOMERO_GROUP_MAPPINGS_FILE", str(mapping))
+    canonical = write_v2_image(
+        mount / "Project A/canonical/plate.ome.zarr", plate=True
+    )
+    shallow = mount / "Project A/results/plate.ome.zarr"
+    label_path = "A/1/0/labels/nuclei"
+    shutil.copytree(canonical / label_path, shallow / label_path)
+    shutil.rmtree(canonical / "A/1/0/labels")
+    (shallow / ".biomero-shallow.json").write_text(json.dumps({
+        "schema": 1, "model": "rfc8-shallow-copy",
+        "workflowId": "00000000-0000-4000-8000-000000000001",
+        "transferArtifact": "plate.ome.zarr",
+        "interchangeProfile": "ngff-0.4-zarr-v2",
+        "images": [{
+            "imageNodePath": "A/1/0",
+            "source": {
+                "schema": 1, "storageRoot": "group-13-data",
+                "relativePath": "canonical/plate.ome.zarr", "nodePath": "A/1/0",
+                "sourceObjectId": 9, "sourceGeneration": 1,
+                "interchangeProfile": "ngff-0.4-zarr-v2",
+            },
+            "labelNodePaths": [label_path],
+            "labelComponents": [{"logicalNodePath": label_path, "source": None}],
+        }],
+    }), encoding="utf-8")
+    image = FakeImage(42, "A/1/0", [FakeOriginalFile(
+        f"{source}/Project A/results/plate.ome.zarr/", ".zattrs"
+    )])
+    conn = FakeConnection(image)
+
+    response = capabilities(_request("/api/images/42/capabilities/"), 42, conn=conn)
+    payload = json.loads(response.content)
+
+    assert response.status_code == 200
+    assert payload["kind"] == "plate"
+    assert payload["composite_store"] is True
+    assert [label["path"] for label in payload["labels"]] == [label_path]
+    routed = data(
+        _request("/", token=payload["store"]["context"]),
+        42, f"{label_path}/.zattrs", conn=conn,
+    )
+    assert routed["X-Accel-Redirect"].endswith(
+        "/Project%20A/results/plate.ome.zarr/A/1/0/labels/nuclei/.zattrs"
+    )
+
 
 def test_data_uses_internal_redirect_without_body(configure_storage):
     _, mount = configure_storage
@@ -121,6 +238,30 @@ def test_data_uses_internal_redirect_without_body(configure_storage):
     assert response.content == b""
     assert response["X-Accel-Redirect"] == "/_protected_zarr/sample.zarr/.zattrs"
     assert int(response["Content-Length"]) > 0
+
+
+def test_data_routes_declared_shallow_label_to_result_store(configure_storage):
+    _, mount = configure_storage
+    write_v2_image(mount / "canonical.zarr")
+    label = mount / "result.zarr/A/1/0/labels/nuclei"
+    label.mkdir(parents=True)
+    (label / ".zattrs").write_text("{}", encoding="utf-8")
+    conn = _connection("canonical.zarr")
+    token, _ = make_read_context(
+        _request("/"), conn, 42, "canonical.zarr",
+        [StoreRoute(
+            logical=PurePosixPath("A/1/0/labels/nuclei"),
+            physical=PurePosixPath("result.zarr/A/1/0/labels/nuclei"),
+        )],
+    )
+
+    response = data(
+        _request("/", token=token), 42,
+        "A/1/0/labels/nuclei/.zattrs", conn=conn,
+    )
+
+    assert response.status_code == 200
+    assert response["X-Accel-Redirect"] == "/_protected_zarr/result.zarr/A/1/0/labels/nuclei/.zattrs"
 
 
 def test_data_rejects_traversal(configure_storage):

@@ -20,9 +20,24 @@ urlpatterns = [
         name="biomero_zarr_viewer_capabilities",
     ),
     path(
+        "api/images/<int:image_id>/eligibility/",
+        views.image_eligibility,
+        name="biomero_zarr_viewer_image_eligibility",
+    ),
+    path(
         "api/plates/<int:plate_id>/capabilities/",
         views.plate_capabilities,
         name="biomero_zarr_viewer_plate_capabilities",
+    ),
+    path(
+        "api/plates/<int:plate_id>/eligibility/",
+        views.plate_eligibility,
+        name="biomero_zarr_viewer_plate_eligibility",
+    ),
+    path(
+        "api/wells/<int:well_id>/eligibility/",
+        views.well_eligibility,
+        name="biomero_zarr_viewer_well_eligibility",
     ),
     path(
         "api/images/<int:image_id>/roi.png",

@@ -2,16 +2,15 @@
   "use strict";
 
   OME.setOpenWithEnabledHandler("biomero_zarr_viewer", function (selected, callback) {
-    if (selected.length !== 1 || ["image", "plate"].indexOf(selected[0].type) === -1) return false;
+    if (selected.length !== 1 || ["image", "plate", "well"].indexOf(selected[0].type) === -1) return false;
 
-    // BIOMERO deliberately gives imported OMERO Images useful field/image
-    // names, so the selected name often does not retain the .ome.zarr suffix.
-    // Ask the authoritative capability endpoint instead of creating false
-    // negatives from the display name. Plate selections resolve through their
-    // first readable field and retain full HCS navigation in the viewer.
-    var collection = selected[0].type === "plate" ? "plates" : "images";
+    // OMERO.web passes only id/name/type here. Ask a lightweight endpoint that
+    // checks the Fileset and BIOMERO registration annotations without opening
+    // the store or inspecting Zarr metadata. Full validation still happens
+    // when the viewer opens.
+    var collection = selected[0].type === "plate" ? "plates" : selected[0].type === "well" ? "wells" : "images";
     window.fetch(
-      "/biomero_zarr_viewer/api/" + collection + "/" + encodeURIComponent(selected[0].id) + "/capabilities/",
+      "/biomero_zarr_viewer/api/" + collection + "/" + encodeURIComponent(selected[0].id) + "/eligibility/",
       {credentials: "same-origin", headers: {Accept: "application/json"}}
     ).then(function (response) {
       if (!response.ok) return false;
@@ -26,7 +25,7 @@
 
   OME.setOpenWithUrlProvider("biomero_zarr_viewer", function (selected, baseUrl) {
     var separator = baseUrl.indexOf("?") === -1 ? "?" : "&";
-    var key = selected[0].type === "plate" ? "plate" : "image";
+    var key = selected[0].type === "plate" ? "plate" : selected[0].type === "well" ? "well" : "image";
     return baseUrl + separator + key + "=" + encodeURIComponent(selected[0].id);
   });
 })();

@@ -84,9 +84,10 @@ class EventContext:
 
 
 class FakeConnection:
-    def __init__(self, image=None, plate=None, user_id=7, group_id=13):
+    def __init__(self, image=None, plate=None, well=None, user_id=7, group_id=13):
         self.image = image
         self.plate = plate
+        self.well = well
         self.user_id = user_id
         self.context = EventContext(user_id, group_id)
 
@@ -95,6 +96,8 @@ class FakeConnection:
             return self.image
         if object_type == "Plate" and self.plate and int(object_id) == int(self.plate.getId()):
             return self.plate
+        if object_type == "Well" and self.well and int(object_id) == int(self.well.getId()):
+            return self.well
         return None
 
     def getUserId(self):

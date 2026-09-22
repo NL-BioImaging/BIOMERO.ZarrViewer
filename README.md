@@ -124,7 +124,7 @@ The roots may differ, but the relative suffix
 ### Verify the installation
 
 1. Sign in to OMERO.web.
-2. Select a BIOMERO-imported OME-Zarr Image or Plate.
+2. Select a BIOMERO-imported OME-Zarr Image, Plate, or Well.
 3. Open **Open With → OME-Zarr Viewer**.
 4. Confirm that image requests below
    `/biomero_zarr_viewer/data/images/...` return HTTP 200 or 206.
@@ -163,10 +163,29 @@ The viewer can locate a store in either of these ways:
 2. the Image or its readable Dataset/Plate/Screen ancestry has a structured
    `biomero.import` map annotation containing `UUID`, `Filepath`,
    `DestinationType`, and `Files`.
+3. a readable Plate has a BIOMERO schema-2 `biomero.zarr.plate-source`
+   annotation that identifies its canonical managed OME-Zarr store.
 
 The BIOMERO importer produces the second form for in-place imports, including
 plate imports whose individual OMERO Images are named with NGFF field paths
 such as `A/1/0`.
+
+### Canonical and shallow BIOMERO stores
+
+The viewer reconstructs BIOMERO RFC-8 shallow results as one logical store.
+Intensity pixels and plate metadata come from the canonical source recorded in
+`.biomero-shallow.json`; label subtrees retained in the shallow result remain
+at their result paths. This permits labels such as
+`A/1/0/labels/labels_nuclei` to be displayed over canonical `A/1/0` pixels
+without copying the intensity pyramid.
+
+Managed locators such as `group-3-data` are resolved only through the trusted
+BIOMERO group mapping. Set `OMERO_BIOMERO_GROUP_MAPPINGS_FILE` to the JSON
+mapping used by the importer, or set `OMERO_BIOMERO_CONFIG_FILE` to a BIOMERO
+configuration containing `group_mappings`. Both the canonical store and every
+declared label route must resolve below `mount_root`; unsafe, missing, invalid,
+or ambiguous routes are rejected. Existing complete OME-Zarr stores continue
+to use the Fileset and `biomero.import` resolution paths unchanged.
 
 Another importer can therefore be used, but it must provide one of those
 links. Its recorded store path must be below `source_root`, and the matching
@@ -209,6 +228,8 @@ OME-Zarr store from conventional OMERO pixels.
 - deterministic GPU label colors without a JavaScript color table
   proportional to the number of label IDs;
 - Field, Well, and Plate views with plate-grid navigation and field selection;
+- intensity-only Well and Plate overview thumbnails; open a Field to display
+  and control its segmentation label overlays;
 - versioned URL state for viewport, planes, projection, 3D camera and quality,
   channels, labels, and the selected field.
 - measurement-oriented focused links that fit a half-open pixel ROI, select
@@ -257,7 +278,8 @@ overview modes remain 2D.
 ## Security model
 
 1. OMERO.web supplies an authenticated OMERO connection and active group.
-2. The backend resolves the selected readable Image or Plate to one store.
+2. The backend resolves the selected readable Image, Plate, or Well entry to
+   one store. Wells resolve through a readable WellSample Image.
 3. Canonical path checks reject traversal, ambiguous roots, and symlink
    escapes outside the configured mount.
 4. The capability endpoint reads only bounded JSON metadata and returns a
@@ -332,7 +354,11 @@ All routes are below the standard `/biomero_zarr_viewer/` application mount.
 ```text
 GET /?image=<omero-image-id>
 GET /?plate=<omero-plate-id>
+GET /?well=<omero-well-id>
 
+GET /api/images/<id>/eligibility/
+GET /api/plates/<id>/eligibility/
+GET /api/wells/<id>/eligibility/
 GET /api/images/<id>/capabilities/
 GET /api/plates/<id>/capabilities/
 GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
@@ -342,9 +368,21 @@ GET|HEAD /data/images/<id>/<zarr-key>
 X-OMERO-Zarr-Context: <signed-context>
 ```
 
-Unreadable OMERO objects return 404. Unsupported or malformed stores return a
-stable JSON error code. Successful data responses have an empty Django body
-and contain an `X-Accel-Redirect` for Nginx.
+The Open With integration calls the eligibility routes first. They validate
+the OMERO Fileset or official `biomero.import` /
+`biomero.zarr.plate-source` registration metadata without reading the Zarr
+store. This keeps menu feedback quick while preserving a truthful first gate.
+The capability routes perform full path, shallow-manifest, and NGFF metadata
+validation when the viewer opens.
+
+Opening an OMERO Well resolves its first readable WellSample Image, retains
+that field as the selected NGFF path, and starts in Well overview mode so all
+fields from the selected well are visible. Image and Plate entry points retain
+their existing behavior.
+
+Unreadable OMERO objects return 404 from full capabilities. Unsupported or
+malformed stores return a stable JSON error code. Successful data responses
+have an empty Django body and contain an `X-Accel-Redirect` for Nginx.
 
 The ROI endpoint uses the focused-link parameters documented above and returns
 an 8-bit RGB PNG at native crop resolution. It composes intensity channels

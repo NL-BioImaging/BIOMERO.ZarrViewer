@@ -1,13 +1,34 @@
-"""Map a readable OMERO Image back to its in-place OME-Zarr store."""
+"""Map a readable OMERO object to a physical or BIOMERO composite store."""
 
+import json
+import os
+import re
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from .errors import AmbiguousStore, ObjectNotFound, PlateNotFound, StoreNotFound, UnsafePath
+from .errors import (
+    AmbiguousStore,
+    ObjectNotFound,
+    PlateNotFound,
+    StoreNotFound,
+    UnsafePath,
+    WellNotFound,
+)
 from .settings import mount_root, source_root
 
 BIOMERO_IMPORT_NAMESPACE = "biomero.import"
+CANONICAL_PLATE_SOURCE_NAMESPACE = "biomero.zarr.plate-source"
+SHALLOW_MANIFEST = ".biomero-shallow.json"
 MAX_PARENT_DEPTH = 4
+GROUP_STORAGE_ROOT = re.compile(r"^group-(\d+)-data$")
+
+
+@dataclass(frozen=True)
+class StoreRoute:
+    """Map one logical Zarr subtree to a physical subtree below mount_root."""
+
+    logical: PurePosixPath
+    physical: PurePosixPath
 
 
 @dataclass(frozen=True)
@@ -19,6 +40,8 @@ class ResolvedStore:
     relative: PurePosixPath
     recorded_root: PurePosixPath
     recorded_files: tuple[str, ...]
+    routes: tuple[StoreRoute, ...] = ()
+    shallow: bool = False
 
 
 def _string_value(obj, method):
@@ -59,9 +82,9 @@ def _recorded_paths(image):
     return paths
 
 
-def _annotation_values(annotation):
+def _annotation_values(annotation, expected_namespace=BIOMERO_IMPORT_NAMESPACE):
     namespace = _string_value(annotation, "getNs")
-    if namespace != BIOMERO_IMPORT_NAMESPACE:
+    if namespace != expected_namespace:
         return {}
     getter = getattr(annotation, "getValue", None)
     values = getter() if callable(getter) else None
@@ -82,9 +105,8 @@ def _annotation_values(annotation):
     return result
 
 
-def _biomero_annotation_paths(image):
-    """Read importer provenance from the readable Image/container ancestry."""
-    paths = []
+def _ancestry_annotations(image, namespace):
+    """Yield validated map values from readable Image/container ancestry."""
     queue = [(image, 0)]
     seen = set()
     while queue:
@@ -94,43 +116,139 @@ def _biomero_annotation_paths(image):
         if key in seen:
             continue
         seen.add(key)
-
         annotations = getattr(obj, "listAnnotations", None)
         if callable(annotations):
             try:
-                values = list(annotations(ns=BIOMERO_IMPORT_NAMESPACE))
+                values = list(annotations(ns=namespace))
             except TypeError:
                 try:
                     values = list(annotations())
                 except NotImplementedError:
                     values = ()
             except NotImplementedError:
-                # WellSampleWrapper does not implement annotation links, but
-                # it remains an important step in Image -> Screen ancestry.
                 values = ()
             for annotation in values:
-                provenance = _annotation_values(annotation)
-                filepath = provenance.get("Filepath", "").replace("\\", "/")
-                # Require the stable fields emitted by BIOMERO.importer. The
-                # configured-root and canonical containment checks below remain
-                # authoritative for the path itself.
-                if (
-                    filepath
-                    and provenance.get("UUID")
-                    and provenance.get("DestinationType")
-                    and provenance.get("Files")
-                ):
-                    paths.append(filepath)
+                parsed = _annotation_values(annotation, namespace)
+                if parsed:
+                    yield obj, parsed
+        if depth < MAX_PARENT_DEPTH:
+            parents = getattr(obj, "listParents", None)
+            if callable(parents):
+                try:
+                    queue.extend((parent, depth + 1) for parent in list(parents()))
+                except NotImplementedError:
+                    pass
 
-        if depth >= MAX_PARENT_DEPTH:
-            continue
-        parents = getattr(obj, "listParents", None)
-        if callable(parents):
-            try:
-                queue.extend((parent, depth + 1) for parent in list(parents()))
-            except NotImplementedError:
-                pass
+
+def _biomero_annotation_paths(image):
+    """Read importer provenance from the readable Image/container ancestry."""
+    paths = []
+    for _obj, provenance in _ancestry_annotations(image, BIOMERO_IMPORT_NAMESPACE):
+        filepath = provenance.get("Filepath", "").replace("\\", "/")
+        if (
+            filepath
+            and provenance.get("UUID")
+            and provenance.get("DestinationType")
+            and provenance.get("Files")
+        ):
+            paths.append(filepath)
     return paths
+
+
+def _has_canonical_annotation(image):
+    """Return whether an object ancestry declares a canonical BIOMERO store.
+
+    This validates the registration contract only. It deliberately avoids
+    resolving storage mappings or touching the filesystem so Open With can use
+    it as a quick first gate.
+    """
+    for owner, values in _ancestry_annotations(image, CANONICAL_PLATE_SOURCE_NAMESPACE):
+        try:
+            if (
+                int(values.get("schema", 0)) == 2
+                and int(values.get("sourceObjectId", 0)) > 0
+                and int(values.get("sourceObjectId", 0)) == int(_string_value(owner, "getId"))
+                and int(values.get("sourceGeneration", 0)) > 0
+                and int(values.get("imageCount", 0)) > 0
+                and int(values.get("labelCount", 0)) >= 0
+                and values.get("interchangeProfile")
+                and values.get("storageRoot")
+                and values.get("relativePath")
+            ):
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
+
+
+def _has_registered_store(obj):
+    """Check OMERO registration metadata without reading the Zarr store."""
+    recorded = _recorded_paths(obj)
+    if any(zarr_ancestor(value) is not None for value in recorded):
+        return True
+    if any(zarr_ancestor(value) is not None for value in _biomero_annotation_paths(obj)):
+        return True
+    return _has_canonical_annotation(obj)
+
+
+def image_store_registered(conn, image_id):
+    """Return whether an Image is registered as an in-place OME-Zarr store."""
+    try:
+        image_id = int(image_id)
+    except (TypeError, ValueError):
+        return False
+    image = conn.getObject("Image", image_id)
+    return image is not None and _has_registered_store(image)
+
+
+def plate_store_registered(conn, plate_id):
+    """Return whether a Plate or one of its fields is registered as OME-Zarr."""
+    try:
+        plate_id = int(plate_id)
+    except (TypeError, ValueError):
+        return False
+    plate = conn.getObject("Plate", plate_id)
+    if plate is None:
+        return False
+    if _has_registered_store(plate):
+        return True
+
+    # Legacy in-place plate imports may only retain Fileset registration on
+    # their field Images. Stop at the first registered field and never inspect
+    # Zarr metadata or storage here.
+    wells = getattr(plate, "listChildren", None)
+    if not callable(wells):
+        return False
+    for well in wells():
+        samples = getattr(well, "listChildren", None)
+        if not callable(samples):
+            continue
+        for sample in samples():
+            get_image = getattr(sample, "getImage", None)
+            image = get_image() if callable(get_image) else None
+            if image is not None and _has_registered_store(image):
+                return True
+    return False
+
+
+def well_store_registered(conn, well_id):
+    """Return whether a Well contains a registered OME-Zarr field Image."""
+    try:
+        well_id = int(well_id)
+    except (TypeError, ValueError):
+        return False
+    well = conn.getObject("Well", well_id)
+    if well is None:
+        return False
+    samples = getattr(well, "listChildren", None)
+    if not callable(samples):
+        return False
+    for sample in samples():
+        get_image = getattr(sample, "getImage", None)
+        image = get_image() if callable(get_image) else None
+        if image is not None and _has_registered_store(image):
+            return True
+    return False
 
 
 def zarr_ancestor(recorded_path):
@@ -160,6 +278,188 @@ def _map_recorded_root(recorded_root):
     return candidate, PurePosixPath(*relative.parts)
 
 
+def _safe_relative(value, *, allow_dot=False):
+    raw = str(value or "").replace("\\", "/")
+    supplied = PurePosixPath(raw or ".")
+    if supplied.is_absolute() or ".." in supplied.parts or "\x00" in raw:
+        raise UnsafePath("BIOMERO store metadata contains an unsafe path")
+    text = raw.strip("/")
+    path = PurePosixPath(text or ".")
+    if path == PurePosixPath(".") and not allow_dot:
+        raise UnsafePath("BIOMERO store metadata contains an empty path")
+    return path
+
+
+def _contained_directory(relative):
+    root = Path(mount_root()).resolve(strict=True)
+    candidate = root.joinpath(*relative.parts).resolve(strict=True)
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise UnsafePath("The resolved store escapes the configured data mount") from exc
+    if not candidate.is_dir():
+        raise StoreNotFound("The resolved OME-Zarr store is not a directory")
+    return candidate
+
+
+def _group_mappings():
+    paths = [
+        os.environ.get("OMERO_BIOMERO_GROUP_MAPPINGS_FILE"),
+        os.environ.get("OMERO_BIOMERO_CONFIG_FILE"),
+    ]
+    for index, filename in enumerate(paths):
+        if not filename:
+            continue
+        try:
+            payload = json.loads(Path(filename).read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError):
+            continue
+        if index == 1 and isinstance(payload, dict):
+            payload = payload.get("group_mappings", {})
+        if isinstance(payload, dict):
+            return payload
+    return {}
+
+
+def _managed_relative(storage_root, relative_path):
+    relative = _safe_relative(relative_path)
+    if storage_root == "import-mount-data":
+        result = relative
+    else:
+        match = GROUP_STORAGE_ROOT.fullmatch(str(storage_root or ""))
+        mapping = _group_mappings().get(match.group(1), {}) if match else {}
+        folder = mapping.get("folder") if isinstance(mapping, dict) else None
+        if not folder:
+            raise StoreNotFound("The BIOMERO storage root has no trusted group mapping")
+        result = _safe_relative(folder) / relative
+    _contained_directory(result)
+    return result
+
+
+def _canonical_annotation_store(image):
+    stores = set()
+    for owner, values in _ancestry_annotations(image, CANONICAL_PLATE_SOURCE_NAMESPACE):
+        try:
+            valid = (
+                int(values.get("schema", 0)) == 2
+                and int(values.get("sourceObjectId", 0)) > 0
+                and int(values.get("sourceObjectId", 0)) == int(_string_value(owner, "getId"))
+                and int(values.get("sourceGeneration", 0)) > 0
+                and int(values.get("imageCount", 0)) > 0
+                and int(values.get("labelCount", 0)) >= 0
+                and values.get("interchangeProfile")
+            )
+        except (TypeError, ValueError):
+            valid = False
+        if valid:
+            stores.add(_managed_relative(values.get("storageRoot"), values.get("relativePath")))
+    if len(stores) > 1:
+        raise AmbiguousStore("The OMERO object refers to multiple canonical OME-Zarr stores")
+    return next(iter(stores), None)
+
+
+def _manifest_routes(shallow_relative):
+    shallow_path = _contained_directory(shallow_relative)
+    manifest_path = shallow_path / SHALLOW_MANIFEST
+    if not manifest_path.is_file():
+        return None
+    try:
+        if manifest_path.stat().st_size > 4 * 1024 * 1024:
+            raise StoreNotFound("The shallow manifest exceeds the size limit")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise StoreNotFound("The shallow manifest is invalid") from exc
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema") != 1
+        or manifest.get("model") != "rfc8-shallow-copy"
+        or not manifest.get("workflowId")
+        or not manifest.get("transferArtifact")
+        or not manifest.get("interchangeProfile")
+    ):
+        raise StoreNotFound("The shallow manifest uses an unsupported schema")
+    images = manifest.get("images")
+    if not isinstance(images, list) or not images or len(images) > 20_000:
+        raise StoreNotFound("The shallow manifest has an invalid image list")
+
+    primary = None
+    routes = []
+    managed_sources = {}
+
+    def managed(source):
+        key = (str(source.get("storageRoot") or ""), str(source.get("relativePath") or ""))
+        if key not in managed_sources:
+            managed_sources[key] = _managed_relative(*key)
+        return managed_sources[key]
+
+    for image in images:
+        if not isinstance(image, dict):
+            raise StoreNotFound("The shallow manifest has an invalid image entry")
+        image_node = _safe_relative(image.get("imageNodePath"), allow_dot=True)
+        source = image.get("source")
+        try:
+            valid_source = (
+                isinstance(source, dict)
+                and int(source.get("schema", 0)) == 1
+                and int(source.get("sourceObjectId", 0)) > 0
+                and int(source.get("sourceGeneration", 0)) > 0
+                and source.get("interchangeProfile")
+            )
+        except (TypeError, ValueError):
+            valid_source = False
+        if not valid_source:
+            raise StoreNotFound("A shallow image has no canonical source")
+        source_base = managed(source)
+        source_node = _safe_relative(source.get("nodePath"), allow_dot=True)
+        if source_node != image_node:
+            raise StoreNotFound("A shallow image source does not match its logical node")
+        if primary is None:
+            primary = source_base
+        elif primary != source_base:
+            raise StoreNotFound("A shallow Plate spans multiple canonical stores")
+
+        components = image.get("labelComponents")
+        if components is None:
+            components = [
+                {"logicalNodePath": path}
+                for path in image.get("labelNodePaths", [])
+            ]
+        if not isinstance(components, list):
+            raise StoreNotFound("A shallow image has invalid label components")
+        seen = set()
+        for component in components:
+            if not isinstance(component, dict):
+                raise StoreNotFound("A shallow label component is invalid")
+            logical = _safe_relative(component.get("logicalNodePath"))
+            if logical in seen or logical.parts[: len(image_node.parts)] != image_node.parts:
+                raise StoreNotFound("A shallow label path is invalid or duplicated")
+            seen.add(logical)
+            label_source = component.get("source")
+            if label_source is None:
+                physical = shallow_relative / logical
+            elif isinstance(label_source, dict):
+                try:
+                    valid_label_source = (
+                        int(label_source.get("schema", 0)) == 1
+                        and int(label_source.get("sourceObjectId", 0)) > 0
+                        and int(label_source.get("sourceGeneration", 0)) > 0
+                        and label_source.get("interchangeProfile")
+                    )
+                except (TypeError, ValueError):
+                    valid_label_source = False
+                if not valid_label_source:
+                    raise StoreNotFound("A shallow label source is invalid")
+                base = managed(label_source)
+                physical = base / _safe_relative(label_source.get("nodePath"))
+            else:
+                raise StoreNotFound("A shallow label source is invalid")
+            # The managed base was resolved and contained above. Individual
+            # declared label nodes are checked when metadata or data is read,
+            # avoiding dozens of redundant bind-mount stats during Open With.
+            routes.append(StoreRoute(logical, physical))
+    return primary, tuple(routes)
+
+
 def resolve_image_store(conn, image_id):
     try:
         image_id = int(image_id)
@@ -177,7 +477,21 @@ def resolve_image_store(conn, image_id):
         roots = {root for value in recorded if (root := zarr_ancestor(value)) is not None}
         annotation_fallback = bool(roots)
     if not roots:
-        raise StoreNotFound("The image is not backed by an in-place OME-Zarr store")
+        canonical = _canonical_annotation_store(image)
+        if canonical is None:
+            raise StoreNotFound("The image is not backed by an in-place OME-Zarr store")
+        path = _contained_directory(canonical)
+        image_name = _string_value(image, "getName")
+        recorded = [str(canonical / _safe_relative(image_name, allow_dot=True))]
+        return ResolvedStore(
+            image=image,
+            image_id=image_id,
+            image_name=image_name,
+            path=path,
+            relative=canonical,
+            recorded_root=canonical,
+            recorded_files=tuple(recorded),
+        )
     if len(roots) != 1:
         raise AmbiguousStore("The image Fileset refers to multiple OME-Zarr stores")
     recorded_root = next(iter(roots))
@@ -188,6 +502,15 @@ def resolve_image_store(conn, image_id):
         # Images with their NGFF field path (for example A/1/0). Include that
         # non-authoritative hint solely for initial-field selection.
         recorded.append(str(recorded_root / PurePosixPath(image_name.replace("\\", "/"))))
+    composite = _manifest_routes(relative)
+    routes = ()
+    shallow = False
+    if composite is not None:
+        relative, routes = composite
+        path = _contained_directory(relative)
+        shallow = True
+        if image_name:
+            recorded.append(str(relative / _safe_relative(image_name, allow_dot=True)))
     return ResolvedStore(
         image=image,
         image_id=image_id,
@@ -196,6 +519,8 @@ def resolve_image_store(conn, image_id):
         relative=relative,
         recorded_root=recorded_root,
         recorded_files=tuple(recorded),
+        routes=routes,
+        shallow=shallow,
     )
 
 
@@ -227,3 +552,29 @@ def resolve_plate_store(conn, plate_id):
             except (ObjectNotFound, StoreNotFound):
                 continue
     raise StoreNotFound("The plate contains no readable in-place OME-Zarr fields")
+
+
+def resolve_well_store(conn, well_id):
+    """Resolve an OMERO Well through its first readable field Image."""
+    try:
+        well_id = int(well_id)
+    except (TypeError, ValueError) as exc:
+        raise WellNotFound("Well not found") from exc
+    well = conn.getObject("Well", well_id)
+    if well is None:
+        raise WellNotFound("Well not found")
+
+    samples = getattr(well, "listChildren", None)
+    if not callable(samples):
+        raise StoreNotFound("The well contains no readable OME-Zarr fields")
+    for sample in samples():
+        get_image = getattr(sample, "getImage", None)
+        image = get_image() if callable(get_image) else None
+        image_id = _string_value(image, "getId") if image is not None else ""
+        if not image_id:
+            continue
+        try:
+            return resolve_image_store(conn, image_id)
+        except (ObjectNotFound, StoreNotFound):
+            continue
+    raise StoreNotFound("The well contains no readable in-place OME-Zarr fields")

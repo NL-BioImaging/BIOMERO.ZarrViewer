@@ -18,6 +18,7 @@ beforeEach(() => window.history.replaceState(null, "", "/viewer/?image=42"));
 
 test("deep-link state round trips", () => {
   const url = writeDeepLink(42, {
+    view: "well",
     viewport: { x: 12.25, y: 8.5, zoom: -1.25 },
     z: 3,
     t: 2,
@@ -44,6 +45,7 @@ test("deep-link state round trips", () => {
   });
   const parsed = parseDeepLink(url.slice(url.indexOf("?")));
   expect(parsed.viewport).toEqual({ x: 12.25, y: 8.5, zoom: -1.25 });
+  expect(parsed.view).toBe("well");
   expect(parsed.field).toBe("A/1/0");
   expect(parsed.roi).toEqual({ x0: 10, y0: 20, x1: 110, y1: 70 });
   expect(parsed.sourceChannels).toEqual([1]);

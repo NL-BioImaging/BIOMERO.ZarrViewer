@@ -125,7 +125,7 @@ ansible-playbook playbook.yml
 Then:
 
 1. Sign in through the HTTPS Nginx endpoint.
-2. Select a BIOMERO-backed Image or Plate.
+2. Select a BIOMERO-backed Image, Plate, or Well.
 3. Open **Open With → OME-Zarr Viewer**.
 4. Confirm `/biomero_zarr_viewer/data/images/...` requests return 200 or 206.
 5. Confirm a direct request below `/_biomero_zarr_internal/` returns 404.

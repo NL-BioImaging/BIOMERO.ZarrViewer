@@ -47,3 +47,50 @@ test("resolves a same-origin relative data gateway URL", async () => {
   ]);
   vi.unstubAllGlobals();
 });
+
+test("retries transient server errors with bounded backoff without refreshing context", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  const statuses = [500, 502, 504, 200];
+  const caches: RequestCache[] = [];
+  const fetchMock = vi.fn(async (request: Request) => {
+    caches.push(request.cache);
+    return new Response(new Uint8Array([1]), { status: statuses.shift() });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const refresh = vi.fn(async () => capability("fresh"));
+
+  const auth = new AuthenticatedZarrStore(capability("current"), refresh);
+  const result = auth.store.get("/0/0.0.0");
+  await vi.runAllTimersAsync();
+  await result;
+
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  expect(caches).toEqual(["default", "no-store", "no-store", "no-store"]);
+  expect(refresh).not.toHaveBeenCalled();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+test("returns a persistent server error after three retries", async () => {
+  vi.useFakeTimers();
+  vi.spyOn(Math, "random").mockReturnValue(0);
+  const fetchMock = vi.fn(async () => new Response(
+    new Uint8Array([1]), { status: 500 },
+  ));
+  vi.stubGlobal("fetch", fetchMock);
+  const auth = new AuthenticatedZarrStore(capability("current"), async () => capability("fresh"));
+
+  const result = auth.store.get("/0/0.0.0");
+  const rejection = expect(result).rejects.toThrow(
+    "Tile request failed after 4 attempts: 500  (/data/0/0.0.0)",
+  );
+  await vi.runAllTimersAsync();
+  await rejection;
+
+  expect(fetchMock).toHaveBeenCalledTimes(4);
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});

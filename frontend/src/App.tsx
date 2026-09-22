@@ -269,7 +269,7 @@ export default function App() {
   const [volumeCamera, setVolumeCamera] = useState<VolumeCameraState | undefined>(deepLink.volumeCamera);
   const [volumeReset, setVolumeReset] = useState(0);
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<"field" | "well" | "plate">("field");
+  const [viewMode, setViewMode] = useState<"field" | "well" | "plate">(deepLink.view || "field");
   const [plateFieldIndex, setPlateFieldIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showScale, setShowScale] = useState(true);
@@ -455,6 +455,7 @@ export default function App() {
     if (!imageId || !loaded) return;
     const timeout = window.setTimeout(() => {
       const relative = writeDeepLink(imageId, {
+        view: viewMode,
         viewport,
         z: zIndex,
         t: tIndex,
@@ -476,7 +477,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -572,6 +573,7 @@ export default function App() {
               physicalScale={physicalScale(capability)}
               onViewportChange={setViewport}
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
+              onTilesLoaded={() => setStatus((current) => current.startsWith("Tile warning:") ? "Ready" : current)}
             />
           ) : <div className="loading">{error || status}</div>}
         </main>

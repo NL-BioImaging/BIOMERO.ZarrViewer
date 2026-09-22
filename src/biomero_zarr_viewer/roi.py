@@ -37,7 +37,7 @@ class RenderedROI:
     filename: str
 
 
-def render_roi_png(store_path, model: dict[str, Any], query) -> RenderedROI:
+def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None) -> RenderedROI:
     """Render the legacy single-overlay GET contract."""
     overlay = {}
     for source, target in (
@@ -65,7 +65,9 @@ def render_roi_png(store_path, model: dict[str, Any], query) -> RenderedROI:
             }
         ],
     }
-    return render_recipe_png(store_path, model, recipe, decorate=False)
+    return render_recipe_png(
+        store_path, model, recipe, decorate=False, label_roots=label_roots
+    )
 
 
 def render_recipe_png(
@@ -74,6 +76,7 @@ def render_recipe_png(
     recipe: dict[str, Any],
     *,
     decorate: bool = True,
+    label_roots=None,
 ) -> RenderedROI:
     if not isinstance(recipe, dict):
         raise InvalidROI("The render recipe must be a JSON object")
@@ -101,7 +104,7 @@ def render_recipe_png(
     arrays: dict[str, Any] = {}
     planes: dict[tuple[Any, ...], np.ndarray] = {}
     rendered = [
-        _render_panel(root, model, panel, arrays, planes)
+        _render_panel(root, model, panel, arrays, planes, label_roots or {})
         for panel in validated
     ]
     if len(rendered) == 1 and not decorate:
@@ -233,7 +236,7 @@ def _overlay(value: Any) -> dict[str, Any]:
     }
 
 
-def _render_panel(root, model, panel, arrays, planes) -> Image.Image:
+def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Image:
     field = panel["field"]
     bounds = panel["bounds"]
     image_path = _joined_path(field, model["datasets"][0]["path"])
@@ -280,8 +283,14 @@ def _render_panel(root, model, panel, arrays, planes) -> Image.Image:
         label_color = overlay["color"]
         if overlay["label_path"]:
             label = _label(model, field, overlay["label_path"])
-            label_path = _joined_path(label["path"], label["datasets"][0]["path"])
-            label_array = _cached_array(root, label_path, arrays)
+            label_root_path = label_roots.get(label["path"])
+            if label_root_path is None:
+                label_root = root
+                label_path = _joined_path(label["path"], label["datasets"][0]["path"])
+            else:
+                label_root = zarr.open_group(str(label_root_path), mode="r")
+                label_path = str(label["datasets"][0]["path"])
+            label_array = _cached_array(label_root, label_path, arrays)
             label_axes = _axis_names(label.get("axes"), label_array.ndim)
             if label_color is None:
                 label_color = label.get("color")
@@ -575,12 +584,13 @@ def _joined_path(prefix: str, dataset: str) -> str:
 
 
 def _cached_array(root, path: str, cache: dict[str, Any]):
-    if path not in cache:
+    key = (str(getattr(root, "path", "")), str(getattr(root.store, "path", "")), path)
+    if key not in cache:
         try:
-            cache[path] = root[path]
+            cache[key] = root[path]
         except (KeyError, TypeError) as exc:
             raise InvalidMetadata(f"OME-Zarr array '{path}' is unavailable") from exc
-    return cache[path]
+    return cache[key]
 
 
 def _axis_names(values: Any, ndim: int) -> tuple[str, ...]:

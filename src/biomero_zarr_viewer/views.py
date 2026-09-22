@@ -27,8 +27,15 @@ from .errors import (
     UnsupportedStore,
     ViewerError,
 )
-from .metadata import inspect_store
-from .resolver import resolve_image_store, resolve_plate_store
+from .metadata import inspect_label, inspect_store
+from .resolver import (
+    image_store_registered,
+    plate_store_registered,
+    resolve_image_store,
+    resolve_plate_store,
+    resolve_well_store,
+    well_store_registered,
+)
 from .roi import render_recipe_png, render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
@@ -86,6 +93,18 @@ def api_errors(function):
 @require_GET
 @login_required(setGroupContext=True)
 def viewer(request, conn=None, **kwargs):
+    well_id = request.GET.get("well")
+    if well_id and not request.GET.get("image"):
+        try:
+            store = resolve_well_store(conn, well_id)
+            query = request.GET.copy()
+            query.pop("well", None)
+            query["image"] = str(store.image_id)
+            query["v"] = "2"
+            query["view"] = "well"
+            return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
+        except ViewerError:
+            pass
     plate_id = request.GET.get("plate")
     if plate_id and not request.GET.get("image"):
         try:
@@ -117,12 +136,30 @@ def plate_capabilities(request, plate_id, conn=None, **kwargs):
     return _capability_response(request, conn, store, require_plate=True)
 
 
+@require_GET
+@login_required(setGroupContext=True)
+def image_eligibility(request, image_id, conn=None, **kwargs):
+    return JsonResponse({"supported": image_store_registered(conn, image_id)})
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def plate_eligibility(request, plate_id, conn=None, **kwargs):
+    return JsonResponse({"supported": plate_store_registered(conn, plate_id)})
+
+
+@require_GET
+@login_required(setGroupContext=True)
+def well_eligibility(request, well_id, conn=None, **kwargs):
+    return JsonResponse({"supported": well_store_registered(conn, well_id)})
+
+
 def _capability_response(request, conn, store, *, require_plate=False):
-    model = inspect_store(store.path, store.recorded_files)
+    model = _inspect_resolved_store(store)
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
     token, expires_at = make_read_context(
-        request, conn, store.image_id, store.relative
+        request, conn, store.image_id, store.relative, store.routes
     )
     sentinel = "__zarr_key__"
     data_url = reverse(
@@ -158,13 +195,49 @@ def _capability_response(request, conn, store, *, require_plate=False):
     )
 
 
+def _inspect_resolved_store(store):
+    model = inspect_store(store.path, store.recorded_files)
+    if not store.routes:
+        return model
+    field = PurePosixPath(model["initial_path"])
+    labels = []
+    for route in store.routes:
+        logical = route.logical
+        if logical.parts[: len(field.parts)] != field.parts:
+            continue
+        if len(logical.parts) < len(field.parts) + 2 or logical.parts[len(field.parts)] != "labels":
+            continue
+        physical = Path(mount_root()).joinpath(*route.physical.parts)
+        labels.append(
+            inspect_label(
+                physical,
+                str(logical),
+                model["ngff_version"],
+                label_id=len(labels),
+            )
+        )
+    model["labels"] = labels
+    model["composite_store"] = True
+    return model
+
+
+def _label_roots(store):
+    root = Path(mount_root())
+    return {
+        str(route.logical): root.joinpath(*route.physical.parts)
+        for route in store.routes
+    }
+
+
 @require_GET
 @login_required(setGroupContext=True)
 @api_errors
 def roi_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
-    model = inspect_store(store.path, store.recorded_files)
-    rendered = render_roi_png(store.path, model, request.GET)
+    model = _inspect_resolved_store(store)
+    rendered = render_roi_png(
+        store.path, model, request.GET, label_roots=_label_roots(store)
+    )
     response = HttpResponse(rendered.content, content_type="image/png")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
     response["Content-Length"] = str(len(rendered.content))
@@ -184,8 +257,10 @@ def render_png(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = inspect_store(store.path, store.recorded_files)
-    rendered = render_recipe_png(store.path, model, recipe)
+    model = _inspect_resolved_store(store)
+    rendered = render_recipe_png(
+        store.path, model, recipe, label_roots=_label_roots(store)
+    )
     response = HttpResponse(rendered.content, content_type="image/png")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
     response["Content-Length"] = str(len(rendered.content))
@@ -194,7 +269,7 @@ def render_png(request, image_id, conn=None, **kwargs):
     return response
 
 
-def _safe_data_path(store_relative, zarr_key):
+def _safe_data_path(store_relative, zarr_key, routes=()):
     store = PurePosixPath(str(store_relative).replace("\\", "/"))
     key_text = str(zarr_key).replace("\\", "/")
     key = PurePosixPath(key_text)
@@ -207,15 +282,30 @@ def _safe_data_path(store_relative, zarr_key):
         or "\x00" in key_text
     ):
         raise UnsafePath("The requested Zarr key is unsafe")
+    selected_store = store
+    suffix = key
+    matches = []
+    for route in routes if isinstance(routes, list) else ():
+        if not isinstance(route, list) or len(route) != 2:
+            raise UnsafePath("The signed Zarr route is invalid")
+        logical = PurePosixPath(str(route[0]).replace("\\", "/"))
+        physical = PurePosixPath(str(route[1]).replace("\\", "/"))
+        if logical.is_absolute() or physical.is_absolute() or ".." in logical.parts or ".." in physical.parts:
+            raise UnsafePath("The signed Zarr route is unsafe")
+        if key == logical or key.parts[: len(logical.parts)] == logical.parts:
+            matches.append((len(logical.parts), logical, physical))
+    if matches:
+        _, logical, selected_store = max(matches, key=lambda item: item[0])
+        suffix = PurePosixPath(*key.parts[len(logical.parts):])
     root = Path(mount_root()).resolve(strict=True)
-    candidate = root.joinpath(*store.parts, *key.parts).resolve(strict=False)
+    candidate = root.joinpath(*selected_store.parts, *suffix.parts).resolve(strict=False)
     try:
         candidate.relative_to(root)
     except ValueError as exc:
         raise UnsafePath("The requested Zarr key escapes the configured mount") from exc
     if not candidate.is_file():
         raise DataNotFound("The requested Zarr key does not exist")
-    return candidate, PurePosixPath(*store.parts, *key.parts)
+    return candidate, PurePosixPath(*selected_store.parts, *suffix.parts)
 
 
 @require_http_methods(["GET", "HEAD"])
@@ -223,7 +313,9 @@ def _safe_data_path(store_relative, zarr_key):
 @api_errors
 def data(request, image_id, zarr_key, conn=None, **kwargs):
     claims = validate_read_context(request, conn, image_id)
-    candidate, relative = _safe_data_path(claims.get("store", ""), zarr_key)
+    candidate, relative = _safe_data_path(
+        claims.get("store", ""), zarr_key, claims.get("routes", [])
+    )
     content_type = mimetypes.guess_type(candidate.name)[0] or "application/octet-stream"
     response = HttpResponse(content_type=content_type)
     encoded = "/".join(quote(part, safe="") for part in relative.parts)

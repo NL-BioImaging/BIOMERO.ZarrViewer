@@ -20,6 +20,9 @@ def test_open_with_script_is_bundled():
     assert "setOpenWithEnabledHandler" in script
     assert "setOpenWithUrlProvider" in script
     assert '"plate"' in script
+    assert '"well"' in script
+    assert "/eligibility/" in script
+    assert "/capabilities/" not in script
 
 
 def assert_wheel_frontend(wheel):
