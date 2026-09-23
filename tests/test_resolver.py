@@ -172,6 +172,68 @@ def test_resolves_inherited_label_from_managed_node(configure_storage, monkeypat
     )
 
 
+def test_resolves_schema_2_shallow_graph_bindings(configure_storage, monkeypatch, tmp_path):
+    source, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    canonical = mount / "Project A/canonical/cells.ome.zarr"
+    canonical.mkdir(parents=True)
+    inherited = canonical / "labels/existing"
+    inherited.mkdir(parents=True)
+    shallow = mount / "Project A/results/cells.ome.zarr"
+    local = shallow / "labels/nuclei"
+    local.mkdir(parents=True)
+    canonical_source = {
+        "schema": 1,
+        "storageRoot": "group-13-data",
+        "relativePath": "canonical/cells.ome.zarr",
+        "nodePath": ".",
+        "sourceObjectId": 42,
+        "sourceGeneration": 1,
+        "interchangeProfile": "ngff-0.4-zarr-v2",
+    }
+    (shallow / ".biomero-shallow.json").write_text(json.dumps({
+        "schema": 2,
+        "format": "biomero-shallow-zarr",
+        "workflowId": "00000000-0000-4000-8000-000000000001",
+        "transferArtifact": "cells.ome.zarr",
+        "interchangeProfile": "ngff-0.4-zarr-v2",
+        "collection": {
+            "name": "cells.ome.zarr",
+            "images": [{"id": "image-0", "name": ".", "nodePath": "."}],
+            "labels": [
+                {"id": "label-0", "name": "labels/nuclei", "nodePath": "labels/nuclei", "sourceImageId": "image-0"},
+                {"id": "label-1", "name": "labels/existing", "nodePath": "labels/existing", "sourceImageId": "image-0"},
+            ],
+        },
+        "bindings": {
+            "images": [{"nodeId": "image-0", "source": canonical_source, "returnedPixelIdentity": {}}],
+            "labels": [
+                {"nodeId": "label-0", "component": {"logicalNodePath": "labels/nuclei", "source": None}},
+                {"nodeId": "label-1", "component": {
+                    "logicalNodePath": "labels/existing",
+                    "source": {
+                        "storageRoot": "group-13-data",
+                        "relativePath": "canonical/cells.ome.zarr",
+                        "nodePath": "labels/existing",
+                    },
+                }},
+            ],
+        },
+    }), encoding="utf-8")
+    image = FakeImage(42, "cells", [FakeOriginalFile(
+        f"{source}/Project A/results/cells.ome.zarr/", ".zattrs"
+    )])
+
+    resolved = resolve_image_store(FakeConnection(image), 42)
+
+    assert resolved.shallow is True
+    assert resolved.path == canonical.resolve()
+    assert [(str(route.logical), str(route.physical)) for route in resolved.routes] == [
+        ("labels/nuclei", "Project A/results/cells.ome.zarr/labels/nuclei"),
+        ("labels/existing", "Project A/canonical/cells.ome.zarr/labels/existing"),
+    ]
+
+
 def test_skips_wellsample_annotation_api_and_resolves_screen_ancestry(configure_storage):
     _, mount = configure_storage
     store = mount / "plates/cells.ome.zarr"
