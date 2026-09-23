@@ -130,6 +130,48 @@ def test_resolves_shallow_labels_over_canonical_pixels(configure_storage, monkey
     assert str(resolved.routes[0].physical) == "Project A/results/cells.ome.zarr/A/1/0/labels/nuclei"
 
 
+def test_resolves_inherited_label_from_managed_node(configure_storage, monkeypatch, tmp_path):
+    source, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    canonical = mount / "Project A/canonical/cells.ome.zarr"
+    canonical.mkdir(parents=True)
+    inherited = canonical / "A/1/0/labels/existing"
+    inherited.mkdir(parents=True)
+    shallow = mount / "Project A/results/cells.ome.zarr"
+    shallow.mkdir(parents=True)
+    logical = "A/1/0/labels/existing"
+    (shallow / ".biomero-shallow.json").write_text(json.dumps({
+        "schema": 1, "model": "rfc8-shallow-copy",
+        "workflowId": "00000000-0000-4000-8000-000000000001",
+        "transferArtifact": "cells.ome.zarr",
+        "interchangeProfile": "ngff-0.4-zarr-v2", "images": [{
+            "imageNodePath": "A/1/0",
+            "source": {"schema": 1, "storageRoot": "group-13-data", "relativePath": "canonical/cells.ome.zarr", "nodePath": "A/1/0", "sourceObjectId": 9, "sourceGeneration": 1, "interchangeProfile": "ngff-0.4-zarr-v2"},
+            "labelNodePaths": [logical],
+            "labelComponents": [{
+                "logicalNodePath": logical,
+                "source": {
+                    "storageRoot": "group-13-data",
+                    "relativePath": "canonical/cells.ome.zarr",
+                    "nodePath": logical,
+                },
+            }],
+        }],
+    }), encoding="utf-8")
+    image = FakeImage(42, "A/1/0", [FakeOriginalFile(
+        f"{source}/Project A/results/cells.ome.zarr/", ".zattrs"
+    )])
+
+    resolved = resolve_image_store(FakeConnection(image), 42)
+
+    assert resolved.shallow is True
+    assert resolved.path == canonical.resolve()
+    assert str(resolved.routes[0].logical) == logical
+    assert str(resolved.routes[0].physical) == (
+        "Project A/canonical/cells.ome.zarr/A/1/0/labels/existing"
+    )
+
+
 def test_skips_wellsample_annotation_api_and_resolves_screen_ancestry(configure_storage):
     _, mount = configure_storage
     store = mount / "plates/cells.ome.zarr"
