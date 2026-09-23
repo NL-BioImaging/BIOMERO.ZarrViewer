@@ -438,16 +438,14 @@ def _manifest_routes(shallow_relative):
             if label_source is None:
                 physical = shallow_relative / logical
             elif isinstance(label_source, dict):
-                try:
-                    valid_label_source = (
-                        int(label_source.get("schema", 0)) == 1
-                        and int(label_source.get("sourceObjectId", 0)) > 0
-                        and int(label_source.get("sourceGeneration", 0)) > 0
-                        and label_source.get("interchangeProfile")
-                    )
-                except (TypeError, ValueError):
-                    valid_label_source = False
-                if not valid_label_source:
+                # Label components use the shared schema's ManagedZarrNode
+                # shape. Unlike an image's CanonicalZarrSource, it is only a
+                # trusted managed locator and has no OMERO object identity.
+                if not all(
+                    isinstance(label_source.get(field), str)
+                    and label_source.get(field)
+                    for field in ("storageRoot", "relativePath", "nodePath")
+                ):
                     raise StoreNotFound("A shallow label source is invalid")
                 base = managed(label_source)
                 physical = base / _safe_relative(label_source.get("nodePath"))
