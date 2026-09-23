@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=77.0.3", "wheel"]
+requires = ["setuptools>=77.0.3", "setuptools-scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "biomero-zarr-viewer"
-version = "0.6.1"
+dynamic = ["version"]
 description = "Authenticated OME-Zarr viewer for BIOMERO and OMERO.web"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -57,6 +57,8 @@ biomero_zarr_viewer = [
   "static/**/*",
   "analysis_skills/**/*",
 ]
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

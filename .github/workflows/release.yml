@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -21,15 +23,6 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Require the release tag to match the package version
-        shell: bash
-        run: |
-          package_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
-          if [[ "${GITHUB_REF_NAME}" != "v${package_version}" ]]; then
-            echo "Release tag ${GITHUB_REF_NAME} does not match package version ${package_version}" >&2
-            exit 1
-          fi
 
       - name: Install Python build and test dependencies
         run: |
@@ -44,8 +37,18 @@ jobs:
             pytest-django \
             build \
             setuptools \
+            setuptools-scm \
             wheel \
             twine
+
+      - name: Require the release tag to match the derived package version
+        shell: bash
+        run: |
+          package_version="$(python -c 'from setuptools_scm import get_version; print(get_version())')"
+          if [[ "${GITHUB_REF_NAME}" != "v${package_version}" ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match derived package version ${package_version}" >&2
+            exit 1
+          fi
 
       - name: Install and test frontend dependencies
         working-directory: frontend
