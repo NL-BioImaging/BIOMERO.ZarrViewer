@@ -26,6 +26,22 @@ def biomero_annotation(path):
     )
 
 
+def canonical_plate_annotation(plate_id, path, generation):
+    return FakeAnnotation(
+        "biomero.zarr.plate-source",
+        {
+            "schema": "2",
+            "storageRoot": "group-13-data",
+            "relativePath": path,
+            "sourceObjectId": str(plate_id),
+            "sourceGeneration": str(generation),
+            "interchangeProfile": "ngff-0.4-zarr-v2",
+            "imageCount": "18",
+            "labelCount": "0",
+        },
+    )
+
+
 def managed_storage(monkeypatch, tmp_path, mount):
     mapping = tmp_path / "group-mappings.json"
     mapping.write_text(json.dumps({"13": {"folder": "Project A"}}), encoding="utf-8")
@@ -99,6 +115,67 @@ def test_resolves_compact_canonical_plate_annotation(configure_storage, monkeypa
 
     assert resolved.path == canonical.resolve()
     assert str(resolved.relative) == "Project A/canonical/cells.ome.zarr"
+
+
+def test_resolves_latest_canonical_plate_generation(
+    configure_storage, monkeypatch, tmp_path,
+):
+    _, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    older = mount / "Project A/canonical/Plate-1.g1.ome.zarr"
+    current = mount / "Project A/canonical/Plate-1.g2.ome.zarr"
+    older.mkdir(parents=True)
+    current.mkdir()
+    plate = FakeParent(1, annotations=[
+        canonical_plate_annotation(
+            1, "canonical/Plate-1.g1.ome.zarr", 1,
+        ),
+        canonical_plate_annotation(
+            1, "canonical/Plate-1.g2.ome.zarr", 2,
+        ),
+    ])
+    well = FakeParent(8, parents=[plate])
+    image = FakeImage(42, "A/1/0", [], parents=[well])
+    sample = FakeWellSample(7, image, parents=[well])
+    well.listChildren = lambda: [sample]
+    plate.listChildren = lambda: [well]
+
+    resolved = resolve_plate_store(
+        FakeConnection(image=image, plate=plate), 1,
+    )
+
+    assert resolved.path == current.resolve()
+    assert str(resolved.relative) == (
+        "Project A/canonical/Plate-1.g2.ome.zarr"
+    )
+
+
+def test_rejects_ambiguous_current_canonical_plate_generation(
+    configure_storage, monkeypatch, tmp_path,
+):
+    _, mount = configure_storage
+    managed_storage(monkeypatch, tmp_path, mount)
+    for name in (
+        "Plate-1.g1.ome.zarr",
+        "Plate-1.g2.ome.zarr",
+        "Plate-1-other.g2.ome.zarr",
+    ):
+        (mount / "Project A/canonical" / name).mkdir(parents=True)
+    plate = FakeParent(1, annotations=[
+        canonical_plate_annotation(
+            1, "canonical/Plate-1.g1.ome.zarr", 1,
+        ),
+        canonical_plate_annotation(
+            1, "canonical/Plate-1.g2.ome.zarr", 2,
+        ),
+        canonical_plate_annotation(
+            1, "canonical/Plate-1-other.g2.ome.zarr", 2,
+        ),
+    ])
+    image = FakeImage(42, "A/1/0", [], parents=[plate])
+
+    with pytest.raises(AmbiguousStore, match="generation 2"):
+        resolve_image_store(FakeConnection(image), 42)
 
 
 def test_resolves_shallow_labels_over_canonical_pixels(configure_storage, monkeypatch, tmp_path):

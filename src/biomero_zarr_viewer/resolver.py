@@ -337,14 +337,15 @@ def _managed_relative(storage_root, relative_path):
 
 
 def _canonical_annotation_store(image):
-    stores = set()
+    stores_by_generation = {}
     for owner, values in _ancestry_annotations(image, CANONICAL_PLATE_SOURCE_NAMESPACE):
         try:
+            generation = int(values.get("sourceGeneration", 0))
             valid = (
                 int(values.get("schema", 0)) == 2
                 and int(values.get("sourceObjectId", 0)) > 0
                 and int(values.get("sourceObjectId", 0)) == int(_string_value(owner, "getId"))
-                and int(values.get("sourceGeneration", 0)) > 0
+                and generation > 0
                 and int(values.get("imageCount", 0)) > 0
                 and int(values.get("labelCount", 0)) >= 0
                 and values.get("interchangeProfile")
@@ -352,10 +353,21 @@ def _canonical_annotation_store(image):
         except (TypeError, ValueError):
             valid = False
         if valid:
-            stores.add(_managed_relative(values.get("storageRoot"), values.get("relativePath")))
+            stores_by_generation.setdefault(generation, set()).add(
+                _managed_relative(
+                    values.get("storageRoot"), values.get("relativePath")
+                )
+            )
+    if not stores_by_generation:
+        return None
+    generation = max(stores_by_generation)
+    stores = stores_by_generation[generation]
     if len(stores) > 1:
-        raise AmbiguousStore("The OMERO object refers to multiple canonical OME-Zarr stores")
-    return next(iter(stores), None)
+        raise AmbiguousStore(
+            "The OMERO object refers to multiple canonical OME-Zarr stores "
+            f"for generation {generation}"
+        )
+    return next(iter(stores))
 
 
 def _binding_map(values):
