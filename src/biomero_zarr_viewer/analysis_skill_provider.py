@@ -14,7 +14,7 @@ SKILL_NAME = "use-omero-zarr-viewer"
 SKILL_VERSION = "5"
 SKILL_ROOT = Path(__file__).with_name("analysis_skills") / SKILL_NAME
 REQUIRED_RESOURCES = ("references/REFERENCE.md",)
-REQUIRED_CAPABILITIES = ("zarr-render-v2", "zarr-gallery-v1", "zarr-review-export-v1")
+REQUIRED_CAPABILITIES = ("zarr-render-v2", "zarr-gallery-v1")
 
 
 def _files():

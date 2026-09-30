@@ -1,13 +1,13 @@
 ---
 name: use-omero-zarr-viewer
-description: Export bounded PNG or SVG review plots from an active OMERO OME-Zarr Image or Plate, including requested label outlines, tracks, spots, and time projections.
+description: Open an active OMERO OME-Zarr Image or Plate, or export requested bounded PNG or SVG review plots with label outlines, tracks, spots, and time projections.
 metadata:
   version: "5"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
   biomero-required-resources: "references/REFERENCE.md"
-  biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1,zarr-review-export-v1"
+  biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1"
 ---
 
 # Use OMERO ZarrViewer
@@ -23,8 +23,9 @@ gallery rendering, and failure behavior.
 
 ## Procedure
 
-1. Confirm the user requested a PNG or SVG review plot. Do not insert an inline
-   image preview into Analysis or add scientific vectors to viewer links.
+1. Confirm the user asked to open a view or requested a PNG or SVG review plot.
+   Do not insert an inline image preview into Analysis or add scientific vectors
+   to viewer links.
 2. Inspect the active OMERO group and selected Image or Plate. Never invent or
    infer an OMERO object ID from a portable database.
 3. If a CI Segmentation database is involved, open it read-only, inspect its
