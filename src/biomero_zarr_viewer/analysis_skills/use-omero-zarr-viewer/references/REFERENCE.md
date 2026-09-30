@@ -5,6 +5,7 @@
 - [Required context](#required-context)
 - [Database mapping](#database-mapping)
 - [Focused-view inputs](#focused-view-inputs)
+- [Optional scientific vector overlays](#optional-scientific-vector-overlays)
 - [ROI PNG behavior](#roi-png-behavior)
 - [Render v2 and galleries](#render-v2-and-galleries)
 - [Failure handling](#failure-handling)
@@ -84,6 +85,40 @@ Use either `labelPath` or `labelChannel`, never both. A focused view fits the
 complete ROI and outlines only `labelValue`. Version-2 deep links may instead
 carry an `overlays` JSON array. Continue accepting the legacy
 `labelPath`/`labelChannel`/`labelValue` parameters.
+
+## Optional scientific vector overlays
+
+If the authenticated image capability advertises `zarr-vector-overlay-v1`,
+the link's URL fragment may contain `vectors=<encoded JSON>`. The same object
+may be supplied as `vectors` on a render-recipe panel. The format is:
+
+```json
+{"version":1,"items":[
+  {"kind":"point","x":12.25,"y":8.5,"t":2,"z":0,"color":"#00E5FF","radius":4},
+  {"kind":"line","x":10,"y":8,"x2":12.25,"y2":8.5,"t":2,"z":0,"color":"#FFB300","width":2,"trail":true,"dashed":true}
+]}
+```
+
+Coordinates are native pixel coordinates, including subpixel Spotiflow
+positions from `point_localizations`; T/Z are zero-based. A point is displayed
+only on its own T/Z plane. `trail:true` retains a line on later timepoints,
+never earlier ones. A dashed line can denote a missed-frame gap. Show cell or
+nucleus division links only when `cell_divisions` supplies them; spot tracks
+never split. A panel accepts at most 256 items and 16 KiB of vector JSON.
+Query at most the selected track or local neighbours and disclose a clipped
+trail. Do not send whole-image geometry or unrelated objects in a link.
+
+For spatial review join `spatial_measurements` and `object_contacts` to
+`object_navigation` by `object_id`. For colocalisation show the paired channels,
+object mask, `colocalization_thresholds`, sample counts, and `reason`; undefined
+Pearson or Manders values must not be plotted as zero. For tracking join
+`track_observations` to `object_navigation` and use native
+`point_localizations` when available. Check `measurement_extensions` version 1
+and the current OMERO store UUID before every linked review.
+
+Older viewers may omit this capability. In that case open the same image and
+raster label without vectors, and explain that the track/point overlay is
+unavailable in that viewer version.
 
 ## ROI PNG behavior
 

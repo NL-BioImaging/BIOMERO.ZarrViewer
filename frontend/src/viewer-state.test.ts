@@ -16,6 +16,16 @@ const labels: LabelState[] = [
 
 beforeEach(() => window.history.replaceState(null, "", "/viewer/?image=42"));
 
+test("scientific overlays persist when the viewer rewrites its navigation link", () => {
+  const vectors = { version: 1 as const, items: [{ kind: "point" as const,
+    x: 42.5, y: 20.25, t: 1, z: 0, color: "#00E5FF" }] };
+  const first = writeDeepLink(42, { t: 1, z: 0, vectors });
+  window.history.replaceState(null, "", first);
+  const parsed = parseDeepLink();
+  expect(parsed.vectors?.items[0].x).toBe(42.5);
+  expect(writeDeepLink(42, { ...parsed, t: 2, z: 0 })).toContain("#vectors=");
+});
+
 test("deep-link state round trips", () => {
   const url = writeDeepLink(42, {
     view: "well",

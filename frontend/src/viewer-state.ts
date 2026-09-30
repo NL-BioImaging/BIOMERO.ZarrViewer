@@ -1,4 +1,5 @@
 import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeCameraState } from "./types";
+import { parseVectorFragment, vectorFragment, type VectorOverlay } from "./vector-overlays";
 
 export interface DeepLinkState {
   view?: "field" | "well" | "plate";
@@ -17,6 +18,7 @@ export interface DeepLinkState {
   labelValue?: number;
   storeUuid?: string;
   overlays?: OverlayDeepLink[];
+  vectors?: VectorOverlay;
   channels?: Array<Pick<ChannelState, "index" | "visible" | "color" | "low" | "high">>;
   labels?: Array<Pick<LabelState, "id" | "visible" | "opacity" | "mode" | "color" | "outlineWidth" | "highlightValues">>;
 }
@@ -51,6 +53,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const version = params.get("v");
   if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
+  state.vectors = parseVectorFragment(window.location.hash);
   const view = params.get("view");
   if (view === "field" || view === "well" || view === "plate") state.view = view;
   if (params.has("x") || params.has("y") || params.has("zoom")) {
@@ -212,7 +215,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.overlays?.length) params.set("overlays", JSON.stringify(state.overlays.slice(0, 8)));
   if (state.channels) params.set("channels", JSON.stringify(state.channels.map(({ index, visible, color, low, high }) => ({ index, visible, color, low, high }))));
   if (state.labels) params.set("labels", JSON.stringify(state.labels.map(({ id, visible, opacity, mode, color, outlineWidth, highlightValues }) => ({ id, visible, opacity, mode, outlineWidth, ...(color ? { color } : {}), ...(highlightValues?.length ? { highlightValues } : {}) }))));
-  return `${window.location.pathname}?${params.toString()}`;
+  return `${window.location.pathname}?${params.toString()}${vectorFragment(state.vectors)}`;
 }
 
 export function fitRoiViewport(roi: RoiBounds, width: number, height: number): ViewportState {

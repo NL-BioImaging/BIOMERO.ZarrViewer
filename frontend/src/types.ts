@@ -52,6 +52,7 @@ export interface PlateCapability {
 export interface Capability {
   schema_version: 1;
   supported: true;
+  features?: string[];
   image: { id: number; name: string };
   store: {
     url: string;

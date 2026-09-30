@@ -298,6 +298,7 @@ export default function App() {
   const [plateFieldIndex, setPlateFieldIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showScale, setShowScale] = useState(true);
+  const [showVectors, setShowVectors] = useState(true);
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
   const initializedZ = useRef(false);
   const fittedRoi = useRef("");
@@ -495,6 +496,7 @@ export default function App() {
         labelChannel: deepLink.labelChannel,
         labelValue: deepLink.labelValue,
         overlays: labelOverlays(labels, capability, field),
+        vectors: deepLink.vectors,
         storeUuid: deepLink.storeUuid,
         channels,
         labels,
@@ -522,18 +524,33 @@ export default function App() {
               }}
             />}
           {currentLoaded && viewMode === "field" && effectiveRenderMode === "2d" && <>
+            {Boolean(deepLink.vectors?.items.length) && <button className={showVectors ? "active" : ""}
+              aria-pressed={showVectors} onClick={() => setShowVectors((value) => !value)}>Scientific overlays</button>}
             <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Show Navigator</button>
             <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Show Scale</button>
-            {deepLink.roi && capability && <a
-              className="toolbar-button"
-              href={roiPngUrl(capability, {
-                ...deepLink,
-                field,
-                z: zIndex,
-                t: tIndex,
-              }, channels)}
-              download
-            >Download ROI PNG</a>}
+            {deepLink.roi && capability && (deepLink.vectors?.items.length && showVectors
+              ? <button onClick={() => {
+                  void fetch(capability.store.render_url!, {
+                    method: "POST", credentials: "same-origin",
+                    headers: { "Content-Type": "application/json",
+                      "X-CSRFToken": document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/)?.[1] || "" },
+                    body: JSON.stringify({ storeUuid: deepLink.storeUuid || capability.store.uuid,
+                      panels: [{ field: field || capability.initial_path,
+                        roi: [deepLink.roi!.x0, deepLink.roi!.y0, deepLink.roi!.x1, deepLink.roi!.y1],
+                        sourceChannels: channels.filter((channel) => channel.visible).map((channel) => channel.index + 1),
+                        t: tIndex, z: zIndex, scaleBar: true,
+                        overlays: labelOverlays(labels, capability, field), vectors: deepLink.vectors }] })
+                  }).then(async (response) => {
+                    if (!response.ok) throw new Error(`PNG render failed (${response.status})`);
+                    const url = URL.createObjectURL(await response.blob());
+                    const link = document.createElement("a");
+                    link.href = url; link.download = "scientific-review.png"; link.click();
+                    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  }).catch((reason) => setStatus(reason instanceof Error ? reason.message : "PNG render failed"));
+                }}>Download ROI PNG</button>
+              : <a className="toolbar-button" href={roiPngUrl(capability, {
+                  ...deepLink, field, z: zIndex, t: tIndex,
+                }, channels)} download>Download ROI PNG</a>)}
           </>}
           {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
             <button onClick={() => {
@@ -596,6 +613,7 @@ export default function App() {
               showMinimap={showMinimap}
               showScale={showScale}
               physicalScale={physicalScale(capability)}
+              vectors={showVectors ? deepLink.vectors : undefined}
               onViewportChange={setViewport}
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
               onTilesLoaded={() => setStatus((current) => current.startsWith("Tile warning:") ? "Ready" : current)}

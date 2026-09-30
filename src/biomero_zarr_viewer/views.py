@@ -180,6 +180,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
         {
             "schema_version": 1,
             "supported": True,
+            "features": ["zarr-vector-overlay-v1"],
             "image": {"id": store.image_id, "name": store.image_name},
             "store": {
                 "url": data_url,

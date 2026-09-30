@@ -12,6 +12,7 @@ from typing import Any
 import numpy as np
 import zarr
 from PIL import Image, ImageDraw, ImageFont
+from .vector_overlays import draw_vectors, validate_vectors
 
 from .errors import InvalidMetadata, InvalidROI, ROILimitExceeded, StoreMismatch
 from .settings import (
@@ -164,6 +165,7 @@ def _validate_panel(model: dict[str, Any], value: Any) -> dict[str, Any]:
         "z_index": z_index,
         "channels": channels,
         "overlays": [_overlay(item) for item in overlays],
+        "vectors": validate_vectors(value.get("vectors")),
         "title": _bounded_text(value.get("title"), 160),
         "caption": _bounded_text(value.get("caption"), 320),
         "scale_bar": value.get("scaleBar", True) is not False,
@@ -338,6 +340,7 @@ def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Imag
 
     pixels = np.rint(np.clip(composite, 0, 1) * 255).astype(np.uint8)
     image = Image.fromarray(pixels, mode="RGB")
+    draw_vectors(image, panel["vectors"], bounds, panel["timepoint"], panel["z_index"])
     if panel["scale_bar"]:
         _draw_scale_bar(image, model)
     return image

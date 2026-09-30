@@ -16,7 +16,7 @@ Generated for frontend version `0.6.0` with 200 production packages.
 | `@deck.gl/core@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@deck.gl/extensions@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@deck.gl/geo-layers@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/layers@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/layers@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@deck.gl/mesh-layers@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@deck.gl/react@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@deck.gl/widgets@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
@@ -218,7 +218,7 @@ Generated for frontend version `0.6.0` with 200 production packages.
 
 ### L001
 
-Packages: `@deck.gl/core@9.3.7 (LICENSE)`, `@deck.gl/extensions@9.3.11 (LICENSE)`, `@deck.gl/geo-layers@9.3.11 (LICENSE)`, `@deck.gl/layers@9.3.11 (LICENSE)`, `@deck.gl/mesh-layers@9.3.11 (LICENSE)`, `@deck.gl/react@9.3.7 (LICENSE)`, `@deck.gl/widgets@9.3.11 (LICENSE)`, `@probe.gl/env@4.1.1 (LICENSE)`, `@probe.gl/log@4.1.1 (LICENSE)`, `@probe.gl/stats@4.1.1 (LICENSE)`
+Packages: `@deck.gl/core@9.3.7 (LICENSE)`, `@deck.gl/extensions@9.3.11 (LICENSE)`, `@deck.gl/geo-layers@9.3.11 (LICENSE)`, `@deck.gl/layers@9.3.7 (LICENSE)`, `@deck.gl/mesh-layers@9.3.11 (LICENSE)`, `@deck.gl/react@9.3.7 (LICENSE)`, `@deck.gl/widgets@9.3.11 (LICENSE)`, `@probe.gl/env@4.1.1 (LICENSE)`, `@probe.gl/log@4.1.1 (LICENSE)`, `@probe.gl/stats@4.1.1 (LICENSE)`
 
 ````text
 Copyright Vis.gl contributors.

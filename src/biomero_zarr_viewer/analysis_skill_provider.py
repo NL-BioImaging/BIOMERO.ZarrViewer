@@ -11,7 +11,7 @@ from . import __version__
 
 PROVIDER_SCHEMA = "nl.bioimaging.analysis-skill-provider.v1"
 SKILL_NAME = "use-omero-zarr-viewer"
-SKILL_VERSION = "3"
+SKILL_VERSION = "4"
 SKILL_ROOT = Path(__file__).with_name("analysis_skills") / SKILL_NAME
 REQUIRED_RESOURCES = ("references/REFERENCE.md",)
 REQUIRED_CAPABILITIES = ("zarr-render-v2", "zarr-gallery-v1")
