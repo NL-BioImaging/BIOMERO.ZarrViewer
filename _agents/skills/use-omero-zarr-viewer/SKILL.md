@@ -1,8 +1,8 @@
 ---
 name: use-omero-zarr-viewer
-description: Open an active OMERO OME-Zarr Image or Plate, or export requested bounded PNG or SVG review plots with label outlines, tracks, spots, and time projections.
+description: Open an active OMERO OME-Zarr Image or Plate, or render bounded PNG or SVG plots with caller-supplied vectors, raster label outlines, and temporal projections.
 metadata:
-  version: "5"
+  version: "6"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
@@ -28,30 +28,26 @@ gallery rendering, and failure behavior.
    to viewer links.
 2. Inspect the active OMERO group and selected Image or Plate. Never invent or
    infer an OMERO object ID from a portable database.
-3. If a CI Segmentation database is involved, open it read-only, inspect its
-   schema, and query `object_navigation` for the requested object.
-4. Compare the database `output_store_uuid` with the UUID reported by the
-   viewer capability. Stop on a mismatch. For an older database without a UUID,
-   explain that identity cannot be verified automatically.
-5. Use `output_resource_path`, timepoint, label storage fields, label value,
-   and half-open pixel bounds from the navigation row. For point-only objects
-   without bounds, create a small bounded crop around the centroid and clamp it
-   to the image dimensions.
-6. Use `label_sources` when the user wants the inference-origin intensity
-   channel. Database channel indices and viewer `sourceChannels` are one-based.
-7. Cite the successful analysis evidence ID when asking the host to render a
-   plot. Preserve the active OMERO group and pass
-   only validated fields from the reference.
-8. Prefer one gallery request over separate per-object PNG requests.
-9. Save or attach a plot only when the user requested an export. Report the
-   selected field, object, channels, Z/T plane or time range, bounds, and label outline.
-10. When optional CISegmentation extension rows are present, use bounded
-    read-only queries for a selected track, spot, colocalisation result, or
-    spatial neighbour. Confirm the viewer advertises `zarr-review-export-v1`
-    before adding points or lines to an export recipe. Keep raster labels as
-    the authoritative segmentation masks. For a time projection, use a bounded
-    `timeProjection` range and choose `max` or `mean`; show a label outline only
-    when its label value belongs to the displayed end frame.
+3. Establish the requested store UUID, field, native-pixel crop, channels,
+   Z plane, and timepoint from authenticated OMERO context or trusted analysis
+   data. Verify the UUID against the current viewer capability and preserve
+   the active OMERO group. Never infer an OMERO object ID from a database.
+4. For a requested export, construct a bounded render recipe. Use raster label
+   paths/values for outlines; use `vectors` for caller-supplied points or lines.
+   The viewer does not require a particular measurement or tracking schema.
+5. Confirm `zarr-review-export-v1` before adding vectors or a temporal
+   projection. Choose `max` or `mean` over at most 32 frames, ending at the
+   panel's `t`. Do not put vectors in interactive viewer links.
+6. In an Analysis notebook, return `omero_analysis_render_recipe` and optional
+   `omero_analysis_render_format` (`png` or `svg`) in `result`. Analysis verifies
+   store access and sends the authenticated render request; notebook Python does
+   not contact ZarrViewer directly. See the reference for an example.
+7. If data comes from CISegmentation, read its database with bounded queries;
+   `object_navigation` and tracking tables can supply coordinates. Keep masks
+   authoritative and use end-frame label values on temporal projections.
+8. Prefer one gallery request over separate per-object PNG requests. Save or
+   attach a plot only when requested, and report its field, channels, Z/T or
+   time range, crop, and overlays.
 
 ## Safety
 

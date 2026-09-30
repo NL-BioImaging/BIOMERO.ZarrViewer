@@ -3,7 +3,7 @@
 ## Contents
 
 - [Required context](#required-context)
-- [Database mapping](#database-mapping)
+- [Optional CISegmentation database mapping](#optional-cisegmentation-database-mapping)
 - [Focused-view inputs](#focused-view-inputs)
 - [Requested review plot exports](#requested-review-plot-exports)
 - [ROI PNG behavior](#roi-png-behavior)
@@ -13,8 +13,10 @@
 ## Required context
 
 The host must provide an authenticated active OMERO Image or Plate and
-ZarrViewer capabilities for that object. A CI Segmentation measurement
-database is portable and deliberately does not store OMERO object IDs.
+ZarrViewer capabilities for that object. Vector coordinates may come from any
+trusted analysis source; ZarrViewer does not inspect the source's schema.
+CISegmentation is one optional source and its portable database deliberately
+does not store OMERO object IDs.
 
 When both sides provide an identity, require:
 
@@ -24,7 +26,7 @@ measurement_runs.output_store_uuid == viewer store UUID
 
 Do not navigate or render when these values differ.
 
-## Database mapping
+## Optional CISegmentation database mapping
 
 Schema version 3 provides `object_navigation`. Query one object:
 
@@ -100,16 +102,14 @@ The format is:
 ]}
 ```
 
-Coordinates are native pixel coordinates, including subpixel Spotiflow
-positions from `point_localizations`; T/Z are zero-based. A point is displayed
+Coordinates are native pixel coordinates from the caller's chosen source;
+subpixel positions are accepted. T/Z are zero-based. A point is displayed
 only on its own T/Z plane. `trail:true` retains a line on later timepoints,
-never earlier ones. A dashed line can denote a missed-frame gap. Show cell or
-nucleus division links only when `cell_divisions` supplies them; spot tracks
-never split. A panel accepts at most 256 items and 16 KiB of vector JSON.
-Query at most the selected track or local neighbours and disclose a clipped
-trail. Do not send whole-image geometry or unrelated objects in a recipe.
+never earlier ones. A dashed line can denote a missed-frame gap. A panel
+accepts at most 256 items and 16 KiB of vector JSON. Send a selected track or
+local neighbours, not whole-image geometry or unrelated objects.
 
-For spatial review join `spatial_measurements` and `object_contacts` to
+For CISegmentation spatial review, join `spatial_measurements` and `object_contacts` to
 `object_navigation` by `object_id`. For colocalisation show the paired channels,
 object mask, `colocalization_thresholds`, sample counts, and `reason`; undefined
 Pearson or Manders values must not be plotted as zero. For tracking join
@@ -122,6 +122,35 @@ The same export panel can request `timeProjection` with zero-based inclusive
 must equal `end`. Render at most 32 frames within the aggregate pixel budget.
 For a projected image, use an outline only when its label value belongs to
 the end frame; a trajectory can still cover the selected time range.
+
+An OMERO.Analysis notebook can request one authenticated plot by returning a
+plain Python dict in its `result` variable. The notebook does not call the
+viewer or carry OMERO credentials:
+
+```python
+result = {
+    "omero_analysis_render_format": "png",  # or "svg"
+    "omero_analysis_render_recipe": {
+        "storeUuid": store_uuid,
+        "filename": "selected-track.png",
+        "panels": [{
+            "field": field,
+            "roi": [x0, y0, x1, y1],
+            "sourceChannels": [1],
+            "t": end_frame,
+            "z": z_index,
+            "overlays": [],
+            "timeProjection": {"method": "max", "start": start_frame, "end": end_frame},
+            "vectors": {"version": 1, "items": track_points_and_lines},
+        }],
+    },
+}
+```
+
+Analysis validates the one-panel bounds, resolves `storeUuid` in the current
+OMERO group, and sends the recipe to ZarrViewer. The PNG/SVG appears in the
+notebook's saved results. Other callers may POST the same recipe directly to
+the authenticated renderer.
 
 `POST /api/images/{id}/render.svg` accepts one panel with the same recipe
 fields as `render.png`. Its image is embedded as PNG while label outlines and
