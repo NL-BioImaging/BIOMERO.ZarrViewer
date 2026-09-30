@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 import re
+import base64
+from html import escape
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import PurePosixPath
@@ -94,6 +96,8 @@ def render_recipe_png(
     aggregate_pixels = sum(
         (panel["bounds"][2] - panel["bounds"][0])
         * (panel["bounds"][3] - panel["bounds"][1])
+        * (panel["time_projection"]["end"] - panel["time_projection"]["start"] + 1
+           if panel["time_projection"] else 1)
         for panel in validated
     )
     if aggregate_pixels > render_max_aggregate_pixels():
@@ -130,6 +134,52 @@ def render_recipe_png(
     return RenderedROI(content, safe_name or "zarr_render.png")
 
 
+def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any], *, label_roots=None) -> RenderedROI:
+    """Export one bounded crop with a raster image and editable vector annotations."""
+    if not isinstance(recipe, dict):
+        raise InvalidROI("The render recipe must be a JSON object")
+    _validate_store_uuid(model, recipe.get("storeUuid"))
+    panels = recipe.get("panels")
+    if not isinstance(panels, list) or len(panels) != 1:
+        raise InvalidROI("SVG export requires exactly one panel")
+    panel = _validate_panel(model, panels[0])
+    x0, y0, x1, y1 = panel["bounds"]
+    frame_count = (panel["time_projection"]["end"] - panel["time_projection"]["start"] + 1
+                   if panel["time_projection"] else 1)
+    if (x1 - x0) * (y1 - y0) * frame_count > render_max_aggregate_pixels():
+        raise ROILimitExceeded("The render recipe exceeds the aggregate native-pixel budget")
+    root = zarr.open_group(str(store_path), mode="r")
+    arrays, planes = {}, {}
+    background = _render_panel(root, model, {**panel, "overlays": [], "vectors": [], "scale_bar": False}, arrays, planes, label_roots or {})
+    encoded = base64.b64encode(_encode_png(background)).decode("ascii")
+    width, height = x1 - x0, y1 - y0
+    parts = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+             f'<image width="{width}" height="{height}" href="data:image/png;base64,{encoded}"/>']
+    for overlay in panel["overlays"]:
+        mask = _label_mask(root, model, panel, overlay, arrays, planes, label_roots or {})
+        outline = _inside_outline(mask, overlay["outline_width"])
+        yy, xx = np.nonzero(outline)
+        if len(xx) > 100_000:
+            raise ROILimitExceeded("The selected label outline is too complex for SVG export")
+        if len(xx):
+            color = overlay["color"] or "#FFFF00"
+            path = "".join(f"M{int(x)} {int(y)}h1" for x, y in zip(xx, yy))
+            parts.append(f'<path d="{path}" fill="none" stroke="{color}" stroke-opacity="{overlay["opacity"]:.3g}" stroke-width="1"/>')
+    from .vector_overlays import svg_vectors
+    parts.extend(svg_vectors(panel["vectors"], panel["bounds"], panel["timepoint"], panel["z_index"],
+                             panel["time_projection"]["start"] if panel["time_projection"] else None))
+    if panel["title"]:
+        parts.append(f'<title>{escape(panel["title"])}</title>')
+    parts.append("</svg>")
+    content = "".join(parts).encode("utf-8")
+    if len(content) > roi_max_output_bytes():
+        raise ROILimitExceeded("The SVG export exceeds the output byte limit")
+    name = re.sub(r"[^A-Za-z0-9_.-]+", "_", _bounded_text(recipe.get("filename"), 100) or "zarr_review.svg").strip("_")
+    if not name.lower().endswith(".svg"):
+        name += ".svg"
+    return RenderedROI(content, name)
+
+
 def _validate_store_uuid(model: dict[str, Any], requested: Any) -> None:
     requested_uuid = str(requested or "").strip().lower()
     actual_uuid = str(model.get("store_uuid") or "").strip().lower()
@@ -149,6 +199,9 @@ def _validate_panel(model: dict[str, Any], value: Any) -> dict[str, Any]:
     timepoint = _index(value.get("t"), "t")
     z_index = _index(value.get("z"), "z")
     channels = _channel_specs(value, model)
+    time_projection = _time_projection(value.get("timeProjection"))
+    if time_projection and timepoint != time_projection["end"]:
+        raise InvalidROI("t must be the final frame of a temporal projection")
     overlays = value.get("overlays", [])
     if overlays is None:
         overlays = []
@@ -166,10 +219,22 @@ def _validate_panel(model: dict[str, Any], value: Any) -> dict[str, Any]:
         "channels": channels,
         "overlays": [_overlay(item) for item in overlays],
         "vectors": validate_vectors(value.get("vectors")),
+        "time_projection": time_projection,
         "title": _bounded_text(value.get("title"), 160),
         "caption": _bounded_text(value.get("caption"), 320),
         "scale_bar": value.get("scaleBar", True) is not False,
     }
+
+
+def _time_projection(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict) or value.get("method") not in {"max", "mean"}:
+        raise InvalidROI("timeProjection.method must be max or mean")
+    start, end = _index(value.get("start"), "timeProjection.start"), _index(value.get("end"), "timeProjection.end")
+    if end < start or end - start + 1 > 32:
+        raise ROILimitExceeded("A temporal projection must include 1 through 32 frames")
+    return {"start": start, "end": end, "method": value["method"]}
 
 
 def _channel_specs(panel: dict[str, Any], model: dict[str, Any]) -> list[dict[str, Any]]:
@@ -257,15 +322,23 @@ def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Imag
         number = channel["index"]
         if number > available_channels:
             raise InvalidROI("An intensity channel is unavailable")
-        plane = _cached_plane(
-            image_array,
-            axes,
-            bounds,
-            number,
-            panel["timepoint"],
-            panel["z_index"],
-            planes,
-        )
+        projection = panel["time_projection"]
+        if projection:
+            if projection["end"] >= _axis_size(image_array.shape, axes, "t"):
+                raise InvalidROI("Temporal projection extends beyond available timepoints")
+            plane = None
+            for t in range(projection["start"], projection["end"] + 1):
+                frame = _cached_plane(image_array, axes, bounds, number, t, panel["z_index"], planes)
+                if plane is None:
+                    plane = frame.astype(np.float32)
+                elif projection["method"] == "max":
+                    np.maximum(plane, frame, out=plane)
+                else:
+                    plane += frame
+            if projection["method"] == "mean":
+                plane /= projection["end"] - projection["start"] + 1
+        else:
+            plane = _cached_plane(image_array, axes, bounds, number, panel["timepoint"], panel["z_index"], planes)
         metadata = channel_metadata.get(number, {})
         window = metadata.get("window", {})
         low = channel["low"]
@@ -340,10 +413,33 @@ def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Imag
 
     pixels = np.rint(np.clip(composite, 0, 1) * 255).astype(np.uint8)
     image = Image.fromarray(pixels, mode="RGB")
-    draw_vectors(image, panel["vectors"], bounds, panel["timepoint"], panel["z_index"])
+    draw_vectors(image, panel["vectors"], bounds, panel["timepoint"], panel["z_index"],
+                 panel["time_projection"]["start"] if panel["time_projection"] else None)
     if panel["scale_bar"]:
         _draw_scale_bar(image, model)
     return image
+
+
+def _label_mask(root, model, panel, overlay, arrays, planes, label_roots):
+    field, bounds = panel["field"], panel["bounds"]
+    if overlay["label_path"]:
+        label = _label(model, field, overlay["label_path"])
+        label_root_path = label_roots.get(label["path"])
+        label_root = zarr.open_group(str(label_root_path), mode="r") if label_root_path else root
+        label_path = (str(label["datasets"][0]["path"]) if label_root_path else
+                      _joined_path(label["path"], label["datasets"][0]["path"]))
+        label_array = _cached_array(label_root, label_path, arrays)
+        axes = _axis_names(label.get("axes"), label_array.ndim)
+        channel = 1
+    else:
+        image_path = _joined_path(field, model["datasets"][0]["path"])
+        label_array = _cached_array(root, image_path, arrays)
+        axes = _axis_names(model.get("axes"), label_array.ndim)
+        channel = overlay["label_channel"]
+        if channel > _axis_size(label_array.shape, axes, "c"):
+            raise InvalidROI("An appended label channel is unavailable")
+    plane = _cached_plane(label_array, axes, bounds, channel, panel["timepoint"], panel["z_index"], planes)
+    return plane != 0 if overlay["values"] is None else np.isin(plane, overlay["values"])
 
 
 def _compose_gallery(

@@ -68,11 +68,11 @@ def validate_vectors(value):
     return checked
 
 
-def draw_vectors(image, items, bounds, t, z):
+def draw_vectors(image, items, bounds, t, z, start_t=None):
     draw = ImageDraw.Draw(image)
     x0, y0, _, _ = bounds
     for item in items:
-        if item["z"] != z or (item["t"] > t if item["trail"] else item["t"] != t):
+        if not _visible(item, t, z, start_t):
             continue
         x, y = item["x"] - x0, item["y"] - y0
         color = item["color"]
@@ -96,6 +96,39 @@ def draw_vectors(image, items, bounds, t, z):
                 end = min(length, start + 7)
                 draw.line((x + (x2 - x) * start / length, y + (y2 - y) * start / length,
                            x + (x2 - x) * end / length, y + (y2 - y) * end / length), fill=color, width=width)
+
+
+def _visible(item, t, z, start_t):
+    if item["z"] != z or item["t"] > t:
+        return False
+    if start_t is not None:
+        return item["t"] >= start_t
+    return item["trail"] or item["t"] == t
+
+
+def svg_vectors(items, bounds, t, z, start_t=None):
+    """Return bounded SVG geometry in crop-local coordinates."""
+    x0, y0, x1, y1 = bounds
+    width, height = x1 - x0, y1 - y0
+    elements = []
+    for item in items:
+        if not _visible(item, t, z, start_t):
+            continue
+        x, y = item["x"] - x0, item["y"] - y0
+        color = item["color"]
+        if item["kind"] == "point":
+            radius = item["size"]
+            if x + radius < 0 or y + radius < 0 or x - radius >= width or y - radius >= height:
+                continue
+            elements.append(f'<circle cx="{x:.3f}" cy="{y:.3f}" r="{radius:.3f}" fill="{color}" stroke="white" stroke-width="1"/>')
+            continue
+        clipped = _clip_line(x, y, item["x2"] - x0, item["y2"] - y0, width, height)
+        if clipped is None:
+            continue
+        ax, ay, bx, by = clipped
+        dash = ' stroke-dasharray="7 5"' if item["dashed"] else ""
+        elements.append(f'<path d="M{ax:.3f} {ay:.3f}L{bx:.3f} {by:.3f}" fill="none" stroke="{color}" stroke-width="{item["size"]:.3f}"{dash}/>')
+    return elements
 
 
 def _clip_line(x, y, x2, y2, width, height):

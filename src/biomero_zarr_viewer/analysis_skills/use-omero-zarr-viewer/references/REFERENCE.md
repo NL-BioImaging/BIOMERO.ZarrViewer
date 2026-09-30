@@ -5,7 +5,7 @@
 - [Required context](#required-context)
 - [Database mapping](#database-mapping)
 - [Focused-view inputs](#focused-view-inputs)
-- [Optional scientific vector overlays](#optional-scientific-vector-overlays)
+- [Requested review plot exports](#requested-review-plot-exports)
 - [ROI PNG behavior](#roi-png-behavior)
 - [Render v2 and galleries](#render-v2-and-galleries)
 - [Failure handling](#failure-handling)
@@ -86,11 +86,12 @@ complete ROI and outlines only `labelValue`. Version-2 deep links may instead
 carry an `overlays` JSON array. Continue accepting the legacy
 `labelPath`/`labelChannel`/`labelValue` parameters.
 
-## Optional scientific vector overlays
+## Requested review plot exports
 
-If the authenticated image capability advertises `zarr-vector-overlay-v1`,
-the link's URL fragment may contain `vectors=<encoded JSON>`. The same object
-may be supplied as `vectors` on a render-recipe panel. The format is:
+If the authenticated image capability advertises `zarr-review-export-v1`,
+Analysis may send `vectors` on a render-recipe panel for a user-requested PNG
+or SVG. Do not put these vectors in viewer links or display them interactively.
+The format is:
 
 ```json
 {"version":1,"items":[
@@ -106,7 +107,7 @@ never earlier ones. A dashed line can denote a missed-frame gap. Show cell or
 nucleus division links only when `cell_divisions` supplies them; spot tracks
 never split. A panel accepts at most 256 items and 16 KiB of vector JSON.
 Query at most the selected track or local neighbours and disclose a clipped
-trail. Do not send whole-image geometry or unrelated objects in a link.
+trail. Do not send whole-image geometry or unrelated objects in a recipe.
 
 For spatial review join `spatial_measurements` and `object_contacts` to
 `object_navigation` by `object_id`. For colocalisation show the paired channels,
@@ -116,9 +117,16 @@ Pearson or Manders values must not be plotted as zero. For tracking join
 `point_localizations` when available. Check `measurement_extensions` version 1
 and the current OMERO store UUID before every linked review.
 
-Older viewers may omit this capability. In that case open the same image and
-raster label without vectors, and explain that the track/point overlay is
-unavailable in that viewer version.
+The same export panel can request `timeProjection` with zero-based inclusive
+`start` and `end`, and method `max` or `mean`. The selected panel timepoint `t`
+must equal `end`. Render at most 32 frames within the aggregate pixel budget.
+For a projected image, use an outline only when its label value belongs to
+the end frame; a trajectory can still cover the selected time range.
+
+`POST /api/images/{id}/render.svg` accepts one panel with the same recipe
+fields as `render.png`. Its image is embedded as PNG while label outlines and
+tracks are SVG paths. Use the returned file as a download, not an inline viewer.
+Older viewers may omit this export capability; report that limitation.
 
 ## ROI PNG behavior
 

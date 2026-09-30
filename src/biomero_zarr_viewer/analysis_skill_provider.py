@@ -11,10 +11,10 @@ from . import __version__
 
 PROVIDER_SCHEMA = "nl.bioimaging.analysis-skill-provider.v1"
 SKILL_NAME = "use-omero-zarr-viewer"
-SKILL_VERSION = "4"
+SKILL_VERSION = "5"
 SKILL_ROOT = Path(__file__).with_name("analysis_skills") / SKILL_NAME
 REQUIRED_RESOURCES = ("references/REFERENCE.md",)
-REQUIRED_CAPABILITIES = ("zarr-render-v2", "zarr-gallery-v1")
+REQUIRED_CAPABILITIES = ("zarr-render-v2", "zarr-gallery-v1", "zarr-review-export-v1")
 
 
 def _files():
@@ -46,8 +46,8 @@ def descriptor():
     return {
         "name": SKILL_NAME,
         "description": (
-            "Open measured objects in OMERO ZarrViewer and render bounded ROI "
-            "PNGs through authenticated host capabilities."
+            "Render requested PNG or SVG review plots with bounded label, track, "
+            "spot, and time-projection data."
         ),
         "purpose": "application-operation",
         "consumers": ["omero-analysis"],

@@ -1,13 +1,13 @@
 ---
 name: use-omero-zarr-viewer
-description: Open measured CI Segmentation objects in OMERO ZarrViewer and render bounded ROI PNGs through authenticated host capabilities. Use when a user asks to show a specific HCS field, focus a measured cell or other label object, select its originating image channels, highlight its label value, or save a PNG crop from an active OMERO OME-Zarr Image or Plate.
+description: Export bounded PNG or SVG review plots from an active OMERO OME-Zarr Image or Plate, including requested label outlines, tracks, spots, and time projections.
 metadata:
-  version: "4"
+  version: "5"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
   biomero-required-resources: "references/REFERENCE.md"
-  biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1"
+  biomero-required-capabilities: "zarr-render-v2,zarr-gallery-v1,zarr-review-export-v1"
 ---
 
 # Use OMERO ZarrViewer
@@ -23,7 +23,8 @@ gallery rendering, and failure behavior.
 
 ## Procedure
 
-1. Confirm the user asked to open a view or create an ROI PNG.
+1. Confirm the user requested a PNG or SVG review plot. Do not insert an inline
+   image preview into Analysis or add scientific vectors to viewer links.
 2. Inspect the active OMERO group and selected Image or Plate. Never invent or
    infer an OMERO object ID from a portable database.
 3. If a CI Segmentation database is involved, open it read-only, inspect its
@@ -37,17 +38,19 @@ gallery rendering, and failure behavior.
    to the image dimensions.
 6. Use `label_sources` when the user wants the inference-origin intensity
    channel. Database channel indices and viewer `sourceChannels` are one-based.
-7. Cite the successful analysis evidence ID when asking the host to open the
-   focused viewer or render a PNG. Preserve the active OMERO group and pass
+7. Cite the successful analysis evidence ID when asking the host to render a
+   plot. Preserve the active OMERO group and pass
    only validated fields from the reference.
 8. Prefer one gallery request over separate per-object PNG requests.
-9. Save or attach a PNG only when the user requested an export. Report the
-   selected field, object, channels, Z/T plane, bounds, and label overlay.
+9. Save or attach a plot only when the user requested an export. Report the
+   selected field, object, channels, Z/T plane or time range, bounds, and label outline.
 10. When optional CISegmentation extension rows are present, use bounded
     read-only queries for a selected track, spot, colocalisation result, or
-    spatial neighbour. Confirm the viewer advertises `zarr-vector-overlay-v1`
-    before adding points or lines. Keep the raster label as the authoritative
-    segmentation mask and use the same vector items in the link and PNG recipe.
+    spatial neighbour. Confirm the viewer advertises `zarr-review-export-v1`
+    before adding points or lines to an export recipe. Keep raster labels as
+    the authoritative segmentation masks. For a time projection, use a bounded
+    `timeProjection` range and choose `max` or `mean`; show a label outline only
+    when its label value belongs to the displayed end frame.
 
 ## Safety
 
@@ -57,5 +60,5 @@ gallery rendering, and failure behavior.
 - Never bypass OMERO permissions or switch groups implicitly.
 - Respect renderer bounds and channel limits; reduce the requested crop or
   channels instead of bypassing limits.
-- Do not claim a PNG or viewer state exists until the host capability returns
+- Do not claim a plot exists until the host capability returns
   success.

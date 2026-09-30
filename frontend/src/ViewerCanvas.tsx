@@ -8,9 +8,7 @@ import {
   OVERVIEW_VIEW_ID,
   VivViewer,
 } from "@hms-dbmi/viv";
-import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { ChannelState, LabelState, ViewportState } from "./types";
-import { visibleVectorItems, type VectorOverlay, type VectorItem } from "./vector-overlays";
 import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
@@ -36,7 +34,6 @@ interface Props {
   showMinimap: boolean;
   showScale: boolean;
   physicalScale?: { size: number; unit: string };
-  vectors?: VectorOverlay;
   onViewportChange: (state: ViewportState) => void;
   onTileError: (message: string) => void;
   onTilesLoaded: () => void;
@@ -68,7 +65,6 @@ export function ViewerCanvas({
   showMinimap,
   showScale,
   physicalScale,
-  vectors,
   onViewportChange,
   onTileError,
   onTilesLoaded,
@@ -136,35 +132,6 @@ export function ViewerCanvas({
         onViewportLoad: () => reportViewportLoad(`label:${state.id}`),
       } as any);
     });
-  const visibleVectors = visibleVectorItems(vectors, t, z);
-  const vectorPoints = visibleVectors.filter((item) => item.kind === "point");
-  const vectorPaths = visibleVectors.filter((item) => item.kind === "line")
-    .flatMap((item) => vectorPathSegments(item));
-  const vectorLayers = [
-    new PathLayer({
-      id: `scientific-lines-#${DETAIL_VIEW_ID}#`,
-      viewportId: DETAIL_VIEW_ID,
-      data: vectorPaths,
-      getPath: (item: { path: number[][] }) => item.path,
-      getColor: (item: { color: [number, number, number] }) => item.color,
-      getWidth: (item: { width: number }) => item.width,
-      widthUnits: "pixels",
-      pickable: false,
-    } as any),
-    new ScatterplotLayer({
-      id: `scientific-points-#${DETAIL_VIEW_ID}#`,
-      viewportId: DETAIL_VIEW_ID,
-      data: vectorPoints,
-      getPosition: (item: VectorItem) => [item.x, item.y],
-      getFillColor: (item: VectorItem) => hexToRgb(item.color),
-      getLineColor: [255, 255, 255],
-      getRadius: (item: VectorItem) => item.radius || 4,
-      radiusUnits: "pixels",
-      stroked: true,
-      lineWidthMinPixels: 1,
-      pickable: false,
-    } as any),
-  ];
 
   const layerProps: any[] = [{
     loader,
@@ -221,7 +188,7 @@ export function ViewerCanvas({
         onViewportChange({ x: Number(target[0]), y: Number(target[1]), zoom: Number(viewState.zoom) });
       }}
       deckProps={{
-        layers: [...labelLayers, ...vectorLayers],
+        layers: labelLayers,
         onHover: inspectHover,
       }}
     />
@@ -242,25 +209,6 @@ export function ViewerCanvas({
       <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
     </div>}
   </>;
-}
-
-function vectorPathSegments(item: VectorItem): Array<{ path: number[][]; color: [number, number, number]; width: number }> {
-  const dx = (item.x2 || 0) - item.x;
-  const dy = (item.y2 || 0) - item.y;
-  const length = Math.hypot(dx, dy);
-  const color = hexToRgb(item.color);
-  const width = item.width || 2;
-  if (!item.dashed || length <= 8) return [{ path: [[item.x, item.y], [item.x2 || 0, item.y2 || 0]], color, width }];
-  const segments = [];
-  for (let start = 0; start < length && segments.length < 64; start += 12) {
-    const end = Math.min(length, start + 7);
-    segments.push({
-      path: [[item.x + dx * start / length, item.y + dy * start / length],
-        [item.x + dx * end / length, item.y + dy * end / length]],
-      color, width,
-    });
-  }
-  return segments;
 }
 
 function scaleBarSize(pixelSize: number, zoom: number): { value: number; pixels: number } {
