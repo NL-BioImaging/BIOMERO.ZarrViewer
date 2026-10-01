@@ -202,3 +202,12 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
   .control-panel { position: absolute; z-index: 5; right: 0; top: 4.25rem; bottom: 0; width: min(24rem, 92vw); box-shadow: -10px 0 24px #0008; }
   .topbar span { display: none; }
 }
+
+.time-playback { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:8px 0; }
+.time-playback label { display:flex; gap:4px; align-items:center; }
+.time-playback input[type=number] { width:54px; }
+.movie-export { position:relative; }
+.movie-export-panel { position:absolute; z-index:20; right:0; top:42px; width:min(360px,85vw); padding:16px; background:#202437; border:1px solid #454b60; border-radius:6px; box-shadow:0 8px 20px #0008; }
+.movie-export-panel label { display:flex; justify-content:space-between; align-items:center; margin:8px 0; }
+.movie-export-panel input { width:90px; }
+.movie-export-panel p { font-size:12px; line-height:1.5; }

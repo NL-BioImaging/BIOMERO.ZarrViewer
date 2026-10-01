@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  base: "./",
+  worker: { format: "es" },
   // Some transitive Deck.gl dependencies still branch on Node's conventional
   // environment flag.  Replace the expression at build time so the browser
   // bundle never requires a global `process` shim.

@@ -3,6 +3,10 @@
 import argparse
 import re
 import zipfile
+import tempfile
+import subprocess
+import sys
+import hashlib
 from pathlib import Path, PurePosixPath
 
 
@@ -29,6 +33,7 @@ REQUIRED_LICENSE_FILES = {
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("wheel", type=Path)
+    parser.add_argument("--install", action="store_true")
     args = parser.parse_args()
     with zipfile.ZipFile(args.wheel) as archive:
         names = set(archive.namelist())
@@ -49,6 +54,9 @@ def main():
         if len(main_chunks) != 1:
             raise RuntimeError(f"Wheel must contain exactly one main frontend chunk: {main_chunks}")
 
+        workers = [name for name in names if name.startswith(str(STATIC / 'assets/movie-encoder.worker-')) and name.endswith('.js')]
+        if len(workers) != 1:
+            raise RuntimeError('Wheel must include exactly one browser movie encoder worker')
         metadata_paths = sorted(name for name in names if name.endswith(".dist-info/METADATA"))
         if len(metadata_paths) != 1:
             raise RuntimeError(f"Wheel must contain exactly one METADATA file: {metadata_paths}")
@@ -61,6 +69,16 @@ def main():
             if not any(name.endswith(suffix) for name in names):
                 raise RuntimeError(f"Wheel is missing packaged legal file: {legal_file}")
 
+    if args.install:
+        with tempfile.TemporaryDirectory(prefix='viewer-wheel-check-') as target:
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '--no-deps', '--target', target, str(args.wheel)], check=True)
+            with zipfile.ZipFile(args.wheel) as archive:
+                for member in archive.infolist():
+                    if member.is_dir() or '.dist-info/' in member.filename:
+                        continue
+                    installed = Path(target) / member.filename
+                    if not installed.is_file() or hashlib.sha256(installed.read_bytes()).digest() != hashlib.sha256(archive.read(member)).digest():
+                        raise RuntimeError(f'Installed file differs: {member.filename}')
     print(f"Verified packaged frontend in {args.wheel}")
 
 

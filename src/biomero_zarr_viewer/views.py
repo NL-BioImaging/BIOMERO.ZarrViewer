@@ -1,4 +1,6 @@
+from . import __version__
 import json
+import hashlib
 import logging
 import mimetypes
 from functools import wraps
@@ -36,7 +38,7 @@ from .resolver import (
     resolve_well_store,
     well_store_registered,
 )
-from .roi import render_recipe_png, render_roi_png
+from .roi import render_recipe_png, render_recipe_svg, render_roi_png
 from .settings import internal_prefix, mount_root
 from .tokens import make_read_context, validate_read_context
 from .analysis_skill_provider import catalog_payload, package_payload, SKILL_NAME
@@ -117,7 +119,9 @@ def viewer(request, conn=None, **kwargs):
             # The capability check normally prevents this path. Rendering the
             # host lets the frontend show its standard missing-image message.
             pass
-    return render(request, "biomero_zarr_viewer/viewer.html")
+    entry = Path(__file__).with_name("static") / "biomero_zarr_viewer/app.js"
+    frontend_build = hashlib.sha256(entry.read_bytes()).hexdigest()[:16] if entry.is_file() else "unbuilt"
+    return render(request, "biomero_zarr_viewer/viewer.html", {"frontend_build": frontend_build})
 
 
 @require_GET
@@ -175,11 +179,21 @@ def _capability_response(request, conn, store, *, require_plate=False):
         "biomero_zarr_viewer_render_png",
         kwargs={"image_id": store.image_id},
     )
+    render_svg_url = reverse(
+        "biomero_zarr_viewer_render_svg",
+        kwargs={"image_id": store.image_id},
+    )
     store_uuid = model.pop("store_uuid", None)
+    binding_digest = hashlib.sha256(json.dumps({
+        "relative": str(store.relative),
+        "routes": [(str(route.logical), str(route.physical)) for route in store.routes],
+    }, sort_keys=True).encode("utf-8")).hexdigest()
     return JsonResponse(
         {
             "schema_version": 1,
+            "viewer_version": __version__,
             "supported": True,
+            "features": ["zarr-review-export-v1", "zarr-movie-v1"],
             "image": {"id": store.image_id, "name": store.image_name},
             "store": {
                 "url": data_url,
@@ -189,6 +203,9 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "name": store.relative.name,
                 "roi_url": roi_url,
                 "render_url": render_url,
+                "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
+                "binding_digest": binding_digest,
+                "render_svg_url": render_svg_url,
             },
             **model,
         }
@@ -266,6 +283,28 @@ def render_png(request, image_id, conn=None, **kwargs):
     response["Content-Length"] = str(len(rendered.content))
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@require_http_methods(["POST"])
+@login_required(setGroupContext=True)
+@api_errors
+def render_svg(request, image_id, conn=None, **kwargs):
+    if len(request.body) > 1024 * 1024:
+        raise ROILimitExceeded("The render recipe exceeds 1 MiB")
+    try:
+        recipe = json.loads(request.body or b"{}")
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise InvalidROI("The render recipe is not valid JSON") from exc
+    store = resolve_image_store(conn, image_id)
+    model = _inspect_resolved_store(store)
+    rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store))
+    response = HttpResponse(rendered.content, content_type="image/svg+xml")
+    response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
+    response["Content-Length"] = str(len(rendered.content))
+    response["Cache-Control"] = "private, no-store"
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Content-Security-Policy"] = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox"
     return response
 
 
