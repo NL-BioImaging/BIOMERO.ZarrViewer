@@ -1,8 +1,10 @@
+import { MovieExport, TimePlayback } from "./MovieControls";
+import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
-import { analyzeChannels, applyChannelAnalysis, type ChannelAnalysis } from "./channel-scaling";
+import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis } from "./channel-scaling";
 import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { projectLoader } from "./projection-loader";
 import type {
@@ -62,16 +64,6 @@ function useElementSize<T extends HTMLElement>() {
   return [ref, size] as const;
 }
 
-function dtypeDomain(dtype: string): [number, number] {
-  const normalized = dtype.toLowerCase();
-  if (normalized.includes("uint8")) return [0, 255];
-  if (normalized.includes("uint16")) return [0, 65535];
-  if (normalized.includes("uint32")) return [0, 4294967295];
-  if (normalized.includes("int8")) return [-128, 127];
-  if (normalized.includes("int16")) return [-32768, 32767];
-  if (normalized.includes("int32")) return [-2147483648, 2147483647];
-  return [0, 1];
-}
 
 const palette = ["#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF", "#FFFF00", "#FF0000"];
 const labelPalette = [
@@ -235,7 +227,7 @@ function labelOverlays(
   return labels.filter((label) => label.visible).slice(0, 8).map((label) => {
     const appended = label.path.match(/:channel:(\d+)$/);
     const labelPath = capability && field
-      ? fieldLabelPath(label.path, capability.initial_path, field)
+      ? fieldLabelPath(label.path, capability!.initial_path, field!)
       : label.path;
     return {
       ...(appended ? { labelChannel: Number(appended[1]) } : { labelPath }),
@@ -338,7 +330,7 @@ export default function App() {
     ) {
       throw new ViewerApiError(
         "store_uuid_mismatch",
-        "This link targets a different CI Segmentation output store",
+        "This link targets a different image store",
         409,
       );
     }
@@ -370,7 +362,7 @@ export default function App() {
       const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field) as any);
       const imageLoader = attachNgffPhysicalSizes(imageResult.data, imageResult.metadata);
       const labelResults = await Promise.allSettled(capability.labels.map(async (label) => {
-        const path = fieldLabelPath(label.path, capability.initial_path, field);
+        const path = fieldLabelPath(label.path, capability!.initial_path, field!);
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path) as any);
         return { id: label.id, loader: attachNgffPhysicalSizes(result.data, result.metadata) };
       }));
@@ -533,6 +525,19 @@ export default function App() {
               setVolumeCamera(undefined);
               setVolumeReset((value) => value + 1);
             }}>Reset 3D View</button>}
+          {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && effectiveRenderMode === "2d" && viewMode === "field" && <MovieExport
+            imageId={imageId} sizeT={currentLoaded.sizeT} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
+              filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
+              panels: [{ field, roi: visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), viewport, viewerSize),
+                sourceChannels: channels.filter(channel => channel.visible).map(channel => channel.index + 1),
+                channelSettings: channels, t: tIndex, z: zIndex, projection, scaleBar: showScale,
+                overlays: labels.filter(label => label.visible).map(label => ({
+                  ...(label.id.startsWith("focused-channel-") ? { labelChannel: Number(label.id.split("-").at(-1)) } :
+                    { labelPath: fieldLabelPath(label.path, capability!.initial_path, field!) }),
+                  values: label.highlightValues || (label.highlightValue ? [label.highlightValue] : undefined),
+                  mode: label.mode, color: label.color, opacity: label.opacity, outlineWidth: label.outlineWidth || 2
+                })) }]
+            } as MovieRecipe} />}
           <FullscreenButton />
         </div>
       </header>
@@ -790,6 +795,7 @@ function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection 
         ? <label className="slider">Z <input type="range" min="0" max={sizeZ - 1} value={z} onChange={(e) => onZ(Number(e.target.value))}/><output>{z + 1}/{sizeZ}</output></label>
         : <p className="projection-note">Using all {sizeZ} Z slices</p>}
     </>}
+    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
     {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }
@@ -823,6 +829,7 @@ export function VolumeControls({
     </label>
     <p className="projection-note">Only visible intensity channels are loaded. Quality and visibility changes reload the volume.</p>
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
+    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
     {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }

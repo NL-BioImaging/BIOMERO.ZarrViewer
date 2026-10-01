@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>BIOMERO OME-Zarr Viewer</title>
-  <link rel="stylesheet" href="{% static 'biomero_zarr_viewer/app.css' %}">
+  <link rel="stylesheet" href="{% static 'biomero_zarr_viewer/app.css' %}?v={{ frontend_build }}">
 </head>
 <body>
   <div id="root">
@@ -17,7 +17,7 @@
       capabilitiesTemplate: "{% url 'biomero_zarr_viewer_capabilities' image_id=0 %}"
     };
   </script>
-  <script type="module" src="{% static 'biomero_zarr_viewer/app.js' %}"></script>
+  <script type="module" src="{% static 'biomero_zarr_viewer/app.js' %}?v={{ frontend_build }}"></script>
 </body>
 </html>
 

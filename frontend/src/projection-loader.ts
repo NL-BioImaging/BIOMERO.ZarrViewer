@@ -6,30 +6,33 @@ interface PixelRaster {
   height: number;
 }
 
-function aggregate(rasters: PixelRaster[], mode: Exclude<ProjectionMode, "slice">): PixelRaster {
-  const first = rasters[0];
-  if (!first) throw new Error("The Z projection returned no planes");
-  const Output = first.data.constructor;
-  const output = new Output(first.data.length);
-  for (let index = 0; index < first.data.length; index += 1) {
-    let value = Number(first.data[index]);
-    for (let plane = 1; plane < rasters.length; plane += 1) {
-      const candidate = Number(rasters[plane].data[index]);
-      if (mode === "mip") value = Math.max(value, candidate);
-      else if (mode === "min") value = Math.min(value, candidate);
-      else value += candidate;
-    }
-    output[index] = mode === "mean" ? value / rasters.length : value;
-  }
-  return { data: output, width: first.width, height: first.height };
-}
-
+/** At most one decoded slice plus a floating-point accumulator is retained. */
 async function project(
   depth: number,
   mode: Exclude<ProjectionMode, "slice">,
   load: (z: number) => Promise<PixelRaster>,
 ): Promise<PixelRaster> {
-  return aggregate(await Promise.all(Array.from({ length: depth }, (_, z) => load(z))), mode);
+  let first: PixelRaster | undefined;
+  let accumulator: Float64Array | undefined;
+  for (let z = 0; z < depth; z++) {
+    const raster = await load(z);
+    if (!first) {
+      first = { ...raster, data: new raster.data.constructor(0) };
+      accumulator = Float64Array.from(raster.data);
+    } else {
+      if (raster.width !== first.width || raster.height !== first.height || raster.data.length !== accumulator!.length)
+        throw new Error("Projection slices have inconsistent dimensions");
+      for (let i = 0; i < accumulator!.length; i++) {
+        const value = Number(raster.data[i]);
+        accumulator![i] = mode === "mip" ? Math.max(accumulator![i], value)
+          : mode === "min" ? Math.min(accumulator![i], value) : accumulator![i] + value;
+      }
+    }
+  }
+  if (!first || !accumulator) throw new Error("The Z projection returned no planes");
+  const data = new first.data.constructor(accumulator.length);
+  for (let i = 0; i < data.length; i++) data[i] = mode === "mean" ? accumulator[i] / depth : accumulator[i];
+  return { ...first, data };
 }
 
 export function projectSource(source: any, mode: Exclude<ProjectionMode, "slice">): any {

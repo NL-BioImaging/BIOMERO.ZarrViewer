@@ -1,4 +1,6 @@
+from . import __version__
 import json
+import hashlib
 import logging
 import mimetypes
 from functools import wraps
@@ -117,7 +119,9 @@ def viewer(request, conn=None, **kwargs):
             # The capability check normally prevents this path. Rendering the
             # host lets the frontend show its standard missing-image message.
             pass
-    return render(request, "biomero_zarr_viewer/viewer.html")
+    entry = Path(__file__).with_name("static") / "biomero_zarr_viewer/app.js"
+    frontend_build = hashlib.sha256(entry.read_bytes()).hexdigest()[:16] if entry.is_file() else "unbuilt"
+    return render(request, "biomero_zarr_viewer/viewer.html", {"frontend_build": frontend_build})
 
 
 @require_GET
@@ -180,11 +184,16 @@ def _capability_response(request, conn, store, *, require_plate=False):
         kwargs={"image_id": store.image_id},
     )
     store_uuid = model.pop("store_uuid", None)
+    binding_digest = hashlib.sha256(json.dumps({
+        "relative": str(store.relative),
+        "routes": [(str(route.logical), str(route.physical)) for route in store.routes],
+    }, sort_keys=True).encode("utf-8")).hexdigest()
     return JsonResponse(
         {
             "schema_version": 1,
+            "viewer_version": __version__,
             "supported": True,
-            "features": ["zarr-review-export-v1"],
+            "features": ["zarr-review-export-v1", "zarr-movie-v1"],
             "image": {"id": store.image_id, "name": store.image_name},
             "store": {
                 "url": data_url,
@@ -194,6 +203,8 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "name": store.relative.name,
                 "roi_url": roi_url,
                 "render_url": render_url,
+                "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
+                "binding_digest": binding_digest,
                 "render_svg_url": render_svg_url,
             },
             **model,

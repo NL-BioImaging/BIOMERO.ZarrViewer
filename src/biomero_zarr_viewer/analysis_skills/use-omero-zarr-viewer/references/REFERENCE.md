@@ -261,3 +261,14 @@ gallery panel.
 - Permission failure: preserve the active group and ask the user to obtain
   access; never work around OMERO authorization.
 - Renderer limit: reduce bounds/channels with the user's intent preserved.
+
+## Browser movies
+
+Capability `zarr-movie-v1` advertises the same-origin `movie_url` bridge.
+Intensity channels may use a selected Z plane or `slice`/`mip`/`mean`/`min`
+projection. Labels use the selected Z. Independent label layers support overlap,
+opacity, ordering, and outlines. `sequence.trailFrames` defaults to 10.
+Native-pixel coordinates and zero-based T/Z remain unchanged. The browser
+returns MP4 bytes, a poster PNG, and provenance including crop, contrast,
+channels, overlays, coordinate transforms, acquisition metadata, and renderer
+version. Stop discards partial output. Check Chrome playback after generation.

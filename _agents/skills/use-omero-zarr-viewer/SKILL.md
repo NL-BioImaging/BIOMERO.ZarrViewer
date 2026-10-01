@@ -1,8 +1,8 @@
 ---
 name: use-omero-zarr-viewer
-description: Open an active OMERO OME-Zarr Image or Plate, or render bounded PNG or SVG plots with caller-supplied vectors, raster label outlines, and temporal projections.
+description: Open an active OMERO OME-Zarr Image or Plate, or render bounded PNG, SVG, or MP4 outputs with caller-supplied vectors, raster label outlines, and temporal projections.
 metadata:
-  version: "6"
+  version: "7"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
@@ -23,7 +23,7 @@ gallery rendering, and failure behavior.
 
 ## Procedure
 
-1. Confirm the user asked to open a view or requested a PNG or SVG review plot.
+1. Confirm the user asked to open a view or requested a PNG, SVG, or MP4 review output.
    Do not insert an inline image preview into Analysis or add scientific vectors
    to viewer links.
 2. Inspect the active OMERO group and selected Image or Plate. Never invent or
@@ -39,7 +39,7 @@ gallery rendering, and failure behavior.
    projection. Choose `max` or `mean` over at most 32 frames, ending at the
    panel's `t`. Do not put vectors in interactive viewer links.
 6. In an Analysis notebook, return `omero_analysis_render_recipe` and optional
-   `omero_analysis_render_format` (`png` or `svg`) in `result`. Analysis verifies
+   `omero_analysis_render_format` (`png`, `svg`, or `mp4`) in `result`. Analysis verifies
    store access and sends the authenticated render request; notebook Python does
    not contact ZarrViewer directly. See the reference for an example.
 7. If data comes from CISegmentation, read its database with bounded queries;
@@ -59,3 +59,13 @@ gallery rendering, and failure behavior.
   channels instead of bypassing limits.
 - Do not claim a plot exists until the host capability returns
   success.
+
+## Temporal movies
+
+For MP4, require `zarr-movie-v1`, add `sequence={version:1,start,end,fps:5}`
+and return the existing recipe with `omero_analysis_render_format="mp4"`.
+ZarrViewer renders native-pixel tiles in the browser and encodes in a worker;
+no new server encoder or workflow service is needed. Defaults are 5 FPS,
+600 frames, 2048 x 2048 pixels, and 256 MiB or the smaller upload limit.
+Keep acquisition timing distinct. `tracks` uses explicit caller-supplied rows
+and id/x/y/t/z column mappings; missing observations remain gaps.

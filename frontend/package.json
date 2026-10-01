@@ -10,13 +10,15 @@
     "build": "npm run licenses && npm run clean && tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "smoke:movie": "node scripts/smoke-movie.mjs"
   },
   "dependencies": {
     "@deck.gl/core": "9.3.7",
     "@deck.gl/layers": "9.3.7",
     "@deck.gl/react": "9.3.7",
     "@hms-dbmi/viv": "0.22.0",
+    "mediabunny": "1.61.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zarrita": "0.7.3"
@@ -29,6 +31,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.4",
     "jsdom": "26.1.0",
+    "playwright-core": "1.62.0",
     "typescript": "5.9.3",
     "vite": "7.3.6",
     "vitest": "3.2.7"

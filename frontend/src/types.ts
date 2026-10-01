@@ -50,6 +50,7 @@ export interface PlateCapability {
 }
 
 export interface Capability {
+  viewer_version?: string;
   schema_version: 1;
   supported: true;
   features?: string[];
@@ -59,6 +60,7 @@ export interface Capability {
     context: string;
     expires_at: string;
     uuid?: string | null;
+    binding_digest?: string;
     name?: string;
     roi_url?: string;
     render_url?: string;

@@ -43,6 +43,11 @@ authenticated `/biomero_zarr_viewer/api/analysis-skills/` endpoints. This
 keeps ZarrViewer operations independent from BIOMERO.WorkflowSkills; Analysis
 discovers the provider only when ZarrViewer is installed and enabled.
 
+Temporal data has compact playback controls and a browser-local **Export movie**
+action. MP4 export defaults to **5 FPS**, with generic intensity, label, point,
+and explicitly mapped track overlays. See [movie playback and export](docs/movies.md)
+for limits, recipes, and Chrome acceptance.
+
 ### Prerequisites
 
 - OMERO.web 5.6 or newer, running on Python 3.10–3.12;

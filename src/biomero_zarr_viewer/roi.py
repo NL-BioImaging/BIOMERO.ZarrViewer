@@ -489,19 +489,27 @@ def _draw_scale_bar(image: Image.Image, model: dict[str, Any]) -> None:
     pixel_size, unit = _pixel_scale(model)
     if pixel_size is None:
         return
-    target_units = pixel_size * max(20, image.width // 5)
+    if image.width < 24 or image.height < 24:
+        return
+    target_units = pixel_size * max(1, image.width // 5)
     power = 10 ** math.floor(math.log10(target_units))
-    normalized = target_units / power
-    nice = (1 if normalized < 1.5 else 2 if normalized < 3.5 else 5 if normalized < 7.5 else 10) * power
-    length = max(12, min(image.width // 3, round(nice / pixel_size)))
+    nice = max(value * power for value in (1, 2, 5, 10) if value * power <= target_units)
+    length = max(1, round(nice / pixel_size))
     draw = ImageDraw.Draw(image)
-    x1, y = image.width - 8, image.height - 10
+    x1, y = image.width - 8, image.height - 8
     x0 = x1 - length
+    label = f"{nice:g} {unit}"
+    font = ImageFont.load_default()
+    text_bounds = draw.textbbox((0, 0), label, font=font)
+    text_width = text_bounds[2] - text_bounds[0]
+    if text_width > image.width - 8:
+        return
+    text_x = max(4, min(x0, image.width - text_width - 4))
+    text_y = max(0, y - 5 - text_bounds[3])
     draw.line((x0, y, x1, y), fill=(255, 255, 255), width=2)
     draw.line((x0, y - 3, x0, y + 3), fill=(255, 255, 255), width=1)
     draw.line((x1, y - 3, x1, y + 3), fill=(255, 255, 255), width=1)
-    label = f"{nice:g} {unit}"
-    draw.text((x0, max(0, y - 12)), label, fill=(255, 255, 255), font=ImageFont.load_default())
+    draw.text((text_x, text_y), label, fill=(255, 255, 255), font=font)
 
 
 def _pixel_scale(model: dict[str, Any]) -> tuple[float | None, str]:
