@@ -44,6 +44,8 @@ class ResolvedStore:
     recorded_files: tuple[str, ...]
     routes: tuple[StoreRoute, ...] = ()
     shallow: bool = False
+    # The analyzed result owns the identity; pixels may live in another store.
+    identity_path: Path | None = None
 
 
 def _string_value(obj, method):
@@ -580,7 +582,9 @@ def resolve_image_store(conn, image_id):
     composite = _manifest_routes(relative)
     routes = ()
     shallow = False
+    identity_path = None
     if composite is not None:
+        identity_path = path
         relative, routes = composite
         path = _contained_directory(relative)
         shallow = True
@@ -596,6 +600,7 @@ def resolve_image_store(conn, image_id):
         recorded_files=tuple(recorded),
         routes=routes,
         shallow=shallow,
+        identity_path=identity_path,
     )
 
 

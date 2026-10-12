@@ -441,6 +441,15 @@ schema-v3 databases supply the portable store UUID, field, label, object value,
 coordinates, and originating channels. The skill never invents an OMERO ID or
 hard-codes a consumer route.
 
+For shallow segmentation results, the UUID comes from the result store's own
+`cisegmentation.output_store_uuid` root metadata. Image pixels still come from
+the canonical source, and label pixels follow the manifest's declared routes.
+Capabilities and PNG/SVG exports use the same result identity. A missing result
+UUID remains unknown; it never inherits the original image store's UUID.
+Replaced result identities also invalidate the exported binding digest.
+Render caches distinguish physical stores as well as array paths, so separate
+cell and aggregate label groups named `0` retain their own pixels and outlines.
+
 ## Relationship to `ome/omero-web-zarr`
 
 [`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr) presents

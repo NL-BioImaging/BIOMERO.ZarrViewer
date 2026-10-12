@@ -30,7 +30,7 @@ from .errors import (
     UnsupportedStore,
     ViewerError,
 )
-from .metadata import inspect_label, inspect_store
+from .metadata import inspect_label, inspect_store, read_store_uuid
 from .resolver import (
     image_store_registered,
     plate_store_registered,
@@ -192,6 +192,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
     store_uuid = model.pop("store_uuid", None)
     binding_digest = hashlib.sha256(json.dumps({
         "relative": str(store.relative),
+        "store_uuid": store_uuid,
         "routes": [(str(route.logical), str(route.physical)) for route in store.routes],
     }, sort_keys=True).encode("utf-8")).hexdigest()
     return JsonResponse(
@@ -206,7 +207,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "context": token,
                 "expires_at": expires_at.isoformat(),
                 "uuid": store_uuid,
-                "name": store.relative.name,
+                "name": store.identity_path.name if store.identity_path else store.relative.name,
                 "roi_url": roi_url,
                 "render_url": render_url,
                 "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
@@ -220,6 +221,8 @@ def _capability_response(request, conn, store, *, require_plate=False):
 
 def _inspect_resolved_store(store):
     model = inspect_store(store.path, store.recorded_files)
+    if store.identity_path is not None:
+        model["store_uuid"] = read_store_uuid(store.identity_path)
     if not store.routes:
         return model
     field = PurePosixPath(model["initial_path"])

@@ -691,8 +691,17 @@ def _joined_path(prefix: str, dataset: str) -> str:
     )
 
 
-def _cached_array(root, path: str, cache: dict[str, Any]):
-    key = (str(getattr(root, "path", "")), str(getattr(root.store, "path", "")), path)
+def _store_cache_key(store):
+    # Zarr 2 DirectoryStore exposes path; Zarr 3 LocalStore exposes root.
+    # For stores without a filesystem location, avoid cross-store reuse.
+    location = getattr(store, "path", None)
+    if location is None:
+        location = getattr(store, "root", None)
+    return (type(store), str(location)) if location is not None else (type(store), id(store))
+
+
+def _cached_array(root, path: str, cache: dict):
+    key = (_store_cache_key(root.store), str(getattr(root, "path", "")), path)
     if key not in cache:
         try:
             cache[key] = root[path]
@@ -731,7 +740,7 @@ def _cached_plane(
     cache,
 ) -> np.ndarray:
     path = str(getattr(array, "path", repr(array)))
-    key = (path, tuple(bounds), channel, timepoint, z_index)
+    key = (_store_cache_key(array.store), path, tuple(bounds), channel, timepoint, z_index)
     if key not in cache:
         cache[key] = _plane(
             array,
