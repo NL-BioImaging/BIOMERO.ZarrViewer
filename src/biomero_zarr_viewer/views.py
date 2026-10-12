@@ -24,6 +24,7 @@ except ImportError:  # Allows isolated tests without a full OMERO.web installati
 from .errors import (
     DataNotFound,
     InvalidROI,
+    InvalidShallowManifest,
     ROILimitExceeded,
     UnsafePath,
     UnsupportedStore,
@@ -94,6 +95,7 @@ def api_errors(function):
 
 @require_GET
 @login_required(setGroupContext=True)
+@api_errors
 def viewer(request, conn=None, **kwargs):
     well_id = request.GET.get("well")
     if well_id and not request.GET.get("image"):
@@ -105,6 +107,8 @@ def viewer(request, conn=None, **kwargs):
             query["v"] = "2"
             query["view"] = "well"
             return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
+        except InvalidShallowManifest:
+            raise
         except ViewerError:
             pass
     plate_id = request.GET.get("plate")
@@ -115,6 +119,8 @@ def viewer(request, conn=None, **kwargs):
             query.pop("plate", None)
             query["image"] = str(store.image_id)
             return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
+        except InvalidShallowManifest:
+            raise
         except ViewerError:
             # The capability check normally prevents this path. Rendering the
             # host lets the frontend show its standard missing-image message.

@@ -13,6 +13,18 @@ extension for opening physical OME-Zarr stores that are registered in OMERO.
 It supports multichannel images, integer segmentation labels, Z stacks, and
 HCS plates.
 
+Shallow result manifests (`.biomero-shallow.json`) accept up to **100 MiB**.
+An invalid or oversized manifest produces an immediate `invalid_shallow_manifest`
+error instead of repeating the same lookup for every field in a Plate or Well.
+The separate 4 MiB limit for individual NGFF metadata documents is unchanged.
+Large composite plates also require sufficient HTTP request-header limits:
+their signed context contains the declared label routes. For a plate with
+2,844 fields and 14,220 labels, the context is approximately 119 KB. Configure
+Nginx with `large_client_header_buffers 4 128k;` and Gunicorn with
+`--limit-request-field_size 131072` (for example through `GUNICORN_CMD_ARGS`).
+These limits must be set at every reverse proxy in the deployment; routing and
+user, group, image, and token-expiry checks still apply.
+
 The viewer does not import data or convert ordinary OMERO images to OME-Zarr.
 Use BIOMERO, or another compatible importer, to create and register the
 OME-Zarr data first.

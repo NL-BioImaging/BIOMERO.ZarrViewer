@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from biomero_zarr_viewer.errors import AmbiguousStore, ObjectNotFound, UnsafePath
+from biomero_zarr_viewer.errors import AmbiguousStore, InvalidShallowManifest, ObjectNotFound, UnsafePath
+from biomero_zarr_viewer import resolver
 from biomero_zarr_viewer.resolver import (
     resolve_image_store,
     resolve_plate_store,
@@ -327,3 +328,95 @@ def test_rejects_symlink_escape(configure_storage, tmp_path):
     image = FakeImage(42, "link.zarr", [FakeOriginalFile("/recorded/link.zarr/", ".zattrs")])
     with pytest.raises(UnsafePath):
         resolve_image_store(FakeConnection(image), 42)
+
+
+def _shallow_fixture(mount):
+    canonical = mount / "canonical.zarr"
+    canonical.mkdir()
+    shallow = mount / "result.zarr"
+    shallow.mkdir()
+    manifest = {
+        "schema": 1, "model": "rfc8-shallow-copy", "workflowId": "workflow",
+        "transferArtifact": "result.zarr", "interchangeProfile": "ngff-0.4-zarr-v2",
+        "images": [{"imageNodePath": ".", "labelComponents": [], "source": {
+            "schema": 1, "storageRoot": "import-mount-data", "relativePath": "canonical.zarr",
+            "nodePath": ".", "sourceObjectId": 42, "sourceGeneration": 1,
+            "interchangeProfile": "ngff-0.4-zarr-v2",
+        }}],
+    }
+    return shallow / resolver.SHALLOW_MANIFEST, json.dumps(manifest)
+
+
+def test_accepts_shallow_manifest_larger_than_old_4_mib_limit(configure_storage):
+    _, mount = configure_storage
+    path, content = _shallow_fixture(mount)
+    path.write_text(content + " " * (5 * 1024 * 1024), encoding="utf-8")
+    assert resolver.MAX_SHALLOW_MANIFEST_BYTES == 100 * 1024 * 1024
+    primary, routes = resolver._manifest_routes(Path("result.zarr"))
+    assert str(primary) == "canonical.zarr"
+    assert routes == ()
+
+
+def test_manifest_size_boundary_and_oversize(configure_storage, monkeypatch):
+    _, mount = configure_storage
+    path, content = _shallow_fixture(mount)
+    monkeypatch.setattr(resolver, "MAX_SHALLOW_MANIFEST_BYTES", 4096)
+    path.write_text(content.ljust(4096), encoding="utf-8")
+    assert resolver._manifest_routes(Path("result.zarr")) is not None
+    with path.open("ab") as stream:
+        stream.write(b" ")
+    with pytest.raises(InvalidShallowManifest, match="size limit"):
+        resolver._manifest_routes(Path("result.zarr"))
+
+
+def test_rejects_real_100_mib_plus_one_without_reading_file(configure_storage):
+    _, mount = configure_storage
+    path, _ = _shallow_fixture(mount)
+    with path.open("wb") as stream:
+        stream.truncate(100 * 1024 * 1024 + 1)
+    with pytest.raises(InvalidShallowManifest, match="100 MiB"):
+        resolver._manifest_routes(Path("result.zarr"))
+
+
+@pytest.mark.parametrize("kind", ["plate", "well"])
+def test_container_stops_on_store_wide_manifest_error(monkeypatch, kind):
+    images = [FakeImage(42, "A/1/0", []), FakeImage(43, "A/1/1", [])]
+    well = FakeParent(8)
+    well.listChildren = lambda: [FakeWellSample(i, image) for i, image in enumerate(images)]
+    plate = FakeParent(9)
+    plate.listChildren = lambda: [well]
+    conn = FakeConnection(plate=plate, well=well)
+    calls = []
+
+    def invalid(_conn, image_id):
+        calls.append(image_id)
+        raise InvalidShallowManifest("The shallow manifest exceeds the 100 MiB size limit")
+
+    monkeypatch.setattr(resolver, "resolve_image_store", invalid)
+    resolve = resolve_plate_store if kind == "plate" else resolve_well_store
+    with pytest.raises(InvalidShallowManifest):
+        resolve(conn, 9 if kind == "plate" else 8)
+    assert calls == ["42"]
+
+
+def test_schema_2_label_binding_lookup_scales_linearly():
+    class CountedLabel(dict):
+        source_reads = 0
+
+        def get(self, key, *args):
+            if key == "sourceImageId":
+                type(self).source_reads += 1
+            return super().get(key, *args)
+
+    images = [{"id": f"image-{i}", "nodePath": f"A/1/{i}"} for i in range(100)]
+    labels = [CountedLabel(id=f"label-{i}", nodePath=f"A/1/{i}/labels/nuclei",
+                          sourceImageId=f"image-{i}") for i in range(100)]
+    manifest = {"collection": {"images": images, "labels": labels}, "bindings": {
+        "images": [{"nodeId": image["id"], "source": {}} for image in images],
+        "labels": [{"nodeId": label["id"], "component": {
+            "logicalNodePath": label["nodePath"], "source": None}} for label in labels],
+    }}
+    result = resolver._schema_2_images(manifest)
+    assert len(result) == len(images)
+    assert result[-1]["labelComponents"][0]["logicalNodePath"] == labels[-1]["nodePath"]
+    assert CountedLabel.source_reads <= 2 * len(labels)

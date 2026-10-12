@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 from .errors import (
     AmbiguousStore,
+    InvalidShallowManifest,
     ObjectNotFound,
     PlateNotFound,
     StoreNotFound,
@@ -19,6 +20,7 @@ from .settings import mount_root, source_root
 BIOMERO_IMPORT_NAMESPACE = "biomero.import"
 CANONICAL_PLATE_SOURCE_NAMESPACE = "biomero.zarr.plate-source"
 SHALLOW_MANIFEST = ".biomero-shallow.json"
+MAX_SHALLOW_MANIFEST_BYTES = 100 * 1024 * 1024
 MAX_PARENT_DEPTH = 4
 GROUP_STORAGE_ROOT = re.compile(r"^group-(\d+)-data$")
 
@@ -360,12 +362,12 @@ def _canonical_annotation_store(image):
 
 def _binding_map(values):
     if not isinstance(values, list):
-        raise StoreNotFound("The shallow manifest has invalid graph bindings")
+        raise InvalidShallowManifest("The shallow manifest has invalid graph bindings")
     result = {}
     for value in values:
         node_id = value.get("nodeId") if isinstance(value, dict) else None
         if not isinstance(node_id, str) or not node_id or node_id in result:
-            raise StoreNotFound("The shallow manifest has invalid graph bindings")
+            raise InvalidShallowManifest("The shallow manifest has invalid graph bindings")
         result[node_id] = value
     return result
 
@@ -375,7 +377,7 @@ def _node_ids(values):
     for value in values:
         node_id = value.get("id") if isinstance(value, dict) else None
         if not isinstance(node_id, str) or not node_id or node_id in result:
-            raise StoreNotFound("The shallow manifest has invalid graph bindings")
+            raise InvalidShallowManifest("The shallow manifest has invalid graph bindings")
         result.add(node_id)
     return result
 
@@ -384,11 +386,11 @@ def _schema_2_images(manifest):
     collection = manifest.get("collection")
     bindings = manifest.get("bindings")
     if not isinstance(collection, dict) or not isinstance(bindings, dict):
-        raise StoreNotFound("The shallow manifest uses an unsupported schema")
+        raise InvalidShallowManifest("The shallow manifest uses an unsupported schema")
     image_nodes = collection.get("images")
     label_nodes = collection.get("labels", [])
     if not isinstance(image_nodes, list) or not isinstance(label_nodes, list):
-        raise StoreNotFound("The shallow manifest has invalid graph bindings")
+        raise InvalidShallowManifest("The shallow manifest has invalid graph bindings")
     image_binding_by_id = _binding_map(bindings.get("images"))
     label_binding_by_id = _binding_map(bindings.get("labels", []))
     image_ids = _node_ids(image_nodes)
@@ -398,26 +400,27 @@ def _schema_2_images(manifest):
         or label_ids != label_binding_by_id.keys()
         or any(label.get("sourceImageId") not in image_ids for label in label_nodes)
     ):
-        raise StoreNotFound("The shallow manifest has invalid graph bindings")
+        raise InvalidShallowManifest("The shallow manifest has invalid graph bindings")
+
+    # Index labels once. Scanning all labels for every field is quadratic for
+    # whole plates (2,844 fields and 14,220 labels in the reported failure).
+    components_by_image = {image_id: [] for image_id in image_ids}
+    for label in label_nodes:
+        component = label_binding_by_id[label["id"]].get("component")
+        if (
+            not isinstance(component, dict)
+            or component.get("logicalNodePath") != label.get("nodePath")
+        ):
+            raise InvalidShallowManifest("A shallow label has no matching storage binding")
+        components_by_image[label["sourceImageId"]].append(component)
 
     images = []
     for node in image_nodes:
-        components = []
-        for label in label_nodes:
-            if label.get("sourceImageId") != node["id"]:
-                continue
-            component = label_binding_by_id[label["id"]].get("component")
-            if (
-                not isinstance(component, dict)
-                or component.get("logicalNodePath") != label.get("nodePath")
-            ):
-                raise StoreNotFound("A shallow label has no matching storage binding")
-            components.append(component)
         images.append(
             {
                 "imageNodePath": node.get("nodePath"),
                 "source": image_binding_by_id[node["id"]].get("source"),
-                "labelComponents": components,
+                "labelComponents": components_by_image[node["id"]],
             }
         )
     return images
@@ -429,27 +432,32 @@ def _manifest_routes(shallow_relative):
     if not manifest_path.is_file():
         return None
     try:
-        if manifest_path.stat().st_size > 4 * 1024 * 1024:
-            raise StoreNotFound("The shallow manifest exceeds the size limit")
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest_path.stat().st_size > MAX_SHALLOW_MANIFEST_BYTES:
+            raise InvalidShallowManifest("The shallow manifest exceeds the 100 MiB size limit")
+        # Bound the read as well as stat: the file may change between the two.
+        with manifest_path.open("rb") as stream:
+            content = stream.read(MAX_SHALLOW_MANIFEST_BYTES + 1)
+        if len(content) > MAX_SHALLOW_MANIFEST_BYTES:
+            raise InvalidShallowManifest("The shallow manifest exceeds the 100 MiB size limit")
+        manifest = json.loads(content.decode("utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise StoreNotFound("The shallow manifest is invalid") from exc
+        raise InvalidShallowManifest("The shallow manifest is invalid") from exc
     if (
         not isinstance(manifest, dict)
         or not manifest.get("workflowId")
         or not manifest.get("transferArtifact")
         or not manifest.get("interchangeProfile")
     ):
-        raise StoreNotFound("The shallow manifest uses an unsupported schema")
+        raise InvalidShallowManifest("The shallow manifest uses an unsupported schema")
     schema = manifest.get("schema")
     if schema == 1 and manifest.get("model") == "rfc8-shallow-copy":
         images = manifest.get("images")
     elif schema == 2 and manifest.get("format") == "biomero-shallow-zarr":
         images = _schema_2_images(manifest)
     else:
-        raise StoreNotFound("The shallow manifest uses an unsupported schema")
+        raise InvalidShallowManifest("The shallow manifest uses an unsupported schema")
     if not isinstance(images, list) or not images or len(images) > 20_000:
-        raise StoreNotFound("The shallow manifest has an invalid image list")
+        raise InvalidShallowManifest("The shallow manifest has an invalid image list")
 
     primary = None
     routes = []
@@ -463,7 +471,7 @@ def _manifest_routes(shallow_relative):
 
     for image in images:
         if not isinstance(image, dict):
-            raise StoreNotFound("The shallow manifest has an invalid image entry")
+            raise InvalidShallowManifest("The shallow manifest has an invalid image entry")
         image_node = _safe_relative(image.get("imageNodePath"), allow_dot=True)
         source = image.get("source")
         try:
@@ -477,15 +485,15 @@ def _manifest_routes(shallow_relative):
         except (TypeError, ValueError):
             valid_source = False
         if not valid_source:
-            raise StoreNotFound("A shallow image has no canonical source")
+            raise InvalidShallowManifest("A shallow image has no canonical source")
         source_base = managed(source)
         source_node = _safe_relative(source.get("nodePath"), allow_dot=True)
         if source_node != image_node:
-            raise StoreNotFound("A shallow image source does not match its logical node")
+            raise InvalidShallowManifest("A shallow image source does not match its logical node")
         if primary is None:
             primary = source_base
         elif primary != source_base:
-            raise StoreNotFound("A shallow Plate spans multiple canonical stores")
+            raise InvalidShallowManifest("A shallow Plate spans multiple canonical stores")
 
         components = image.get("labelComponents")
         if components is None:
@@ -494,14 +502,14 @@ def _manifest_routes(shallow_relative):
                 for path in image.get("labelNodePaths", [])
             ]
         if not isinstance(components, list):
-            raise StoreNotFound("A shallow image has invalid label components")
+            raise InvalidShallowManifest("A shallow image has invalid label components")
         seen = set()
         for component in components:
             if not isinstance(component, dict):
-                raise StoreNotFound("A shallow label component is invalid")
+                raise InvalidShallowManifest("A shallow label component is invalid")
             logical = _safe_relative(component.get("logicalNodePath"))
             if logical in seen or logical.parts[: len(image_node.parts)] != image_node.parts:
-                raise StoreNotFound("A shallow label path is invalid or duplicated")
+                raise InvalidShallowManifest("A shallow label path is invalid or duplicated")
             seen.add(logical)
             label_source = component.get("source")
             if label_source is None:
@@ -515,11 +523,11 @@ def _manifest_routes(shallow_relative):
                     and label_source.get(field)
                     for field in ("storageRoot", "relativePath", "nodePath")
                 ):
-                    raise StoreNotFound("A shallow label source is invalid")
+                    raise InvalidShallowManifest("A shallow label source is invalid")
                 base = managed(label_source)
                 physical = base / _safe_relative(label_source.get("nodePath"))
             else:
-                raise StoreNotFound("A shallow label source is invalid")
+                raise InvalidShallowManifest("A shallow label source is invalid")
             # The managed base was resolved and contained above. Individual
             # declared label nodes are checked when metadata or data is read,
             # avoiding dozens of redundant bind-mount stats during Open With.
