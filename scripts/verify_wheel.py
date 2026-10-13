@@ -7,6 +7,7 @@ import tempfile
 import subprocess
 import sys
 import hashlib
+from email.parser import BytesParser
 from pathlib import Path, PurePosixPath
 
 
@@ -34,9 +35,18 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("wheel", type=Path)
     parser.add_argument("--install", action="store_true")
+    parser.add_argument("--version", help="Require the exact release version after all build steps")
     args = parser.parse_args()
     with zipfile.ZipFile(args.wheel) as archive:
         names = set(archive.namelist())
+        if args.version:
+            metadata_files = [name for name in names if name.endswith('.dist-info/METADATA')]
+            if len(metadata_files) != 1:
+                raise RuntimeError('Wheel must contain exactly one package metadata record')
+            metadata = BytesParser().parsebytes(archive.read(metadata_files[0]))
+            expected_name = f'biomero_zarr_viewer-{args.version}-py3-none-any.whl'
+            if metadata['Version'] != args.version or args.wheel.name != expected_name:
+                raise RuntimeError(f'Wheel version must be exactly {args.version}: {args.wheel.name}')
         missing = sorted(REQUIRED - names)
         if missing:
             raise RuntimeError(f"Wheel is missing packaged assets: {missing}")

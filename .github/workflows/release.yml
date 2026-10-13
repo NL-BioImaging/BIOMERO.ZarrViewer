@@ -53,6 +53,9 @@ jobs:
             echo "Release tag ${GITHUB_REF_NAME} does not match derived package version ${package_version}" >&2
             exit 1
           fi
+          # Frontend/license generation can dirty tracked build inputs. Preserve
+          # the version established from the clean release tag for the wheel build.
+          echo "SETUPTOOLS_SCM_PRETEND_VERSION_FOR_BIOMERO_ZARR_VIEWER=${package_version}" >> "$GITHUB_ENV"
 
       - name: Install and test frontend dependencies
         working-directory: frontend
@@ -71,7 +74,7 @@ jobs:
 
       - name: Verify distributions
         run: |
-          python scripts/verify_wheel.py dist/biomero_zarr_viewer-*.whl
+          python scripts/verify_wheel.py --version "${GITHUB_REF_NAME#v}" dist/biomero_zarr_viewer-*.whl
           python -m twine check dist/*
 
       - name: Upload distributions
