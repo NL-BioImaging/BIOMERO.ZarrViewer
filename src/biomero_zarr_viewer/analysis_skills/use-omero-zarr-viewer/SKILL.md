@@ -2,7 +2,7 @@
 name: use-omero-zarr-viewer
 description: Open an active OMERO OME-Zarr Image or Plate, or render bounded PNG, SVG, or MP4 outputs with caller-supplied vectors, raster label outlines, and temporal projections.
 metadata:
-  version: "7"
+  version: "8"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
@@ -32,6 +32,7 @@ gallery rendering, and failure behavior.
    Z plane, and timepoint from authenticated OMERO context or trusted analysis
    data. Verify the UUID against the current viewer capability and preserve
    the active OMERO group. Never infer an OMERO object ID from a database.
+   For shallow results use the result UUID, not the canonical source-pixel UUID.
 4. For a requested export, construct a bounded render recipe. Use raster label
    paths/values for outlines; use `vectors` for caller-supplied points or lines.
    The viewer does not require a particular measurement or tracking schema.
