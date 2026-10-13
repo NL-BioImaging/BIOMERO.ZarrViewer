@@ -26,6 +26,13 @@ measurement_runs.output_store_uuid == viewer store UUID
 
 Do not navigate or render when these values differ.
 
+For shallow segmentation results, the measured output UUID belongs to the
+result store even when original pixels are read from a canonical source.
+Capabilities and PNG/SVG rendering must report and validate that same result
+identity. Do not substitute the canonical source UUID to bypass a mismatch.
+A missing result UUID requires repair of the registration/metadata or a
+compatible viewer, rather than guessing a binding.
+
 ## Optional CISegmentation database mapping
 
 Schema version 3 provides `object_navigation`. Query one object:

@@ -148,7 +148,7 @@ Generated for frontend version `0.6.0` with 203 production packages.
 | `fast-deep-equal@3.1.3` | MIT | Evgeny Poberezkin | [source](https://github.com/epoberezkin/fast-deep-equal) | [L025](#l025) |
 | `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L016](#l016) |
 | `fast-xml-parser@5.11.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-parser) | [L026](#l026) |
-| `fflate@0.7.4` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L027](#l027) |
+| `fflate@0.7.5` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L027](#l027) |
 | `fflate@0.8.3` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L028](#l028) |
 | `flatbuffers@25.9.23` | Apache-2.0 | The FlatBuffers project | [source](https://github.com/google/flatbuffers) | [L044](#l044) |
 | `geotiff@2.1.3` | MIT | Fabian Schindler | [source](https://github.com/geotiffjs/geotiff.js) | [L029](#l029) |
@@ -1003,7 +1003,7 @@ SOFTWARE.
 
 ### L027
 
-Packages: `fflate@0.7.4 (LICENSE)`
+Packages: `fflate@0.7.5 (LICENSE)`
 
 ````text
 MIT License
