@@ -325,6 +325,38 @@ def _plate_model(root, plate, version, recorded_files):
     }
 
 
+def _store_uuid(root_attributes):
+    cisegmentation = root_attributes.get("cisegmentation", {})
+    value = cisegmentation.get("output_store_uuid") if isinstance(cisegmentation, dict) else None
+    if value is None or value == "":
+        return None
+    try:
+        return str(UUID(str(value).strip()))
+    except ValueError as exc:
+        raise InvalidMetadata("The CI Segmentation output store UUID is invalid") from exc
+
+
+def read_store_uuid(root):
+    """Read a result's own identity without traversing its pixel hierarchy.
+
+    Older shallow results may have no root attributes or UUID. They must not
+    inherit the canonical pixel source's UUID in that case.
+    """
+    root = Path(root)
+    if (root / ".zattrs").is_file():
+        attributes = _read_json(root / ".zattrs")
+    elif (root / "zarr.json").is_file():
+        group = _read_json(root / "zarr.json")
+        if group.get("zarr_format") != 3 or group.get("node_type") != "group":
+            raise InvalidMetadata("The identity root is not a Zarr v3 group")
+        attributes = group.get("attributes", {})
+        if not isinstance(attributes, dict):
+            raise InvalidMetadata("OME-Zarr attributes must be a JSON object")
+    else:
+        return None
+    return _store_uuid(attributes)
+
+
 def inspect_store(root, recorded_files=()):
     root = Path(root)
     if (root / ".zgroup").is_file():
@@ -358,19 +390,7 @@ def inspect_store(root, recorded_files=()):
     if version and version != expected:
         raise UnsupportedStore(f"OME-Zarr {version} is not supported with Zarr v{zarr_format}")
     version = expected
-    cisegmentation = root_attributes.get("cisegmentation", {})
-    store_uuid = (
-        str(cisegmentation.get("output_store_uuid", "")).strip()
-        if isinstance(cisegmentation, dict)
-        else ""
-    )
-    if store_uuid:
-        try:
-            store_uuid = str(UUID(store_uuid))
-        except ValueError as exc:
-            raise InvalidMetadata(
-                "The CI Segmentation output store UUID is invalid"
-            ) from exc
+    store_uuid = _store_uuid(root_attributes)
 
     if isinstance(metadata.get("plate"), dict):
         plate = _plate_model(root, metadata["plate"], version, recorded_files)

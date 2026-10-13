@@ -3,6 +3,7 @@
 import argparse
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,7 @@ def validate():
 
 
 def main():
+    subprocess.run([sys.executable, str(ROOT / "scripts/sync_analysis_skills.py"), "--check"], check=True)
     parser = argparse.ArgumentParser()
     parser.add_argument("--skip-install", action="store_true")
     parser.add_argument("--validate-only", action="store_true")

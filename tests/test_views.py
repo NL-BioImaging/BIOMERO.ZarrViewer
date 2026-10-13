@@ -9,6 +9,8 @@ from django.test import RequestFactory
 from PIL import Image
 
 from biomero_zarr_viewer.tokens import make_read_context
+from biomero_zarr_viewer.errors import InvalidShallowManifest
+from biomero_zarr_viewer import views
 from biomero_zarr_viewer.resolver import StoreRoute
 from biomero_zarr_viewer.views import (
     analysis_skill,
@@ -19,6 +21,7 @@ from biomero_zarr_viewer.views import (
     plate_capabilities,
     plate_eligibility,
     render_png,
+    render_svg,
     roi_png,
     viewer,
     well_eligibility,
@@ -45,6 +48,16 @@ def _request(url, group=13, token=None, method="get", **kwargs):
 def _connection(store_name="sample.zarr"):
     image = FakeImage(42, store_name, [FakeOriginalFile(f"/recorded/{store_name}/", ".zattrs")])
     return FakeConnection(image)
+
+
+def test_plate_viewer_reports_invalid_manifest_immediately(monkeypatch):
+    def invalid(*args):
+        raise InvalidShallowManifest("The shallow manifest exceeds the 100 MiB size limit")
+
+    monkeypatch.setattr(views, "resolve_plate_store", invalid)
+    response = viewer(_request("/?plate=201"), conn=FakeConnection())
+    assert response.status_code == 422
+    assert json.loads(response.content)["error"]["code"] == "invalid_shallow_manifest"
 
 
 def test_analysis_skill_provider_is_versioned_and_hashes_every_file():
@@ -514,6 +527,51 @@ def test_render_png_composes_gallery_and_reuses_label_plane(
     foci_reads = [item for item in reads if "labels/foci" in item[0]]
     assert len(cell_reads) == 1
     assert len(foci_reads) == 1
+
+
+def test_review_svg_and_temporal_projection_are_bounded(configure_storage):
+    from xml.etree import ElementTree
+    from biomero_zarr_viewer.roi import render_recipe_png
+    from biomero_zarr_viewer.metadata import inspect_store
+
+    _, mount = configure_storage
+    store_path = mount / "sample.zarr"
+    store_uuid = _write_renderable_store(store_path)
+    model = inspect_store(store_path)
+    panel = {"field": ".", "roi": [0, 0, 8, 8], "sourceChannels": [1],
+             "t": 1, "z": 1, "scaleBar": False,
+             "timeProjection": {"start": 0, "end": 1, "method": "mean"},
+             "overlays": [{"labelPath": "labels/cells", "values": [7],
+                           "mode": "outline", "color": "#FFFF00"}],
+             "vectors": {"version": 1, "items": [
+                 {"kind": "line", "x": 2, "y": 2, "x2": 5, "y2": 5,
+                  "t": 1, "z": 1, "color": "#00E5FF"}]}}
+    recipe = {"storeUuid": store_uuid, "panels": [panel]}
+    response = render_svg(_request("/api/images/42/render.svg", method="post",
+                                   data=json.dumps(recipe), content_type="application/json"),
+                          42, conn=_connection())
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/svg+xml"
+    root = ElementTree.fromstring(response.content)
+    assert root.tag.endswith("svg")
+    paths = root.findall("{http://www.w3.org/2000/svg}path")
+    assert any(path.attrib.get("stroke") == "#FFFF00" for path in paths)
+    assert any(path.attrib.get("stroke") == "#00E5FF" for path in paths)
+    assert root.find("{http://www.w3.org/2000/svg}image") is not None
+    mean = Image.open(BytesIO(render_recipe_png(store_path, model,
+        {"storeUuid": store_uuid, "panels": [{**panel, "overlays": [], "vectors": None}]},
+        decorate=False).content))
+    maximum = Image.open(BytesIO(render_recipe_png(store_path, model,
+        {"storeUuid": store_uuid, "panels": [{**panel, "overlays": [], "vectors": None,
+            "timeProjection": {"start": 0, "end": 1, "method": "max"}}]},
+        decorate=False).content))
+    assert 0 < mean.getpixel((7, 7))[0] < maximum.getpixel((7, 7))[0]
+
+    invalid = {**panel, "timeProjection": {"start": 0, "end": 32, "method": "max"}, "t": 32}
+    rejected = render_svg(_request("/api/images/42/render.svg", method="post",
+                                   data=json.dumps({"storeUuid": store_uuid, "panels": [invalid]}),
+                                   content_type="application/json"), 42, conn=_connection())
+    assert rejected.status_code == 413
 
 
 def test_render_png_enforces_gallery_limits(configure_storage):

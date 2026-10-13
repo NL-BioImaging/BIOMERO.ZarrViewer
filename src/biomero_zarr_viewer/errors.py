@@ -27,6 +27,13 @@ class StoreNotFound(ViewerError):
     status = 422
 
 
+class InvalidShallowManifest(ViewerError):
+    """A store-wide manifest error, rather than an unregistered field."""
+
+    code = "invalid_shallow_manifest"
+    status = 422
+
+
 class AmbiguousStore(ViewerError):
     code = "ambiguous_zarr_store"
     status = 422

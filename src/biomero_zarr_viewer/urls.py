@@ -50,6 +50,11 @@ urlpatterns = [
         name="biomero_zarr_viewer_render_png",
     ),
     path(
+        "api/images/<int:image_id>/render.svg",
+        views.render_svg,
+        name="biomero_zarr_viewer_render_svg",
+    ),
+    path(
         "data/images/<int:image_id>/<path:zarr_key>",
         views.data,
         name="biomero_zarr_viewer_data",

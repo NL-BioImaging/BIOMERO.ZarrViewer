@@ -1,6 +1,17 @@
 import { getChannelStats } from "@hms-dbmi/viv";
 import type { ChannelState } from "./types";
 
+export function dtypeDomain(dtype: string): [number, number] {
+  const normalized = dtype.toLowerCase();
+  if (normalized.includes("uint8")) return [0, 255];
+  if (normalized.includes("uint16")) return [0, 65535];
+  if (normalized.includes("uint32")) return [0, 4294967295];
+  if (normalized.includes("int8")) return [-128, 127];
+  if (normalized.includes("int16")) return [-32768, 32767];
+  if (normalized.includes("int32")) return [-2147483648, 2147483647];
+  return [0, 1];
+}
+
 const SAMPLE_BUDGET = 262_144;
 const MAX_TILES_PER_AXIS = 4;
 const HISTOGRAM_BINS = 48;

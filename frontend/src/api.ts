@@ -22,6 +22,9 @@ export async function fetchCapabilities(imageId: number): Promise<Capability> {
   const template = window.BIOMERO_ZARR_VIEWER.capabilitiesTemplate;
   const url = template.replace(/\/0\/capabilities\/$/, `/${imageId}/capabilities/`);
   const response = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+  if (response.redirected && new URL(response.url).pathname.includes('login')) {
+    throw new ViewerApiError('session_expired', 'Please sign in to OMERO and try again.', 401);
+  }
   let payload: Capability | ApiFailure;
   try {
     payload = await response.json() as Capability | ApiFailure;

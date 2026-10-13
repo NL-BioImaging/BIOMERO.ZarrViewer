@@ -13,6 +13,18 @@ extension for opening physical OME-Zarr stores that are registered in OMERO.
 It supports multichannel images, integer segmentation labels, Z stacks, and
 HCS plates.
 
+Shallow result manifests (`.biomero-shallow.json`) accept up to **100 MiB**.
+An invalid or oversized manifest produces an immediate `invalid_shallow_manifest`
+error instead of repeating the same lookup for every field in a Plate or Well.
+The separate 4 MiB limit for individual NGFF metadata documents is unchanged.
+Large composite plates also require sufficient HTTP request-header limits:
+their signed context contains the declared label routes. For a plate with
+2,844 fields and 14,220 labels, the context is approximately 119 KB. Configure
+Nginx with `large_client_header_buffers 4 128k;` and Gunicorn with
+`--limit-request-field_size 131072` (for example through `GUNICORN_CMD_ARGS`).
+These limits must be set at every reverse proxy in the deployment; routing and
+user, group, image, and token-expiry checks still apply.
+
 The viewer does not import data or convert ordinary OMERO images to OME-Zarr.
 Use BIOMERO, or another compatible importer, to create and register the
 OME-Zarr data first.
@@ -42,6 +54,11 @@ The wheel also serves its bundled `use-omero-zarr-viewer` Analysis skill from
 authenticated `/biomero_zarr_viewer/api/analysis-skills/` endpoints. This
 keeps ZarrViewer operations independent from BIOMERO.WorkflowSkills; Analysis
 discovers the provider only when ZarrViewer is installed and enabled.
+
+Temporal data has compact playback controls and a browser-local **Export movie**
+action. MP4 export defaults to **5 FPS**, with generic intensity, label, point,
+and explicitly mapped track overlays. See [movie playback and export](docs/movies.md)
+for limits, recipes, and Chrome acceptance.
 
 ### Prerequisites
 
@@ -423,6 +440,15 @@ The adapter supplies the active OMERO Image/Plate ID and group. CI Segmentation
 schema-v3 databases supply the portable store UUID, field, label, object value,
 coordinates, and originating channels. The skill never invents an OMERO ID or
 hard-codes a consumer route.
+
+For shallow segmentation results, the UUID comes from the result store's own
+`cisegmentation.output_store_uuid` root metadata. Image pixels still come from
+the canonical source, and label pixels follow the manifest's declared routes.
+Capabilities and PNG/SVG exports use the same result identity. A missing result
+UUID remains unknown; it never inherits the original image store's UUID.
+Replaced result identities also invalidate the exported binding digest.
+Render caches distinguish physical stores as well as array paths, so separate
+cell and aggregate label groups named `0` retain their own pixels and outlines.
 
 ## Relationship to `ome/omero-web-zarr`
 
