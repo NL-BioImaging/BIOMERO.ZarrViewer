@@ -14,7 +14,7 @@ const channel: ChannelState = {
 };
 
 describe("automatic channel scaling", () => {
-  test("uses Viv percentile statistics from the coarsest raster", async () => {
+  test("uses Viv percentile statistics from native pixels", async () => {
     const source = {
       labels: ["c", "y", "x"],
       shape: [1, 2, 3],
@@ -55,4 +55,15 @@ describe("automatic channel scaling", () => {
 
     expect(scaled).toMatchObject({ low: 2, high: 900 });
   });
+});
+
+
+test("pyramid averaging cannot replace native-resolution contrast", async () => {
+  const native = { labels: ["c", "y", "x"], shape: [1, 2, 3],
+    getRaster: vi.fn(async () => ({ data: new Uint16Array([0, 100, 500, 1000, 4000, 20000]) })) };
+  const coarse = { ...native, getRaster: vi.fn(async () => ({ data: new Uint16Array([0, 20, 30, 40]) })) };
+  const [scaled] = await autoScaleChannels([native, coarse], [channel]);
+  expect(scaled.high).toBe(20000);
+  expect(native.getRaster).toHaveBeenCalledOnce();
+  expect(coarse.getRaster).not.toHaveBeenCalled();
 });

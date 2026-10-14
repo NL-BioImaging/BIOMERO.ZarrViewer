@@ -12,6 +12,7 @@ import type { ChannelState, LabelState, ViewportState } from "./types";
 import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
+import { previewLevel } from "./preview-resolution";
 
 interface LabelTooltip {
   screenX: number;
@@ -145,8 +146,9 @@ export function ViewerCanvas({
   }];
 
   if (showMinimap) {
-    views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
-    layerProps.push(layerProps[0]);
+    const overviewLoader = loader.slice(0, previewLevel(loader, 160 * (window.devicePixelRatio || 1)) + 1);
+    views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader: overviewLoader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
+    layerProps.push({ ...layerProps[0], loader: overviewLoader });
     viewStates.push({ id: OVERVIEW_VIEW_ID });
   }
 

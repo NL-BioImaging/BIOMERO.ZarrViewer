@@ -155,7 +155,10 @@ def _biomero_annotation_paths(image):
             and provenance.get("DestinationType")
             and provenance.get("Files")
         ):
-            paths.append(filepath)
+            # Preprocessed imports retain the original input (e.g. experiment.db)
+            # in Filepath and record the actual imported store separately.
+            imported = provenance.get("Imported_from", "").replace("\\", "/")
+            paths.append(imported if zarr_ancestor(imported) is not None else filepath)
     return paths
 
 
@@ -617,11 +620,17 @@ def resolve_plate_store(conn, plate_id):
     wells = getattr(plate, "listChildren", None)
     if not callable(wells):
         raise StoreNotFound("The plate contains no readable OME-Zarr fields")
-    for well in wells():
+    def position(obj, method):
+        try:
+            return int(_string_value(obj, method) or 0)
+        except ValueError:
+            return 0
+
+    for well in sorted(wells(), key=lambda item: (position(item, "getRow"), position(item, "getColumn"), position(item, "getId"))):
         samples = getattr(well, "listChildren", None)
         if not callable(samples):
             continue
-        for sample in samples():
+        for sample in sorted(samples(), key=lambda item: (position(item, "getIndex"), position(item, "getId"))):
             get_image = getattr(sample, "getImage", None)
             image = get_image() if callable(get_image) else None
             image_id = _string_value(image, "getId") if image is not None else ""

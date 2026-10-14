@@ -31,6 +31,7 @@ import {
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
 import { OverviewGrid } from "./OverviewGrid";
+import { plateGeometry } from "./plate-geometry";
 import {
   activeVolumeChannels,
   chooseVolumeLevel,
@@ -394,7 +395,13 @@ export default function App() {
       const defaults = channelStates(capability, next.image);
       const analysisLoader = projectLoader(next.image, projection);
       const analyses = await analyzeChannels(analysisLoader, defaults, projection === "slice" ? nextZ : 0, nextT);
-      const scaled = applyChannelAnalysis(defaults, analyses);
+      if (cancelled) return;
+      const automatic = applyChannelAnalysis(defaults, analyses);
+      const scaled = defaults.map((channel, index) => {
+        const window = capability.channels[index]?.window;
+        return window && Number.isFinite(window.start) && Number.isFinite(window.end) && window.end > window.start
+          ? channel : automatic[index];
+      });
       analyzedProjection.current = projection;
       setLoaded(next);
       setChannelAnalyses(analyses);
@@ -882,7 +889,7 @@ function PlateNavigation({ capability, field, onField, mode, onMode, plateFieldI
 }
 
 function PlateGrid({ capability, field, onField, expanded }: { capability: Capability; field?: string; onField: (path: string) => void; expanded: boolean }) {
-  const plate = capability.plate!;
+  const plate = plateGeometry(capability.plate!);
   const wells = new Map(plate.wells.map((well) => [`${well.row_index}:${well.column_index}`, well]));
   return <details className="plate-map" open={expanded}>
     <summary><span>{plate.rows.length * plate.columns.length}-well</span><small>{plate.rows.length} × {plate.columns.length}</small></summary>

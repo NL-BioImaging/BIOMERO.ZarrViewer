@@ -158,7 +158,7 @@ def test_plate_capability_and_viewer_redirect(configure_storage):
     redirect_request.GET["plate"] = "9"
     redirect = viewer(redirect_request, conn=conn)
     assert redirect.status_code == 302
-    assert redirect["Location"].endswith("?image=42")
+    assert redirect["Location"].endswith("?image=42&v=2&view=plate")
 
     eligible = plate_eligibility(
         _request("/api/plates/9/eligibility/"), 9, conn=conn

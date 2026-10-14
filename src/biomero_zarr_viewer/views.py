@@ -118,6 +118,8 @@ def viewer(request, conn=None, **kwargs):
             query = request.GET.copy()
             query.pop("plate", None)
             query["image"] = str(store.image_id)
+            query["v"] = "2"
+            query.setdefault("view", "plate")
             return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
         except InvalidShallowManifest:
             raise

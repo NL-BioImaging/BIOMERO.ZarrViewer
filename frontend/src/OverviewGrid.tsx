@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import * as zarr from "zarrita";
 import { PrefixStore } from "./authenticated-store";
 import type { Capability, ChannelState, PlateWell } from "./types";
+import { previewLevel, queuePreview } from "./preview-resolution";
+import { loadPreviewPyramid } from "./preview-source";
 
 interface OverviewGridProps {
   capability: Capability;
@@ -171,6 +172,8 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
         channels={channels}
         z={z}
         t={t}
+        targetPixels={Math.min(1024, 2 ** Math.ceil(Math.log2(Math.max(64, (TILE_SIZE - 16) * zoom * (window.devicePixelRatio || 1)))))}
+        inView={tile.left + TILE_SIZE >= visible.left && tile.left <= visible.right && tile.top + TILE_SIZE >= visible.top && tile.top <= visible.bottom}
         style={{ left: tile.left, top: tile.top, width: TILE_SIZE, height: TILE_SIZE }}
         onRendered={handleRendered}
         onSelect={() => onSelect(tile.path)}
@@ -230,7 +233,7 @@ function rgb(value: string): [number, number, number] {
   return [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)) as [number, number, number];
 }
 
-function ThumbnailTile({ store, path, title, selected, channels, z, t, style, onRendered, onSelect, onOpen }: {
+function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPixels, inView, style, onRendered, onSelect, onOpen }: {
   store: zarr.FetchStore;
   path: string;
   title: string;
@@ -238,6 +241,8 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
   channels: ChannelState[];
   z: number;
   t: number;
+  targetPixels: number;
+  inView: boolean;
   style?: CSSProperties;
   onRendered: (path: string, preview: string, fullWidth: number) => void;
   onSelect: () => void;
@@ -246,25 +251,32 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
   const canvas = useRef<HTMLCanvasElement>(null);
   const clickTimer = useRef<number | undefined>(undefined);
   const [loader, setLoader] = useState<any[] | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
-    setLoader(null);
-    setError(false);
-    loadOmeZarrFromStore(new PrefixStore(store, path) as any)
-      .then((result) => { if (!cancelled) setLoader(result.data); })
-      .catch(() => { if (!cancelled) setError(true); });
+    if (!inView || loader) return;
+    setError(undefined);
+    void queuePreview(async () => {
+      if (cancelled) return;
+      const result = await loadPreviewPyramid(new PrefixStore(store, path));
+      if (!cancelled) setLoader(result);
+    }).catch((reason) => { if (!cancelled) setError(String(reason)); });
     return () => { cancelled = true; };
-  }, [path, store]);
+  }, [path, store, inView, loader]);
 
   useEffect(() => {
-    if (!loader || !canvas.current) return;
+    if (!loader || !canvas.current || !inView) return;
     let cancelled = false;
     const draw = async () => {
-      const source = loader[loader.length - 1] || loader[0];
+      if (cancelled) return;
+      const source = loader[previewLevel(loader, targetPixels)];
       const visible = channels.filter((channel) => channel.visible);
-      if (!source || !visible.length) return;
+      if (!source) return;
+      if (!visible.length) {
+        canvas.current?.getContext("2d")?.clearRect(0, 0, canvas.current.width, canvas.current.height);
+        return;
+      }
       const rasters = await Promise.all(visible.map(async (channel) => ({ channel, raster: await source.getRaster({ selection: selection(source, channel.index, z, t) }) })));
       if (cancelled || !canvas.current || !rasters.length) return;
       const labels: string[] = source.labels || [];
@@ -286,14 +298,15 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
       canvas.current.width = width;
       canvas.current.height = height;
       canvas.current.getContext("2d")?.putImageData(new ImageData(output, width, height), 0, 0);
+      setError(undefined);
       const finest = loader[0];
       const finestLabels: string[] = finest?.labels || [];
       const xIndex = finestLabels.indexOf("x");
       onRendered(path, canvas.current.toDataURL("image/jpeg", 0.72), Number(xIndex >= 0 ? finest.shape[xIndex] : width));
     };
-    void draw().catch(() => setError(true));
+    void queuePreview(draw, true).catch((reason) => { if (!cancelled) setError(String(reason)); });
     return () => { cancelled = true; };
-  }, [channels, loader, onRendered, path, t, z]);
+  }, [channels, loader, onRendered, path, t, z, targetPixels, inView]);
 
   useEffect(() => () => window.clearTimeout(clickTimer.current), []);
 
@@ -316,6 +329,6 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
   };
 
   return <button className={`overview-tile ${selected ? "active" : ""}`} style={style} onClick={handleClick} onDoubleClick={handleDoubleClick}>
-    <span className="thumbnail-frame">{error ? <span className="thumbnail-error">Unavailable</span> : <canvas ref={canvas} aria-label={`${title} thumbnail`} />}<strong className="overview-tile-label">{title}</strong></span>
+    <span className="thumbnail-frame"><canvas ref={canvas} aria-label={`${title} thumbnail`} />{error && <span className="thumbnail-error" title={error}>Unavailable</span>}<strong className="overview-tile-label">{title}</strong></span>
   </button>;
 }

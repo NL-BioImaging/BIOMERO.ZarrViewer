@@ -420,3 +420,45 @@ def test_schema_2_label_binding_lookup_scales_linearly():
     assert len(result) == len(images)
     assert result[-1]["labelComponents"][0]["logicalNodePath"] == labels[-1]["nodePath"]
     assert CountedLabel.source_reads <= 2 * len(labels)
+
+
+def test_preprocessed_import_uses_imported_from_for_eligibility_and_resolution(configure_storage):
+    _, mount = configure_storage
+    store = mount / "cells/.processed/converted.ome.zarr"
+    store.mkdir(parents=True)
+    annotation = biomero_annotation("/recorded/cells/experiment.db")
+    annotation.values["Imported_from"] = "/recorded/cells/.processed/converted.ome.zarr"
+    plate = FakeParent(9, annotations=[annotation])
+    well = FakeParent(8, parents=[plate])
+    image = FakeImage(42, "B/1/0", [], parents=[well])
+    conn = FakeConnection(image=image, plate=plate)
+    assert resolver.plate_store_registered(conn, 9)
+    assert resolver.image_store_registered(conn, 42)
+    assert resolve_image_store(conn, 42).path == store.resolve()
+
+
+def test_preprocessed_import_still_rejects_escape_from_mount(configure_storage):
+    _, mount = configure_storage
+    (mount.parent / "outside.ome.zarr").mkdir()
+    annotation = biomero_annotation("/recorded/cells/experiment.db")
+    annotation.values["Imported_from"] = "/recorded/../outside.ome.zarr"
+    image = FakeImage(42, "field", [], annotations=[annotation])
+    with pytest.raises(UnsafePath):
+        resolve_image_store(FakeConnection(image=image), 42)
+
+
+def test_plate_starts_at_first_physical_well_not_database_iteration_order(monkeypatch):
+    first_image = FakeImage(42, "B/1/0", [])
+    later_image = FakeImage(99, "K/24/0", [])
+    first = FakeParent(10)
+    first.getRow = lambda: 1
+    first.getColumn = lambda: 0
+    first.listChildren = lambda: [FakeWellSample(20, first_image)]
+    later = FakeParent(9)
+    later.getRow = lambda: 10
+    later.getColumn = lambda: 23
+    later.listChildren = lambda: [FakeWellSample(19, later_image)]
+    plate = FakeParent(8)
+    plate.listChildren = lambda: [later, first]
+    monkeypatch.setattr(resolver, "resolve_image_store", lambda conn, image_id: int(image_id))
+    assert resolve_plate_store(FakeConnection(plate=plate), 8) == 42

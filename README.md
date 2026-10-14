@@ -199,6 +199,12 @@ The BIOMERO importer produces the second form for in-place imports, including
 plate imports whose individual OMERO Images are named with NGFF field paths
 such as `A/1/0`.
 
+For preprocessed imports, `Imported_from` in the same structured `biomero.import`
+annotation identifies the imported OME-Zarr while `Filepath` may still point at
+an original `experiment.db`. The same access and storage-root checks apply.
+Opening a Plate starts in Plate overview at the first populated well in physical
+row/column order; Image and explicit field links retain their selected field.
+
 ### Canonical and shallow BIOMERO stores
 
 The viewer reconstructs BIOMERO RFC-8 shallow results as one logical store.
@@ -245,6 +251,8 @@ OME-Zarr store from conventional OMERO pixels.
   fullscreen mode;
 - channel visibility, color, dual-ended display range, sampled histogram, and
   Auto/Fit/Hist controls;
+- saved NGFF display ranges on first open, with bounded native-resolution
+  sampling for automatic contrast instead of contrast from blurred pyramid levels;
 - middle Z slice by default, T and Z navigation, and MIP, mean, or minimum
   intensity projection across Z;
 - a field-level 2D/3D toggle for Z stacks, with orbiting volume ray casting at
@@ -262,6 +270,10 @@ OME-Zarr store from conventional OMERO pixels.
 - Field, Well, and Plate views with plate-grid navigation and field selection;
 - intensity-only Well and Plate overview thumbnails; open a Field to display
   and control its segmentation label overlays;
+- previews that gain detail with zoom, a sharper field navigator, and bounded
+  concurrent preview loading for large plates;
+- standard 6, 12, 24, 48, 96, 384, or 1536-well navigation grids inferred from
+  recorded well coordinates when only part of a plate was imported;
 - versioned URL state for viewport, planes, projection, 3D camera and quality,
   channels, labels, and the selected field.
 - measurement-oriented focused links that fit a half-open pixel ROI, select
