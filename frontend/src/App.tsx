@@ -30,7 +30,7 @@ import {
 } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
-import { OverviewGrid } from "./OverviewGrid";
+import { OverviewGrid, defaultPlateFieldIndex } from "./OverviewGrid";
 import { plateGeometry } from "./plate-geometry";
 import { withVolumeCache, type LoadProgress } from "./volume-loader";
 import {
@@ -289,7 +289,7 @@ export default function App() {
   const [volumeReset, setVolumeReset] = useState(0);
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"field" | "well" | "plate">(deepLink.view || "field");
-  const [plateFieldIndex, setPlateFieldIndex] = useState(0);
+  const [plateFieldIndex, setPlateFieldIndex] = useState(deepLink.plateField || 0);
   const [showMinimap, setShowMinimap] = useState(true);
   const [showScale, setShowScale] = useState(true);
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
@@ -350,9 +350,13 @@ export default function App() {
     refreshCapability().then((value) => {
       const controller = new AuthenticatedZarrStore(value, refreshCapability);
       setAuthStore(controller);
+      const defaultField = defaultPlateFieldIndex(value);
+      setPlateFieldIndex(deepLink.plateField ?? defaultField);
       setField((current) => {
         const validFields = value.plate?.wells.flatMap((well) => well.fields.map((item) => item.path)) || [];
-        return current && validFields.includes(current) ? current : value.initial_path;
+        if (current && validFields.includes(current)) return current;
+        const initialWell = value.plate?.wells.find(well=>well.fields.some(item=>item.path===value.initial_path));
+        return deepLink.view === "plate" ? initialWell?.fields[Math.min(deepLink.plateField ?? defaultField,initialWell.fields.length-1)]?.path || value.initial_path : value.initial_path;
       });
     }).catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load OME-Zarr capabilities"));
   }, [imageId, refreshCapability]);
@@ -486,6 +490,7 @@ export default function App() {
     const timeout = window.setTimeout(() => {
       const relative = writeDeepLink(imageId, {
         view: viewMode,
+        plateField: plateFieldIndex,
         viewport,
         z: zIndex,
         t: tIndex,
@@ -507,7 +512,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 

@@ -2,6 +2,7 @@ import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, V
 
 export interface DeepLinkState {
   view?: "field" | "well" | "plate";
+  plateField?: number;
   viewport?: ViewportState;
   z?: number;
   t?: number;
@@ -52,6 +53,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
   const view = params.get("view");
+  if (params.has("plateField")) state.plateField = Math.floor(finite(params.get("plateField"),0,0,1535));
   if (view === "field" || view === "well" || view === "plate") state.view = view;
   if (params.has("x") || params.has("y") || params.has("zoom")) {
     state.viewport = {
@@ -187,6 +189,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   params.set("image", String(imageId));
   params.set("v", "2");
   if (state.view && state.view !== "field") params.set("view", state.view);
+  if (state.plateField != null) params.set("plateField",String(Math.max(0,Math.floor(state.plateField))));
   if (state.viewport) {
     params.set("x", state.viewport.x.toFixed(2));
     params.set("y", state.viewport.y.toFixed(2));

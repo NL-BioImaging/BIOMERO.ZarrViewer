@@ -1,6 +1,7 @@
 import * as zarr from "zarrita";
 import type { Capability, ChannelState } from "./types";
 import { requestPreview } from "./preview-client";
+import { MosaicClient } from "./mosaic-client";
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -40,18 +41,25 @@ export class AuthenticatedZarrStore {
       fetch: async (request) => this.authorizedFetch(request),
     });
     if (capability.store.preview_url) Object.assign(this.store, { getPreview: (field: string, size: number, channels: ChannelState[], z: number, t: number, signal: AbortSignal) => requestPreview(this, field, size, channels, z, t, signal) });
+    if (capability.store.mosaic_url) Object.assign(this.store, { mosaic: new MosaicClient(this) });
   }
 
   update(capability: Capability): void {
     this.capability = capability;
   }
 
-  fetch(url: string): Promise<Response> {
-    return this.authorizedFetch(new Request(new URL(url, window.location.href), { cache: "no-store" }));
+  fetch(url: string, init?: RequestInit): Promise<Response> {
+    const headers = new Headers(init?.headers);
+    if (init?.method === "POST") {
+      const csrf = document.cookie.split(";").map(value => value.trim()).find(value => value.startsWith("csrftoken="));
+      if (csrf) headers.set("X-CSRFToken", decodeURIComponent(csrf.slice("csrftoken=".length)));
+    }
+    return this.authorizedFetch(new Request(new URL(url, window.location.href), { cache: "no-store", ...init, headers }));
   }
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
   get previewUrl(): string | undefined { return this.capability.store.preview_url; }
+  get mosaicUrl(): string | undefined { return this.capability.store.mosaic_url; }
   get volumeIdentity(): string { return `${this.capability.store.binding_digest || ""}:${this.capability.store.uuid || ""}`; }
 
   private async refresh(): Promise<Capability> {
@@ -66,7 +74,7 @@ export class AuthenticatedZarrStore {
   private requestWithContext(request: Request, bypassCache = false): Request {
     const headers = new Headers(request.headers);
     headers.set("X-OMERO-Zarr-Context", this.capability.store.context);
-    return new Request(request, {
+    return new Request(request.clone(), {
       headers,
       credentials: "same-origin",
       cache: bypassCache ? "no-store" : request.cache,

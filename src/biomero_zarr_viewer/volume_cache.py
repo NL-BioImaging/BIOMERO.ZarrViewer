@@ -59,7 +59,7 @@ def cache_root():
 
 
 def cache_limit():
-    return max(0, int(os.environ.get("BIOMERO_ZARR_CACHE_MAX_BYTES", "10000000000")))
+    return max(0, int(os.environ.get("BIOMERO_ZARR_CACHE_MAX_BYTES", "20000000000")))
 
 
 def _process_stamp(pid):
@@ -171,14 +171,14 @@ def entry(key, scope):
         return result
 
 
-def _reserve(key, scope, size, metadata):
+def _reserve(key, scope, size, metadata, *, rebuild=False):
     root = cache_root()
     limit = cache_limit()
     if not limit or size > limit:
         raise ROILimitExceeded("Volume exceeds BIOMERO_ZARR_CACHE_MAX_BYTES")
     with database() as db:
         hit = db.execute("SELECT status FROM entries WHERE key=?", (key,)).fetchone()
-        if hit and hit["status"] == "ready" and (root / (key + ".bin")).is_file():
+        if not rebuild and hit and hit["status"] == "ready" and (root / (key + ".bin")).is_file():
             if db.execute("SELECT COALESCE(SUM(size),0) FROM entries").fetchone()[0] <= limit:
                 return False
         db.execute("BEGIN IMMEDIATE")
@@ -186,11 +186,13 @@ def _reserve(key, scope, size, metadata):
             if not _owner_alive(abandoned["owner"]):
                 (root / (abandoned["key"] + ".part")).unlink(missing_ok=True)
                 (root / (abandoned["key"] + ".bin")).unlink(missing_ok=True)
+                (root / (abandoned["key"] + ".scratch")).unlink(missing_ok=True)
+                (root / (abandoned["key"] + ".next")).unlink(missing_ok=True)
                 db.execute("DELETE FROM entries WHERE key=?", (abandoned["key"],))
         existing = db.execute("SELECT * FROM entries WHERE key=?", (key,)).fetchone()
         if existing and existing["status"] in ("queued", "building"):
             return False
-        if existing and existing["status"] == "ready" and (root / (key + ".bin")).is_file():
+        if not rebuild and existing and existing["status"] == "ready" and (root / (key + ".bin")).is_file():
             total = db.execute("SELECT COALESCE(SUM(size),0) FROM entries").fetchone()[0]
             for old in db.execute("SELECT key,size FROM entries WHERE status='ready' AND key<>? ORDER BY accessed",(key,)).fetchall():
                 if total <= limit: break
@@ -199,6 +201,7 @@ def _reserve(key, scope, size, metadata):
                 total -= old["size"]
             if total > limit: raise ROILimitExceeded("Cache is busy applying its new size limit")
             return False
+        (root / (key + ".bin")).unlink(missing_ok=True)
         db.execute("DELETE FROM entries WHERE key=?", (key,))
         # Reservations count towards the limit, including files still being built.
         total = db.execute("SELECT COALESCE(SUM(size),0) FROM entries").fetchone()[0]

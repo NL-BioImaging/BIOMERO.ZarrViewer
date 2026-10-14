@@ -503,7 +503,9 @@ environment:
   BIOMERO_ZARR_CACHE_MAX_BYTES: "50000000000" # 50 GB of cached data
 ```
 
-The default limit is 10,000,000,000 bytes. Zero disables the cached endpoints;
+The default limit is 20,000,000,000 bytes (20 GB) when the environment variable is
+absent. Set the desired deployment limit explicitly, such as the 50 GB example
+above. Zero disables the cached endpoints;
 existing cached files are retained. SQLite keeps a small additional index.
 Least-recently-used completed entries are evicted to make room. Concurrent jobs
 reserve their eventual size, duplicate requests share the same job, and writes
@@ -527,3 +529,27 @@ visible fields request detail. Cache keys include channel colors/ranges, T/Z,
 source identity and source fingerprints. Small navigator images are retained
 separately so visiting high-resolution wells does not inflate the minimap's
 memory usage. Preview requests support up to eight visible channels.
+
+Plate mode uses a single, lossless RGB mosaic pyramid with 512-pixel tiles,
+including native-resolution detail. The first visit builds it in the background
+with a progress indicator. Subsequent visits read only the visible pyramid tiles;
+zoomed-out views no longer issue hundreds of individual well requests. Well mode
+continues to use field previews. A new plate overview defaults to the middle
+field (field 4 for nine fields); `plateField` in its URL preserves a chosen index.
+
+Mosaics share the volume/preview cache quota and LRU eviction. The reservation
+includes the temporary disk-backed image, downsampled working level and archive,
+so building a large plate may require considerably more space than its final
+compressed pyramid. Construction processes one field and bounded tile blocks at
+a time. A field is limited to 16 million pixels, a plate to 1536 populated wells,
+and display composition to eight channels. Insufficient cache capacity produces
+an explicit error before construction starts.
+
+The derivative is keyed by authenticated user/group/image, source routes/root
+metadata, layout, field choice, channel visibility/colors/ranges, Z and T. Source
+stores are treated as immutable imports: if pixels or individual field metadata
+are edited in place without updating the root metadata, use **Rebuild plate
+overview** (the circular arrow next to Fit). This replaces only the cached
+derivative; source data is never modified. Rebuilding and ordinary cache misses
+coalesce across web workers. A completed mosaic survives container restarts when
+the cache directory is mounted persistently.

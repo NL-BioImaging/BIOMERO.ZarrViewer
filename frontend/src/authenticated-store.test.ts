@@ -30,6 +30,23 @@ test("a rejected data request refreshes its context exactly once", async () => {
   vi.unstubAllGlobals();
 });
 
+test("mosaic POST bodies and CSRF protection survive a context refresh", async () => {
+  const bodies:string[]=[];
+  const csrf:string[]=[];
+  document.cookie="csrftoken=test-csrf; path=/";
+  vi.stubGlobal("fetch",vi.fn(async(request:Request)=>{
+    bodies.push(await request.text());csrf.push(request.headers.get("X-CSRFToken")||"");
+    return new Response("{}",{status:bodies.length===1?403:200});
+  }));
+  const auth=new AuthenticatedZarrStore(capability("expired"),async()=>capability("fresh"));
+  const response=await auth.fetch('/mosaic/',{method:'POST',body:'{"tiles":[]}'});
+  expect(response.status).toBe(200);
+  expect(bodies).toEqual(['{"tiles":[]}','{"tiles":[]}']);
+  expect(csrf).toEqual(['test-csrf','test-csrf']);
+  document.cookie="csrftoken=; max-age=0; path=/";
+  vi.unstubAllGlobals();
+});
+
 test("resolves a same-origin relative data gateway URL", async () => {
   const relative = capability("context");
   relative.store.url = "/biomero_zarr_viewer/data/images/42/";

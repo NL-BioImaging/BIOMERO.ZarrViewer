@@ -66,6 +66,7 @@ export interface Capability {
     render_url?: string;
     volume_url?: string;
     preview_url?: string;
+    mosaic_url?: string;
   };
   kind: "image" | "plate";
   ngff_version: "0.4" | "0.5";
