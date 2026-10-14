@@ -3,6 +3,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("api/images/<int:image_id>/previews/", views.cached_previews, name="biomero_zarr_viewer_previews"),
+    path("api/images/<int:image_id>/volume/", views.cached_volume, name="biomero_zarr_viewer_volume"),
     path("", views.viewer, name="biomero_zarr_viewer_index"),
     path(
         "api/analysis-skills/",

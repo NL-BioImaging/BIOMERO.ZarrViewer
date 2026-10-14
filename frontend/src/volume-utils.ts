@@ -69,7 +69,7 @@ export function safeVolumeLevels(levels: VolumeLevel[]): VolumeLevel[] {
 export function chooseVolumeLevel(levels: VolumeLevel[], requested?: number): VolumeLevel | undefined {
   const safe = safeVolumeLevels(levels);
   if (!safe.length) return undefined;
-  return safe.find((level) => level.index === requested) || safe[safe.length - 1];
+  return safe.find((level) => level.index === requested) || safe.find(level => level.rawBytes <= 64*1024*1024) || safe[safe.length - 1];
 }
 
 export function detectMax3dTextureSize(): number {

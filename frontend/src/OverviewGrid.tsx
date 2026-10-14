@@ -259,9 +259,28 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
   const clickTimer = useRef<number | undefined>(undefined);
   const [loader, setLoader] = useState<any[] | null>(null);
   const [error, setError] = useState<string>();
+  const [renderedLevel, setRenderedLevel] = useState<number>();
+
+  useEffect(() => {
+    if (!(store as any).getPreview || !inView || !channels.length) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    void (store as any).getPreview(path, fullResolution ? 2048 : targetPixels, channels, z, t, controller.signal).then(async (preview: any) => {
+      if (cancelled) return;
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Preview decoding failed")); image.src = preview.url; });
+      if (cancelled || !canvas.current) return;
+      canvas.current.width = preview.width; canvas.current.height = preview.height;
+      canvas.current.getContext("2d")?.drawImage(image, 0, 0);
+      setRenderedLevel(preview.level); setError(undefined);
+      onRendered(path, minimapPreview(canvas.current), preview.full_width);
+    }).catch((reason: unknown) => { if (!cancelled) setError(String(reason)); });
+    return () => { cancelled = true; controller.abort(); };
+  }, [store, path, inView, channels, z, t, targetPixels, fullResolution, onRendered]);
 
   useEffect(() => {
     let cancelled = false;
+    if ((store as any).getPreview) return;
     if (!inView || loader) return;
     setError(undefined);
     void queuePreview(async () => {
@@ -309,7 +328,7 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
       const finest = loader[0];
       const finestLabels: string[] = finest?.labels || [];
       const xIndex = finestLabels.indexOf("x");
-      onRendered(path, canvas.current.toDataURL("image/jpeg", 0.72), Number(xIndex >= 0 ? finest.shape[xIndex] : width));
+      onRendered(path, minimapPreview(canvas.current), Number(xIndex >= 0 ? finest.shape[xIndex] : width));
     };
     void queuePreview(draw, true).catch((reason) => { if (!cancelled) setError(String(reason)); });
     return () => { cancelled = true; };
@@ -336,6 +355,16 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
   };
 
   return <button className={`overview-tile ${selected ? "active" : ""}`} style={style} onClick={handleClick} onDoubleClick={handleDoubleClick}>
-    <span className="thumbnail-frame"><canvas ref={canvas} data-resolution-level={loader ? previewLevel(loader, targetPixels, fullResolution) : undefined} aria-label={`${title} thumbnail`} />{error && <span className="thumbnail-error" title={error}>Unavailable</span>}<strong className="overview-tile-label">{title}</strong></span>
+    <span className="thumbnail-frame"><canvas ref={canvas} data-resolution-level={loader ? previewLevel(loader, targetPixels, fullResolution) : renderedLevel} aria-label={`${title} thumbnail`} />{error && <span className="thumbnail-error" title={error}>Unavailable</span>}<strong className="overview-tile-label">{title}</strong></span>
   </button>;
+}
+
+
+function minimapPreview(source: HTMLCanvasElement): string {
+  const mini = document.createElement("canvas");
+  const ratio = Math.min(1, 160 / Math.max(source.width, source.height));
+  mini.width = Math.max(1, Math.round(source.width * ratio));
+  mini.height = Math.max(1, Math.round(source.height * ratio));
+  mini.getContext("2d")?.drawImage(source, 0, 0, mini.width, mini.height);
+  return mini.toDataURL("image/jpeg", 0.72);
 }

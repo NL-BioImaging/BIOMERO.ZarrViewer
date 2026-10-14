@@ -1,5 +1,6 @@
 import * as zarr from "zarrita";
-import type { Capability } from "./types";
+import type { Capability, ChannelState } from "./types";
+import { requestPreview } from "./preview-client";
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -38,11 +39,20 @@ export class AuthenticatedZarrStore {
     this.store = new zarr.FetchStore(storeUrl, {
       fetch: async (request) => this.authorizedFetch(request),
     });
+    if (capability.store.preview_url) Object.assign(this.store, { getPreview: (field: string, size: number, channels: ChannelState[], z: number, t: number, signal: AbortSignal) => requestPreview(this, field, size, channels, z, t, signal) });
   }
 
   update(capability: Capability): void {
     this.capability = capability;
   }
+
+  fetch(url: string): Promise<Response> {
+    return this.authorizedFetch(new Request(new URL(url, window.location.href), { cache: "no-store" }));
+  }
+
+  get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
+  get previewUrl(): string | undefined { return this.capability.store.preview_url; }
+  get volumeIdentity(): string { return `${this.capability.store.binding_digest || ""}:${this.capability.store.uuid || ""}`; }
 
   private async refresh(): Promise<Capability> {
     if (!this.refreshing) {

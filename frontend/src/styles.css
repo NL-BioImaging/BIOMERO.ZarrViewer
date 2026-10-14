@@ -214,3 +214,5 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 .toolbar .icon-button { width: 2.15rem; height: 2.15rem; padding: .4rem; display: inline-grid; place-items: center; }
 .icon-button svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.volume-cache-progress { position: absolute; z-index: 20; left: 50%; bottom: 2rem; transform: translateX(-50%); display: grid; gap: .45rem; min-width: 18rem; padding: .8rem 1rem; background: #171a2bee; border: 1px solid #4b526c; border-radius: 6px; font-size: .8rem; }
+.volume-cache-progress progress { width: 100%; accent-color: #55bb66; }

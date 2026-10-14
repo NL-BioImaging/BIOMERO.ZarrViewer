@@ -103,6 +103,7 @@ function VolumeRenderer({
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string>();
+  const [preparedKey, setPreparedKey] = useState("");
   const selectedChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
@@ -111,10 +112,23 @@ function VolumeRenderer({
     setReady(false);
     onErrorRef.current(message);
   }, []);
-  const guardedLoader = useMemo(() => withVolumeErrorReporting(loader, reportError), [loader, reportError]);
-  const sourceLabels = guardedLoader[resolution]?.labels || guardedLoader[0]?.labels || [];
+  // Each NGFF level already declares its Z downsampling. Passing one selected
+  // level at resolution zero avoids Viv downsampling its depth a second time.
+  const guardedLoader = useMemo(() => withVolumeErrorReporting([loader[resolution]], reportError), [loader, resolution, reportError]);
+  const sourceLabels = guardedLoader[0]?.labels || [];
   const selectionAxes = Array.isArray(sourceLabels) ? sourceLabels.join(",") : "";
   const selectedChannelKey = selectedChannels.map((channel) => channel.index).join(",");
+  const prepareKey = `${resolution}:${t}:${selectedChannelKey}`;
+  useEffect(() => {
+    let cancelled = false;
+    setPreparedKey("");
+    const source = loader[resolution];
+    if (!source?.getVolume) { setPreparedKey(prepareKey); return; }
+    Promise.all(selectedChannels.map(channel => source.getVolume(volumeSelection(source.labels, channel.index, t))))
+      .then(() => { if (!cancelled) setPreparedKey(prepareKey); })
+      .catch((error) => { if (!cancelled) reportError(String(error)); });
+    return () => { cancelled = true; };
+  }, [loader, resolution, t, selectedChannelKey, prepareKey, reportError]);
   const selections = useMemo(
     () => selectedChannels.map((channel) => volumeSelection(sourceLabels, channel.index, t)),
     [selectedChannelKey, selectionAxes, t],
@@ -155,7 +169,7 @@ function VolumeRenderer({
     channelsVisible: selectedChannels.map(() => true),
     colors: selectedChannels.map((channel) => hexToRgb(channel.color)),
     contrastLimits: selectedChannels.map((channel) => [channel.low, channel.high]),
-    resolution,
+    resolution: 0,
     extensions: [new ColorPalette3DExtensions.AdditiveBlendExtension({})],
     useProgressIndicator: false,
     onUpdate: ({ progress: value }: { progress: number }) => setProgress(Math.max(0, Math.min(1, finite(value, 0)))),
@@ -171,7 +185,7 @@ function VolumeRenderer({
   }];
 
   return <div className="volume-stage">
-    <VolumeVivViewer
+    {preparedKey === prepareKey && <VolumeVivViewer
       views={[view]}
       viewStates={[viewState]}
       layerProps={layerProps}
@@ -184,11 +198,10 @@ function VolumeRenderer({
           zoom: finite(next.zoom, viewState.zoom),
         });
       }}
-    />
+    />}
     {!ready && !loadError && <div className="volume-loading" role="status" aria-live="polite">
       <strong>Loading 3D volume…</strong>
-      <progress max="1" value={progress} />
-      <span>{Math.round(progress * 100)}%</span>
+      {preparedKey === prepareKey ? <><progress max="1" value={progress} /><span>{Math.round(progress * 100)}%</span></> : <span>Preparing cached volume data...</span>}
       <button onClick={onCancel}>Cancel and return to 2D</button>
     </div>}
     {loadError && <div className="volume-error" role="alert">

@@ -1,4 +1,5 @@
 import type { ProjectionMode } from "./types";
+const cachedProjections = new WeakMap<object, Map<string, Promise<PixelRaster>>>();
 
 interface PixelRaster {
   data: any;
@@ -42,6 +43,20 @@ export function projectSource(source: any, mode: Exclude<ProjectionMode, "slice"
   const depth = Math.max(1, Number(source.shape[zIndex]) || 1);
   const projectedLabels = labels.filter((_, index) => index !== zIndex);
   const projectedShape = source.shape.filter((_: number, index: number) => index !== zIndex);
+  let cache = cachedProjections.get(source);
+  if (!cache) { cache = new Map(); cachedProjections.set(source, cache); }
+  const volumeProjection = (selection: any): Promise<PixelRaster> => {
+    const key = JSON.stringify([mode, selection?.c || 0, selection?.t || 0]);
+    let pending = cache!.get(key);
+    if (!pending) {
+      pending = source.getVolume(selection).then(async (volume: any) => {
+        const size = volume.width * volume.height;
+        return project(volume.depth, mode, async (z) => ({data: volume.data.subarray(z*size,(z+1)*size), width:volume.width, height:volume.height}));
+      }).catch((error: unknown) => { cache!.delete(key); throw error; });
+      cache!.set(key, pending!);
+    }
+    return pending!;
+  };
   return {
     dtype: source.dtype,
     labels: projectedLabels,
@@ -49,8 +64,20 @@ export function projectSource(source: any, mode: Exclude<ProjectionMode, "slice"
     tileSize: source.tileSize,
     meta: source.meta,
     onTileError: (error: Error) => source.onTileError?.(error),
-    getRaster: ({ selection, signal }: any) => project(depth, mode, (z) => source.getRaster({ selection: { ...selection, z }, signal })),
-    getTile: ({ x, y, selection, signal }: any) => project(depth, mode, (z) => source.getTile({ x, y, selection: { ...selection, z }, signal })),
+    getRaster: async ({ selection, signal }: any) => {
+      const result = source.getVolume ? await volumeProjection(selection) : await project(depth, mode, (z) => source.getRaster({ selection: { ...selection, z }, signal }));
+      signal?.throwIfAborted(); return result;
+    },
+    getTile: async ({ x, y, selection, signal }: any) => {
+      if (!source.getVolume) return project(depth, mode, (z) => source.getTile({ x, y, selection: { ...selection, z }, signal }));
+      const raster = await volumeProjection(selection);
+      signal?.throwIfAborted();
+      const left = x * source.tileSize, top = y * source.tileSize;
+      const width = Math.min(source.tileSize, raster.width-left), height = Math.min(source.tileSize, raster.height-top);
+      const data = new raster.data.constructor(width*height);
+      for (let row=0;row<height;row++) data.set(raster.data.subarray((top+row)*raster.width+left,(top+row)*raster.width+left+width),row*width);
+      return {data,width,height};
+    },
   };
 }
 

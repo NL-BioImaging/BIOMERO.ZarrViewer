@@ -75,6 +75,7 @@ export function ViewerCanvas({
   const hoverRequest = useRef(0);
   const [labelTooltip, setLabelTooltip] = useState<LabelTooltip | undefined>(undefined);
   const reportTileError = useCallback((layerId: string, error: unknown) => {
+    if (error instanceof DOMException && error.name === "AbortError") return;
     failedLayers.current.add(layerId);
     onTileError(error instanceof Error ? error.message : "A tile failed to load");
   }, [onTileError]);

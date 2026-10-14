@@ -50,13 +50,13 @@ test("volume levels enforce memory, texture, and 3D constraints", () => {
   expect(safeVolumeLevels(levels).map((level) => level.index)).toEqual([1]);
 });
 
-test("requested safe level wins and otherwise the coarsest safe level is chosen", () => {
+test("requested safe level wins and otherwise the finest level within the initial-load budget is chosen", () => {
   const levels = volumeLevels([
     source([1, 1, 16, 256, 256]),
     source([1, 1, 8, 128, 128]),
   ], 1, 512);
   expect(chooseVolumeLevel(levels, 0)?.index).toBe(0);
-  expect(chooseVolumeLevel(levels, 99)?.index).toBe(1);
+  expect(chooseVolumeLevel(levels, 99)?.index).toBe(0);
 });
 
 test("only visible channels up to Viv's channel limit are loaded", () => {

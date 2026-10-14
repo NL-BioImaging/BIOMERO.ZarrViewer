@@ -490,3 +490,40 @@ GNU Affero General Public License v3.0 or later. See [`LICENSE`](LICENSE).
 Users of the network application can obtain the corresponding source from the
 [`NL-BioImaging/BIOMERO.ZarrViewer`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer)
 repository.
+
+
+## Shared volume and plate-preview cache
+
+Set these environment variables on the OMERO.web service and mount a persistent,
+writable directory at the cache path:
+
+```yaml
+environment:
+  BIOMERO_ZARR_CACHE_DIR: /var/cache/biomero-zarr
+  BIOMERO_ZARR_CACHE_MAX_BYTES: "50000000000" # 50 GB of cached data
+```
+
+The default limit is 10,000,000,000 bytes. Zero disables the cached endpoints;
+existing cached files are retained. SQLite keeps a small additional index.
+Least-recently-used completed entries are evicted to make room. Concurrent jobs
+reserve their eventual size, duplicate requests share the same job, and writes
+are published atomically. Cache access requires an authenticated OMERO session
+and its signed user/group/image context. Cache entries are scoped to that
+context and fingerprint the source metadata and chunk file sizes/modification
+times. Reload the viewer after changing a source store in place.
+
+Volumes are packed once per source, level, channel and time point, then reused
+for MIP/mean/min projections and 3D. The viewer displays preparation/download
+progress and retains up to 256 MiB of decoded volume data in browser memory.
+The server's per-volume safety limit is also 256 MiB; a large disk cache does
+not override GPU or per-volume memory limits. Larger 2D projections continue
+to use the bounded tile-based path. 3D starts at the finest safe level below a
+64 MiB initial-load budget; higher safe levels remain selectable. The selected
+NGFF level is used directly without additional implicit Z subsampling.
+
+Plate/Well previews are rendered in batches (up to 16 small fields per request)
+and cached as display PNGs. Source resolution still follows zoom and only
+visible fields request detail. Cache keys include channel colors/ranges, T/Z,
+source identity and source fingerprints. Small navigator images are retained
+separately so visiting high-resolution wells does not inflate the minimap's
+memory usage. Preview requests support up to eight visible channels.

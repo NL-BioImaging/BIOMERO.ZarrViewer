@@ -32,6 +32,7 @@ import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
 import { OverviewGrid } from "./OverviewGrid";
 import { plateGeometry } from "./plate-geometry";
+import { withVolumeCache, type LoadProgress } from "./volume-loader";
 import {
   activeVolumeChannels,
   chooseVolumeLevel,
@@ -294,7 +295,9 @@ export default function App() {
   const [viewerRef, viewerSize] = useElementSize<HTMLDivElement>();
   const initializedZ = useRef(false);
   const fittedRoi = useRef("");
-  const analyzedProjection = useRef<ProjectionMode>(projection);
+  const analyzedProjection = useRef<string>(projection);
+  const [loadProgress, setLoadProgress] = useState<LoadProgress>({busy:false,fraction:0,phase:""});
+  const reportLoadProgress = useCallback((value: LoadProgress) => setLoadProgress(value), []);
   const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
   const currentLoaded = loaded?.path === field ? loaded : null;
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
@@ -361,7 +364,7 @@ export default function App() {
     setError(null);
     const load = async () => {
       const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field) as any);
-      const imageLoader = attachNgffPhysicalSizes(imageResult.data, imageResult.metadata);
+      const imageLoader = withVolumeCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata), authStore, field, reportLoadProgress);
       const labelResults = await Promise.allSettled(capability.labels.map(async (label) => {
         const path = fieldLabelPath(label.path, capability!.initial_path, field!);
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path) as any);
@@ -460,12 +463,15 @@ export default function App() {
   }, [renderMode, currentLoaded, maxTextureSize, volumeChannels.length, selectedVolumeLevel, volumeLevel]);
 
   useEffect(() => {
-    if (!loaded || !displayLoader || !channels.length || analyzedProjection.current === projection) return;
-    analyzedProjection.current = projection;
+    const analysisKey = effectiveRenderMode === "3d" ? "volume" : projection;
+    if (!loaded || !displayLoader || !channels.length || analyzedProjection.current === analysisKey) return;
     let cancelled = false;
-    setStatus(projection === "slice" ? "Calculating slice ranges…" : "Calculating projection ranges…");
-    analyzeChannels(displayLoader, channels, projection === "slice" ? zIndex : 0, tIndex).then((analyses) => {
+    const analysisLoader = effectiveRenderMode === "3d" && selectedVolumeLevel
+      ? projectLoader([loaded.image[selectedVolumeLevel.index]], "mip") : displayLoader;
+    setStatus(effectiveRenderMode === "3d" ? "Calculating volume ranges..." : "Calculating projection ranges...");
+    analyzeChannels(analysisLoader, channels, effectiveRenderMode === "2d" && projection === "slice" ? zIndex : 0, tIndex).then((analyses) => {
       if (cancelled) return;
+      analyzedProjection.current = analysisKey;
       setChannelAnalyses(analyses);
       setChannels((current) => applyChannelAnalysis(current, analyses));
       setStatus("Ready");
@@ -473,7 +479,7 @@ export default function App() {
       if (!cancelled) setStatus(`Projection warning: ${reason instanceof Error ? reason.message : "range calculation failed"}`);
     });
     return () => { cancelled = true; };
-  }, [projection, displayLoader]);
+  }, [projection, displayLoader, effectiveRenderMode, selectedVolumeLevel]);
 
   useEffect(() => {
     if (!imageId || !loaded) return;
@@ -550,6 +556,7 @@ export default function App() {
       </header>
       <div className="workspace">
         <main className="viewer-host" ref={viewerRef}>
+          {loadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{loadProgress.phase}… {Math.round(loadProgress.fraction*100)}%</span><progress aria-label="Volume loading progress" max="1" value={loadProgress.fraction}/></div>}
           {capability?.plate && authStore && viewMode !== "field" ? (
             <OverviewGrid
               capability={capability}
