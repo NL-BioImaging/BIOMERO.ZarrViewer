@@ -215,7 +215,6 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "render_url": render_url,
                 "volume_url": reverse("biomero_zarr_viewer_volume", kwargs={"image_id": store.image_id}) if cache_limit() else None,
                 "preview_url": reverse("biomero_zarr_viewer_previews", kwargs={"image_id": store.image_id}) if cache_limit() else None,
-                "mosaic_url": reverse("biomero_zarr_viewer_mosaic", kwargs={"image_id": store.image_id}) if cache_limit() and model.get("kind") == "plate" else None,
                 "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
                 "binding_digest": binding_digest,
                 "render_svg_url": render_svg_url,
@@ -432,41 +431,6 @@ def cached_volume(request, image_id, conn=None, **kwargs):
         response["Cache-Control"] = "private, no-store"
         return response
     response = JsonResponse({"key": result["key"], "status": result["status"], "progress": result["progress"], **result["metadata"], "error": result["error"]})
-    response["Cache-Control"] = "no-store"
-    return response
-
-
-@require_http_methods(["GET", "POST"])
-@login_required(setGroupContext=True)
-@api_errors
-def cached_mosaic(request, image_id, conn=None, **kwargs):
-    from . import volume_cache, mosaic_cache
-    if not volume_cache.cache_limit():
-        raise UnsupportedStore("Mosaic cache is disabled")
-    claims = validate_read_context(request, conn, image_id)
-    scope = volume_cache.scope_key(claims, image_id)
-    if request.method == "POST":
-        if len(request.body) > 512 * 1024:
-            raise ROILimitExceeded("Mosaic request too large")
-        try:
-            options = json.loads(request.body)
-        except (ValueError, UnicodeError) as exc:
-            raise InvalidROI("Invalid mosaic request") from exc
-        if not isinstance(options, dict): raise InvalidROI("Invalid mosaic request")
-        result = mosaic_cache.request_mosaic(claims, scope, options, _safe_data_path, rebuild=options.get("rebuild") is True)
-    else:
-        result = volume_cache.entry(request.GET.get("job", ""), scope)
-        if result["metadata"].get("kind") != "plate-mosaic-v1": raise InvalidROI("Invalid mosaic job")
-        if "level" in request.GET:
-            try:
-                level, x, y = [int(request.GET.get(a, "0")) for a in ("level", "x", "y")]
-            except ValueError as exc:
-                raise InvalidROI("Invalid mosaic tile") from exc
-            response = HttpResponse(mosaic_cache.read_tile(result, level, x, y), content_type="image/png")
-            response["Cache-Control"] = "private, no-store"
-            response["X-Content-Type-Options"] = "nosniff"
-            return response
-    response = JsonResponse({"key": result["key"], "status": result["status"], "progress": result["progress"], "error": result["error"], **result["metadata"]})
     response["Cache-Control"] = "no-store"
     return response
 

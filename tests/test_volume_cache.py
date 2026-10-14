@@ -134,3 +134,10 @@ def test_volume_endpoint_authentication_traversal_and_binary_response(configure_
     np.testing.assert_array_equal(np.frombuffer(b''.join(response.streaming_content),dtype='<u2').reshape(3,2,4),pixels[0])
     wrong=FakeConnection(user_id=8)
     assert cached_volume(_request(f"/?job={result['key']}",token=token),42,conn=wrong).status_code==403
+
+
+def test_cache_default_is_twenty_decimal_gigabytes(monkeypatch):
+    monkeypatch.delenv('BIOMERO_ZARR_CACHE_MAX_BYTES',raising=False)
+    assert cache.cache_limit()==20_000_000_000
+    monkeypatch.setenv('BIOMERO_ZARR_CACHE_MAX_BYTES','50000000000')
+    assert cache.cache_limit()==50_000_000_000

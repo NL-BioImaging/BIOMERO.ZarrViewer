@@ -4,8 +4,6 @@ import { PrefixStore } from "./authenticated-store";
 import type { Capability, ChannelState, PlateWell } from "./types";
 import { previewLevel, queuePreview } from "./preview-resolution";
 import { loadPreviewPyramid } from "./preview-source";
-import { MosaicLayer } from "./MosaicLayer";
-import type { MosaicClient, MosaicInfo } from "./mosaic-client";
 
 interface OverviewGridProps {
   capability: Capability;
@@ -91,15 +89,6 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
   const [dragging, setDragging] = useState(false);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [fullWidth, setFullWidth] = useState<number>();
-  const [mosaicProgress, setMosaicProgress] = useState<MosaicInfo | null>(null);
-  const [mosaicError, setMosaicError] = useState<string>();
-  const [mosaicThumbnail, setMosaicThumbnail] = useState<string>();
-  const [mosaicRebuild, setMosaicRebuild] = useState(0);
-  const mosaicClient: MosaicClient | undefined = mode === "plate" ? (store as any).mosaic : undefined;
-  const handleMosaicProgress = useCallback((value:MosaicInfo|null, error?:string) => {setMosaicProgress(value);setMosaicError(error);if(!value)setMosaicThumbnail(undefined);},[]);
-  const handleMosaicThumbnail = useCallback((url:string,width:number) => {setMosaicThumbnail(url);setFullWidth(width);},[]);
-  const mosaicOptions = useMemo(() => ({width:layout.width,height:layout.height,tiles:layout.tiles.map(({path,left,top})=>({path,left,top})),
-    channels:channels.filter(c=>c.visible).map(({index,color,low,high})=>({index,color,low,high})),z,t}),[layout,channels,z,t]);
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | undefined>(undefined);
   const suppressClick = useRef(false);
   const layoutKey = layout.tiles.map((tile) => tile.path).join("|");
@@ -184,8 +173,7 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
       onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
     >
       <div className="overview-scene" style={{ width: layout.width, height: layout.height, transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}>
-      {mosaicClient && channels.length > 0 && <MosaicLayer client={mosaicClient} options={mosaicOptions} zoom={zoom} visible={visible} rebuild={mosaicRebuild} onProgress={handleMosaicProgress} onThumbnail={handleMosaicThumbnail}/>}
-      {mosaicClient ? layout.tiles.map(tile=><button key={tile.path} className={`overview-tile mosaic-cell ${tile.path===selectedPath?"active":""}`} style={{left:tile.left,top:tile.top,width:TILE_SIZE,height:TILE_SIZE}} onClick={()=>onSelect(tile.path)} aria-label={tile.title}><strong className="overview-tile-label">{tile.title}</strong></button>) : layout.tiles.map((tile) => <ThumbnailTile
+      {layout.tiles.map((tile) => <ThumbnailTile
         key={tile.path}
         store={store}
         path={tile.path}
@@ -205,17 +193,14 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
       </div>
     </div>
     {showMinimap && <div className="overview-minimap" style={{ width: layout.width * miniScale, height: layout.height * miniScale }} aria-label="Overview minimap">
-      {mosaicClient && mosaicThumbnail ? <img alt="" src={mosaicThumbnail} style={{left:0,top:0,width:layout.width*miniScale,height:layout.height*miniScale}}/> : layout.tiles.map((tile) => previews[tile.path]
+      {layout.tiles.map((tile) => previews[tile.path]
         ? <img key={tile.path} src={previews[tile.path]} alt="" style={{ left: tile.left * miniScale, top: tile.top * miniScale, width: TILE_SIZE * miniScale, height: TILE_SIZE * miniScale }} />
         : <i key={tile.path} style={{ left: tile.left * miniScale, top: tile.top * miniScale, width: TILE_SIZE * miniScale, height: TILE_SIZE * miniScale }} />)}
       <span className="minimap-window" style={{ left: visible.left * miniScale, top: visible.top * miniScale, width: Math.max(0, visible.right - visible.left) * miniScale, height: Math.max(0, visible.bottom - visible.top) * miniScale }} />
     </div>}
     <div className="overview-camera-status">
       <button onClick={fit}>Fit</button><output>{Math.round(zoom * 100)}%</output><span>Wheel to zoom · drag to pan</span>
-      {mosaicClient && <button aria-label="Rebuild plate overview" title="Rebuild the cached overview after changing source pixels" disabled={!!mosaicProgress && !["ready","error"].includes(mosaicProgress.status)} onClick={()=>setMosaicRebuild(value=>value+1)}>↻</button>}
     </div>
-    {mosaicClient && mosaicProgress?.status !== "ready" && !mosaicError && <div className="mosaic-progress" role="status"><strong>Preparing plate overview… {Math.round((mosaicProgress?.progress||0)*100)}%</strong><progress aria-label="Plate pyramid preparation" max="1" value={mosaicProgress?.progress||0}/><span>The first build is saved for later visits.</span></div>}
-    {mosaicClient && mosaicError && <div className="mosaic-progress" role="alert">{mosaicError}<button onClick={()=>setMosaicRebuild(value=>value+1)}>Rebuild overview</button></div>}
     {showScale && scaleBar && <div className="physical-scale overview-scale" aria-label={`Scale ${scaleBar.value} ${pixelSize!.unit}`}><span style={{ width: `${scaleBar.pixels}px` }}/><strong>{scaleBar.value} {unitLabel(pixelSize!.unit)}</strong></div>}
   </div>;
 }

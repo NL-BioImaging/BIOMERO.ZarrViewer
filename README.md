@@ -530,26 +530,7 @@ source identity and source fingerprints. Small navigator images are retained
 separately so visiting high-resolution wells does not inflate the minimap's
 memory usage. Preview requests support up to eight visible channels.
 
-Plate mode uses a single, lossless RGB mosaic pyramid with 512-pixel tiles,
-including native-resolution detail. The first visit builds it in the background
-with a progress indicator. Subsequent visits read only the visible pyramid tiles;
-zoomed-out views no longer issue hundreds of individual well requests. Well mode
-continues to use field previews. A new plate overview defaults to the middle
-field (field 4 for nine fields); `plateField` in its URL preserves a chosen index.
-
-Mosaics share the volume/preview cache quota and LRU eviction. The reservation
-includes the temporary disk-backed image, downsampled working level and archive,
-so building a large plate may require considerably more space than its final
-compressed pyramid. Construction processes one field and bounded tile blocks at
-a time. A field is limited to 16 million pixels, a plate to 1536 populated wells,
-and display composition to eight channels. Insufficient cache capacity produces
-an explicit error before construction starts.
-
-The derivative is keyed by authenticated user/group/image, source routes/root
-metadata, layout, field choice, channel visibility/colors/ranges, Z and T. Source
-stores are treated as immutable imports: if pixels or individual field metadata
-are edited in place without updating the root metadata, use **Rebuild plate
-overview** (the circular arrow next to Fit). This replaces only the cached
-derivative; source data is never modified. Rebuilding and ordinary cache misses
-coalesce across web workers. A completed mosaic survives container restarts when
-the cache directory is mounted persistently.
+A new plate overview defaults to the middle field (field 4 for nine fields).
+The `plateField` URL parameter preserves a chosen field index. Plate and Well
+views load individual field previews at a resolution appropriate to the zoom;
+no whole-plate mosaic or additional plate pyramid is generated.
