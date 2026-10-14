@@ -211,3 +211,6 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .movie-export-panel label { display:flex; justify-content:space-between; align-items:center; margin:8px 0; }
 .movie-export-panel input { width:90px; }
 .movie-export-panel p { font-size:12px; line-height:1.5; }
+
+.toolbar .icon-button { width: 2.15rem; height: 2.15rem; padding: .4rem; display: inline-grid; place-items: center; }
+.icon-button svg { width: 1.2rem; height: 1.2rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

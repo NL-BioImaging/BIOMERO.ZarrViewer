@@ -1,4 +1,4 @@
-import { B as r } from "./main-B-wsnEmo.js";
+import { B as r } from "./main-M8LB_evw.js";
 class s extends r {
   constructor() {
     if (super(), typeof createImageBitmap > "u")

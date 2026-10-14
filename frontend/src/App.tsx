@@ -520,9 +520,9 @@ export default function App() {
                 setRenderMode(mode);
               }}
             />}
-          {currentLoaded && viewMode === "field" && effectiveRenderMode === "2d" && <>
-            <button className={showMinimap ? "active" : ""} aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}>Show Navigator</button>
-            <button className={showScale ? "active" : ""} aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}>Show Scale</button>
+          {currentLoaded && (viewMode !== "field" || effectiveRenderMode === "2d") && <>
+            <button className={`icon-button ${showMinimap ? "active" : ""}`} aria-label="Navigator" title="Navigator" aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 17 3-7 7-3-3 7Z"/><path d="m10 10 4 4"/></svg></button>
+            <button className={`icon-button ${showScale ? "active" : ""}`} aria-label="Scale bar" title="Scale bar" aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v5m5-5v3m5-3v5"/></svg></button>
             {deepLink.roi && capability && <a className="toolbar-button" href={roiPngUrl(capability, {
                   ...deepLink, field, z: zIndex, t: tIndex,
                 }, channels)} download>Download ROI PNG</a>}
@@ -555,6 +555,8 @@ export default function App() {
               capability={capability}
               store={authStore.store}
               mode={viewMode}
+              showMinimap={showMinimap}
+              showScale={showScale}
               selectedPath={field}
               plateFieldIndex={plateFieldIndex}
               channels={channels}

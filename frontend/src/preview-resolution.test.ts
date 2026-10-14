@@ -43,3 +43,10 @@ test("sparse named rows retain physical well coordinates", () => {
   expect(plate.columns).toHaveLength(24);
   expect(plate.wells[0]).toMatchObject({row_index: 15, column_index: 1});
 });
+
+
+test("a whole plate uses low resolution and a single enlarged well reaches native pixels", () => {
+  expect(pyramid[previewLevel(pyramid, 48)].shape[0]).toBe(62);
+  expect(pyramid[previewLevel(pyramid, 300)].shape[0]).toBe(251);
+  expect(previewLevel(pyramid, 900, true)).toBe(0);
+});
