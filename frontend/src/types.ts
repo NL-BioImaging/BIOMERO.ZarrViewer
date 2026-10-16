@@ -65,6 +65,7 @@ export interface Capability {
     roi_url?: string;
     render_url?: string;
     volume_url?: string;
+    neuroglancer_url?: string;
     preview_url?: string;
   };
   kind: "image" | "plate";
@@ -130,6 +131,9 @@ export interface VolumeCameraState {
   zoom: number;
 }
 
+export type VolumeBlendMode = "additive" | "maximum" | "minimum";
+export type VolumeRenderer = "neuroglancer" | "classic";
+
 export interface VolumeLevel {
   index: number;
   width: number;
@@ -142,6 +146,6 @@ export interface VolumeLevel {
 
 declare global {
   interface Window {
-    BIOMERO_ZARR_VIEWER: { capabilitiesTemplate: string };
+    BIOMERO_ZARR_VIEWER: { capabilitiesTemplate: string; neuroglancerUrl?: string };
   }
 }

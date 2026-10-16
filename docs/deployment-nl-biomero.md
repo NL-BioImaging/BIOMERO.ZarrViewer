@@ -159,3 +159,10 @@ docker compose logs --tail=100 omeroweb zarrviewer-nginx
 
 For the HTTPS scenario, inspect the existing `nginx` service instead of
 `zarrviewer-nginx`.
+
+## Cache and large datasets
+
+See [configuration and security](configuration.md) for persistent volume/mesh
+cache setup, memory and label-surface limits, and the Nginx/Gunicorn request
+header limits needed by large shallow plates. Use the combined plugin image
+when updating an existing deployment; see [installation](installation.md).

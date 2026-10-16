@@ -1,4 +1,5 @@
-import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeCameraState } from "./types";
+import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeBlendMode, VolumeCameraState, VolumeRenderer } from "./types";
+import type { NeuroglancerCamera } from "./neuroglancer-state";
 
 export interface DeepLinkState {
   view?: "field" | "well" | "plate";
@@ -9,7 +10,13 @@ export interface DeepLinkState {
   projection?: ProjectionMode;
   renderMode?: RenderMode;
   volumeLevel?: number;
+  volumeRenderer?: VolumeRenderer;
+  volumeBlend?: VolumeBlendMode;
+  volumeBrightness?: number;
+  volumeBackground?: string;
+  volumeGain?: number;
   volumeCamera?: VolumeCameraState;
+  ngCamera?: NeuroglancerCamera;
   field?: string;
   roi?: RoiBounds;
   sourceChannels?: number[];
@@ -52,6 +59,15 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const version = params.get("v");
   if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
+  const ngCamera = params.get("ngCamera");
+  if (ngCamera && ngCamera.length < 1000) {
+    try {
+      const value = JSON.parse(ngCamera);
+      if (Array.isArray(value.position) && value.position.length === 3 && value.position.every(Number.isFinite)
+        && Array.isArray(value.orientation) && value.orientation.length === 4 && value.orientation.every(Number.isFinite)
+        && Number.isFinite(value.scale) && value.scale > 0 && Math.hypot(...value.orientation) > 0) state.ngCamera = value;
+    } catch { /* Ignore invalid optional camera state. */ }
+  }
   const view = params.get("view");
   if (params.has("plateField")) state.plateField = Math.floor(finite(params.get("plateField"),0,0,1535));
   if (view === "field" || view === "well" || view === "plate") state.view = view;
@@ -67,6 +83,13 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const projection = params.get("projection");
   if (projection === "mip" || projection === "mean" || projection === "min") state.projection = projection;
   if (params.get("render") === "3d") state.renderMode = "3d";
+  if (params.get("viewer3d") === "classic") state.volumeRenderer = "classic";
+  if (params.has("brightness3d")) state.volumeBrightness = finite(params.get("brightness3d"), 1, .1, 4);
+  if (params.has("gain3d")) state.volumeGain = finite(params.get("gain3d"), -3, -5, 3);
+  const background = params.get("background3d");
+  if (background && /^#[0-9a-f]{6}$/i.test(background)) state.volumeBackground = background;
+  const volumeBlend = params.get("volumeBlend");
+  if (volumeBlend === "additive" || volumeBlend === "maximum" || volumeBlend === "minimum") state.volumeBlend = volumeBlend;
   if (params.has("volumeLevel")) state.volumeLevel = Math.floor(finite(params.get("volumeLevel"), 0, 0, 1024));
   if (params.has("orbit") || params.has("tilt") || params.has("zoom3d")) {
     state.volumeCamera = {
@@ -199,6 +222,12 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   params.set("t", String(Math.max(0, Math.floor(state.t))));
   if (state.projection && state.projection !== "slice") params.set("projection", state.projection);
   if (state.renderMode === "3d") params.set("render", "3d");
+  if (state.volumeRenderer === "classic") params.set("viewer3d", "classic");
+  if (state.volumeBrightness != null && state.volumeBrightness !== 1) params.set("brightness3d", String(state.volumeBrightness));
+  if (state.volumeGain != null && state.volumeGain !== -3) params.set("gain3d", String(state.volumeGain));
+  if (state.volumeBackground && state.volumeBackground !== "#030406") params.set("background3d", state.volumeBackground);
+  if (state.ngCamera) params.set("ngCamera", JSON.stringify(state.ngCamera));
+  if (state.volumeBlend && state.volumeBlend !== "additive") params.set("volumeBlend", state.volumeBlend);
   if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
   if (state.renderMode === "3d" && state.volumeCamera) {
     params.set("orbit", state.volumeCamera.orbit.toFixed(2));

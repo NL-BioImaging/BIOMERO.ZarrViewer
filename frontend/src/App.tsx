@@ -1,4 +1,5 @@
 import { MovieExport, TimePlayback } from "./MovieControls";
+import { ViewerHelp } from "./HelpWindow";
 import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
@@ -15,8 +16,10 @@ import type {
   ProjectionMode,
   RenderMode,
   ViewportState,
+  VolumeBlendMode,
   VolumeCameraState,
   VolumeLevel,
+  VolumeRenderer,
 } from "./types";
 import {
   applyChannelDeepLink,
@@ -30,6 +33,8 @@ import {
 } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
+import { NeuroglancerCanvas } from "./NeuroglancerCanvas";
+import type { NeuroglancerCamera } from "./neuroglancer-state";
 import { OverviewGrid, defaultPlateFieldIndex } from "./OverviewGrid";
 import { plateGeometry } from "./plate-geometry";
 import { withVolumeCache, type LoadProgress } from "./volume-loader";
@@ -148,10 +153,22 @@ export function FullscreenButton() {
     ? document.exitFullscreen()
     : document.documentElement.requestFullscreen();
   return <button
+    className="icon-button"
     aria-label={active ? "Exit fullscreen" : "Enter fullscreen"}
     title={active ? "Exit fullscreen" : "Enter fullscreen"}
     onClick={() => void toggle()}
-  >{active ? "Exit Fullscreen" : "Fullscreen"}</button>;
+  ><svg viewBox="0 0 24 24" aria-hidden="true"><path d={active ? "M3 9h6V3m6 0v6h6M3 15h6v6m6 0v-6h6" : "M9 3H3v6m12-6h6v6M3 15v6h6m6 0h6v-6"}/></svg></button>;
+}
+
+export function LayerVisibilityCheckbox({ items, name, disabled = false, onChange }: {
+  items: Array<{ visible: boolean }>; name: string; disabled?: boolean; onChange: (visible: boolean) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const all = items.length > 0 && items.every(item => item.visible);
+  const some = items.some(item => item.visible);
+  useEffect(() => { if (ref.current) ref.current.indeterminate = some && !all; }, [some, all]);
+  return <input ref={ref} type="checkbox" aria-label={`Show all ${name}`} title={`Show/hide all ${name}`}
+    disabled={disabled || !items.length} checked={all} onChange={event => onChange(event.target.checked)} />;
 }
 
 function physicalScale(capability: Capability | null): { size: number; unit: string } | undefined {
@@ -285,7 +302,18 @@ export default function App() {
   const [viewport, setViewport] = useState<ViewportState | undefined>(deepLink.viewport);
   const [renderMode, setRenderMode] = useState<RenderMode>(deepLink.renderMode || "2d");
   const [volumeLevel, setVolumeLevel] = useState<number | undefined>(deepLink.volumeLevel);
+  const [volumeRenderer, setVolumeRenderer] = useState<VolumeRenderer>(deepLink.volumeRenderer || "neuroglancer");
+  const [volumeBlend, setVolumeBlend] = useState<VolumeBlendMode>(deepLink.volumeBlend || "additive");
+  const [volumeBrightness, setVolumeBrightness] = useState(deepLink.volumeBrightness ?? 1);
+  const [volumeBackground, setVolumeBackground] = useState(deepLink.volumeBackground || "#030406");
+  const [volumeGain, setVolumeGain] = useState(deepLink.volumeGain ?? -3);
   const [volumeCamera, setVolumeCamera] = useState<VolumeCameraState | undefined>(deepLink.volumeCamera);
+  const [ngCamera, setNgCamera] = useState<NeuroglancerCamera | undefined>(deepLink.ngCamera);
+  const ngCameraField = useRef(field);
+  useEffect(() => {
+    if (ngCameraField.current != null && ngCameraField.current !== field) setNgCamera(undefined);
+    ngCameraField.current = field;
+  }, [field]);
   const [volumeReset, setVolumeReset] = useState(0);
   const [maxTextureSize, setMaxTextureSize] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"field" | "well" | "plate">(deepLink.view || "field");
@@ -312,9 +340,9 @@ export default function App() {
     () => chooseVolumeLevel(allVolumeLevels, volumeLevel),
     [allVolumeLevels, volumeLevel],
   );
-  const volumeAvailable = Boolean(
-    currentLoaded && currentLoaded.sizeZ > 1 && volumeChannels.length && selectedVolumeLevel,
-  );
+  const ngAvailable = Boolean(authStore?.neuroglancerUrl);
+  const useNeuroglancer = ngAvailable && volumeRenderer === "neuroglancer";
+  const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && selectedVolumeLevel);
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
   const visibleChannelCount = channels.filter((channel) => channel.visible).length;
   const volumeChannelWarning = visibleChannelCount > volumeChannels.length
@@ -450,11 +478,6 @@ export default function App() {
       setStatus("3D is unavailable because WebGL 2 could not be initialized.");
       return;
     }
-    if (!volumeChannels.length) {
-      setRenderMode("2d");
-      setStatus("Enable at least one image channel before opening 3D.");
-      return;
-    }
     if (!selectedVolumeLevel) {
       setRenderMode("2d");
       setStatus("No multiscale level fits the 256 MiB 3D memory and GPU texture limits.");
@@ -464,7 +487,7 @@ export default function App() {
       setVolumeLevel(selectedVolumeLevel.index);
       if (volumeLevel != null) setStatus("The requested 3D quality was unsafe; using the coarsest safe level.");
     }
-  }, [renderMode, currentLoaded, maxTextureSize, volumeChannels.length, selectedVolumeLevel, volumeLevel]);
+  }, [renderMode, currentLoaded, maxTextureSize, selectedVolumeLevel, volumeLevel]);
 
   useEffect(() => {
     const analysisKey = effectiveRenderMode === "3d" ? "volume" : projection;
@@ -497,7 +520,13 @@ export default function App() {
         projection,
         renderMode: effectiveRenderMode,
         volumeLevel: selectedVolumeLevel?.index,
+        volumeRenderer,
+        volumeBlend,
+        volumeBrightness,
+        volumeBackground,
+        volumeGain,
         volumeCamera,
+        ngCamera,
         field,
         roi: deepLink.roi,
         sourceChannels: deepLink.sourceChannels,
@@ -512,7 +541,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeCamera, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -522,27 +551,11 @@ export default function App() {
         <div><strong>BIOMERO OME-Zarr Viewer</strong><span>{capability?.plate ? field : capability?.image.name || "Loading…"}</span></div>
         <div className="toolbar">
           <span className="status" aria-live="polite">{error || status}</span>
-          {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 &&
-            <RenderModeToggle
-              mode={effectiveRenderMode}
-              disabled3d={!volumeAvailable}
-              onChange={(mode) => {
-                if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index);
-                setRenderMode(mode);
-              }}
-            />}
           {currentLoaded && (viewMode !== "field" || effectiveRenderMode === "2d") && <>
-            <button className={`icon-button ${showMinimap ? "active" : ""}`} aria-label="Navigator" title="Navigator" aria-pressed={showMinimap} onClick={() => setShowMinimap((value) => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 17 3-7 7-3-3 7Z"/><path d="m10 10 4 4"/></svg></button>
-            <button className={`icon-button ${showScale ? "active" : ""}`} aria-label="Scale bar" title="Scale bar" aria-pressed={showScale} onClick={() => setShowScale((value) => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v5m5-5v3m5-3v5"/></svg></button>
             {deepLink.roi && capability && <a className="toolbar-button" href={roiPngUrl(capability, {
                   ...deepLink, field, z: zIndex, t: tIndex,
                 }, channels)} download>Download ROI PNG</a>}
           </>}
-          {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
-            <button onClick={() => {
-              setVolumeCamera(undefined);
-              setVolumeReset((value) => value + 1);
-            }}>Reset 3D View</button>}
           {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && effectiveRenderMode === "2d" && viewMode === "field" && <MovieExport
             imageId={imageId} sizeT={currentLoaded.sizeT} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
               filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
@@ -556,7 +569,25 @@ export default function App() {
                   mode: label.mode, color: label.color, opacity: label.opacity, outlineWidth: label.outlineWidth || 2
                 })) }]
             } as MovieRecipe} />}
-          <FullscreenButton />
+          <div className="view-toolbar" role="group" aria-label="View controls">
+            {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 && <RenderModeToggle
+              mode={effectiveRenderMode} disabled3d={!volumeAvailable} onChange={mode => {
+                if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index);
+                setRenderMode(mode);
+              }} />}
+            {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
+              <button className="icon-button" aria-label="Reset 3D View" title="Reset 3D View" onClick={() => {
+                setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
+              }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg></button>}
+            {currentLoaded && <>
+              {(effectiveRenderMode !== "3d" || viewMode !== "field") && <button className={`icon-button ${showMinimap ? "active" : ""}`} aria-label="Navigator"
+                title="Navigator" aria-pressed={showMinimap}
+                onClick={() => setShowMinimap(value => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 17 3-7 7-3-3 7Z"/><path d="m10 10 4 4"/></svg></button>}
+              <button className={`icon-button ${showScale ? "active" : ""}`} aria-label="Scale bar" title="Scale bar" aria-pressed={showScale} onClick={() => setShowScale(value => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v5m5-5v3m5-3v5"/></svg></button>
+            </>}
+            <FullscreenButton />
+            <ViewerHelp />
+          </div>
         </div>
       </header>
       <div className="workspace">
@@ -586,6 +617,15 @@ export default function App() {
                 setViewMode(viewMode === "plate" ? "well" : "field");
               }}
             />
+          ) : currentLoaded && authStore && useNeuroglancer && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
+            <NeuroglancerCanvas key={`neuroglancer:${currentLoaded.path}`} auth={authStore} field={currentLoaded.path} channels={channels}
+              labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
+              t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
+              brightness={volumeBrightness} background={volumeBackground}
+              gain={volumeGain} height={viewerSize.height}
+              resetKey={volumeReset} camera={ngCamera} onCameraChange={setNgCamera}
+              onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
+              onReady={() => setStatus("3D image and labels ready")} />
           ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <VolumeCanvas
               key={`${currentLoaded.path}:${tIndex}:${selectedVolumeLevel.index}:${volumeChannels.map((channel) => channel.index).join(",")}:${volumeReset}`}
@@ -595,6 +635,9 @@ export default function App() {
               channels={channels}
               t={tIndex}
               resolution={selectedVolumeLevel.index}
+              blendMode={volumeBlend}
+              brightness={volumeBrightness} background={volumeBackground}
+              showScale={showScale}
               camera={volumeCamera}
               onCameraChange={setVolumeCamera}
               onCancel={() => setRenderMode("2d")}
@@ -643,8 +686,16 @@ export default function App() {
           projection={projection}
           onProjection={setProjection}
           renderMode={effectiveRenderMode}
+          labels3dAvailable={useNeuroglancer}
+          volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
+          onVolumeRenderer={setVolumeRenderer} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
           volumeLevel={selectedVolumeLevel?.index}
+          volumeBlend={volumeBlend}
+          onVolumeBlend={setVolumeBlend}
+          volumeBrightness={volumeBrightness} onVolumeBrightness={setVolumeBrightness}
+          volumeBackground={volumeBackground} onVolumeBackground={setVolumeBackground}
+          volumeGain={volumeGain} onVolumeGain={useNeuroglancer ? setVolumeGain : undefined}
           onVolumeLevel={setVolumeLevel}
           volumeChannelWarning={volumeChannelWarning}
           viewMode={viewMode}
@@ -675,8 +726,20 @@ interface ViewerPanelProps {
   projection: ProjectionMode;
   onProjection: (value: ProjectionMode) => void;
   renderMode: RenderMode;
+  labels3dAvailable?: boolean;
+  volumeRenderer?: VolumeRenderer;
+  onVolumeRenderer?: (value: VolumeRenderer) => void;
+  neuroglancerAvailable?: boolean;
   volumeLevels: VolumeLevel[];
   volumeLevel?: number;
+  volumeBlend?: VolumeBlendMode;
+  onVolumeBlend?: (value: VolumeBlendMode) => void;
+  volumeBrightness?: number;
+  onVolumeBrightness?: (value: number) => void;
+  volumeBackground?: string;
+  onVolumeBackground?: (value: string) => void;
+  volumeGain?: number;
+  onVolumeGain?: (value: number) => void;
   onVolumeLevel: (value: number) => void;
   volumeChannelWarning?: string;
   viewMode: "field" | "well" | "plate";
@@ -693,8 +756,8 @@ export function ViewerPanel(props: ViewerPanelProps) {
   const datasetName = capability?.plate?.name || capability?.image.name || "Loading dataset…";
 
   useEffect(() => {
-    if (props.renderMode === "3d" && viewTab === "labels") setViewTab("channels");
-  }, [props.renderMode, viewTab]);
+    if (props.renderMode === "3d" && !props.labels3dAvailable && viewTab === "labels") setViewTab("channels");
+  }, [props.renderMode, props.labels3dAvailable, viewTab]);
 
   return <aside className="control-panel">
     <div className="dataset-heading"><span aria-hidden="true">▰</span><strong>{datasetName}</strong></div>
@@ -704,12 +767,22 @@ export function ViewerPanel(props: ViewerPanelProps) {
     </div>}
     {showNavigation && capability ? <PlateNavigation capability={capability} field={props.field} onField={props.onField} mode={props.viewMode} onMode={props.onViewMode} plateFieldIndex={props.plateFieldIndex} onPlateFieldIndex={props.onPlateFieldIndex} /> : <>
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
-        <button role="tab" aria-selected={viewTab === "channels"} className={viewTab === "channels" ? "active" : ""} onClick={() => setViewTab("channels")}>Channels ({props.channels.length})</button>
-        <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={props.renderMode === "3d"} title={props.renderMode === "3d" ? "Segmentation labels are available in 2D" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
+        <div className="layer-tab" role="presentation">
+          <LayerVisibilityCheckbox items={props.channels} name="channels" onChange={visible => props.onChannels(props.channels.map(item => ({ ...item, visible })))} />
+          <button role="tab" aria-selected={viewTab === "channels"} className={viewTab === "channels" ? "active" : ""} onClick={() => setViewTab("channels")}>Channels ({props.channels.length})</button>
+        </div>
+        <div className="layer-tab" role="presentation">
+          <LayerVisibilityCheckbox items={props.labels} name="labels" disabled={props.renderMode === "3d" && !props.labels3dAvailable} onChange={visible => props.onLabels(props.labels.map(item => ({ ...item, visible })))} />
+          <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={props.renderMode === "3d" && !props.labels3dAvailable} title={props.renderMode === "3d" && !props.labels3dAvailable ? "Viv 3D displays intensity channels only" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
+        </div>
       </div>
       <div className="panel-scroll">
         {viewTab === "channels" ? <>
-          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
+          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels}
+            volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
+            volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
+            volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
+            volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
           {props.renderMode === "3d"
             ? <VolumeControls
                 sizeT={props.sizeT}
@@ -719,9 +792,10 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
                 channelWarning={props.volumeChannelWarning}
+                renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
             : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
-        </> : <LabelPanel labels={props.labels} onChange={props.onLabels} />}
+        </> : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} />}
       </div>
     </>}
     {capability && <div className="source-strip">
@@ -733,7 +807,19 @@ export function ViewerPanel(props: ViewerPanelProps) {
   </aside>;
 }
 
-function ChannelPanel({ channels, analyses, onChange }: { channels: ChannelState[]; analyses: ChannelAnalysis[]; onChange: (value: ChannelState[]) => void }) {
+function ChannelPanel({ channels, analyses, onChange, volumeBlend = "additive", onVolumeBlend, volumeBrightness = 1, onVolumeBrightness, volumeBackground = "#030406", onVolumeBackground, volumeGain = -3, onVolumeGain }: {
+  channels: ChannelState[];
+  analyses: ChannelAnalysis[];
+  onChange: (value: ChannelState[]) => void;
+  volumeBlend?: VolumeBlendMode;
+  onVolumeBlend?: (value: VolumeBlendMode) => void;
+  volumeBrightness?: number;
+  onVolumeBrightness?: (value: number) => void;
+  volumeBackground?: string;
+  onVolumeBackground?: (value: string) => void;
+  volumeGain?: number;
+  onVolumeGain?: (value: number) => void;
+}) {
   const [histograms, setHistograms] = useState<Set<number>>(new Set());
   const analysisByIndex = new Map(analyses.map((analysis) => [analysis.index, analysis]));
   const update = (index: number, patch: Partial<ChannelState>) => onChange(channels.map((item) => item.index === index ? { ...item, ...patch } : item));
@@ -751,7 +837,19 @@ function ChannelPanel({ channels, analyses, onChange }: { channels: ChannelState
   });
 
   return <section className="panel-section channel-panel">
-    <div className="settings-row"><strong>Display</strong><span>additive blend</span></div>
+    <div className="settings-row"><strong>Display</strong>{onVolumeBlend
+      ? <select aria-label="3D display mode" value={volumeBlend} onChange={(event) => onVolumeBlend(event.target.value as VolumeBlendMode)}>
+          <option value="additive">Additive blend</option>
+          <option value="maximum">Maximum intensity</option>
+          <option value="minimum">Minimum intensity</option>
+        </select>
+      : <span>additive blend</span>}</div>
+    {onVolumeBlend && <div className="volume-appearance">
+      <label className="layer-heading"><span>Background</span><input aria-label="3D background color" type="color" value={volumeBackground} onChange={event => onVolumeBackground?.(event.target.value)} /></label>
+      <label className="slider">Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event => onVolumeBrightness?.(Number(event.target.value))} /><output>{volumeBrightness.toFixed(1)}×</output></label>
+      {onVolumeGain && volumeBlend === "additive" && <label className="slider">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event => onVolumeGain(Number(event.target.value))} /><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}
+      <small className="muted">Brightness affects intensity channels only.</small>
+    </div>}
     {channels.length === 0 && <p className="muted">Loading channels…</p>}
     {channels.map((channel) => {
       const analysis = analysisByIndex.get(channel.index);
@@ -829,6 +927,9 @@ export function VolumeControls({
   level,
   onLevel,
   channelWarning,
+  renderer = "neuroglancer",
+  onRenderer,
+  neuroglancerAvailable = true,
 }: {
   sizeT: number;
   t: number;
@@ -837,9 +938,22 @@ export function VolumeControls({
   level?: number;
   onLevel: (value: number) => void;
   channelWarning?: string;
+  renderer?: VolumeRenderer;
+  onRenderer?: (value: VolumeRenderer) => void;
+  neuroglancerAvailable?: boolean;
 }) {
   return <section className="panel-section position-section volume-controls">
     <h2>3D Volume</h2>
+    {onRenderer && <div className="quality-control">
+      <span>Viewer</span>
+      <div className="mode-toggle" role="group" aria-label="3D viewer">
+        <button className={renderer === "neuroglancer" ? "active" : ""} aria-pressed={renderer === "neuroglancer"} disabled={!neuroglancerAvailable}
+          title="Neuroglancer: image and labels (default)" onClick={() => onRenderer("neuroglancer")}>Neuroglancer</button>
+        <button className={renderer === "classic" ? "active" : ""} aria-pressed={renderer === "classic"}
+          title="Viv: intensity channels" onClick={() => onRenderer("classic")}>Viv</button>
+      </div>
+      {renderer === "classic" && <small className="muted">Viv displays intensity channels only.</small>}
+    </div>}
     <label className="quality-control">
       <span>Quality</span>
       <select aria-label="3D volume quality" value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
@@ -855,18 +969,18 @@ export function VolumeControls({
   </section>;
 }
 
-export function LabelPanel({ labels, onChange }: { labels: LabelState[]; onChange: (value: LabelState[]) => void }) {
+export function LabelPanel({ labels, onChange, volume = false }: { labels: LabelState[]; onChange: (value: LabelState[]) => void; volume?: boolean }) {
   const update = (id: string, patch: Partial<LabelState>) => onChange(labels.map((item) => item.id === id ? { ...item, ...patch } : item));
   const move = (index: number, delta: number) => { const copy = [...labels]; const target = index + delta; if (target < 0 || target >= copy.length) return; [copy[index], copy[target]] = [copy[target], copy[index]]; onChange(copy); };
   return <section className="panel-section label-panel">{labels.length === 0 && <div className="empty-state"><strong>No NGFF label images</strong><p>This field has no segmentation layers advertised in its label-group metadata.</p></div>}{labels.map((label, index) => <div className="layer-card" key={label.id}>
     <label className="layer-heading"><input type="checkbox" checked={label.visible} onChange={(e) => update(label.id, { visible: e.target.checked })}/><strong>{label.name}</strong><select className="label-color-select" aria-label={`${label.name} color mode`} value={label.color || ""} onChange={(e) => update(label.id, { color: e.target.value || undefined })}><option value="">Multicolor</option>{label.color && !labelPalette.some((color) => color.value === label.color?.toUpperCase()) && <option value={label.color}>Custom</option>}{labelPalette.map((color) => <option key={color.value} value={color.value}>{color.name}</option>)}</select></label>
     <label className="slider">Opacity<input type="range" min="0" max="1" step="0.05" value={label.opacity} onChange={(e) => update(label.id, { opacity: Number(e.target.value) })}/><output>{Math.round(label.opacity * 100)}%</output></label>
-    {label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="20" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
+    {!volume && label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="20" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
     <div className="label-actions">
-      <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
+      {volume ? <span className="muted">3D surfaces</span> : <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
         <button className={label.mode === "fill" ? "active" : ""} aria-pressed={label.mode === "fill"} onClick={() => update(label.id, { mode: "fill" })}>Fill</button>
         <button className={label.mode === "outline" ? "active" : ""} aria-pressed={label.mode === "outline"} onClick={() => update(label.id, { mode: "outline" })}>Outline</button>
-      </div>
+      </div>}
       <div className="reorder-actions"><button aria-label={`Move ${label.name} up`} onClick={() => move(index, -1)}>↑</button><button aria-label={`Move ${label.name} down`} onClick={() => move(index, 1)}>↓</button></div>
     </div>
   </div>)}</section>;

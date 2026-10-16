@@ -64,12 +64,13 @@ function transformsFrom(value: unknown): NgffTransform[] {
     : [];
 }
 
-function baseScale(multiscale: NgffMultiscale, axisCount: number): number[] | undefined {
+function datasetScale(multiscale: NgffMultiscale, axisCount: number, level: number): number[] | undefined {
   const datasets = Array.isArray(multiscale.datasets) ? multiscale.datasets : [];
-  const firstDataset = objectValue(datasets[0]) as NgffDataset | undefined;
+  const dataset = objectValue(datasets[level]) as NgffDataset | undefined;
+  if (!dataset) return undefined;
   const transforms = [
     ...transformsFrom(multiscale.coordinateTransformations),
-    ...transformsFrom(firstDataset?.coordinateTransformations),
+    ...transformsFrom(dataset.coordinateTransformations),
   ];
   const scale = Array(axisCount).fill(1);
   let found = false;
@@ -84,18 +85,16 @@ function baseScale(multiscale: NgffMultiscale, axisCount: number): number[] | un
 }
 
 /**
- * Extract the highest-resolution physical voxel sizes from NGFF coordinate
- * transformations. Viv applies its own resolution matrix for lower pyramid
- * levels, so every PixelSource must receive these same base sizes.
+ * Extract physical voxel sizes for an NGFF dataset, defaulting to level zero.
  */
-export function ngffPhysicalSizes(metadata: unknown): Record<string, PhysicalSize> | undefined {
+export function ngffPhysicalSizes(metadata: unknown, level = 0): Record<string, PhysicalSize> | undefined {
   const root = rootMetadata(metadata);
   const multiscales = root?.multiscales;
   if (!Array.isArray(multiscales) || !multiscales.length) return undefined;
   const multiscale = objectValue(multiscales[0]) as NgffMultiscale | undefined;
   if (!multiscale) return undefined;
   const axes = axesFrom(multiscale);
-  const scale = baseScale(multiscale, axes.length);
+  const scale = datasetScale(multiscale, axes.length, level);
   if (!scale) return undefined;
 
   const values = ["x", "y", "z"].flatMap((name) => {
@@ -124,9 +123,17 @@ export function ngffPhysicalSizes(metadata: unknown): Record<string, PhysicalSiz
 export function attachNgffPhysicalSizes(loader: any[], metadata: unknown): any[] {
   const physicalSizes = ngffPhysicalSizes(metadata);
   if (!physicalSizes) return loader;
-  for (const source of loader) {
+  for (const [level, source] of loader.entries()) {
+    const levelSizes = ngffPhysicalSizes(metadata, level);
     source.meta = {
       ...(source.meta || {}),
+      // Keep Viv's base-pixel coordinate system for 2D and camera state. The
+      // standalone 3D level uses these axis-specific ratios as its model matrix.
+      volumeScale: Object.fromEntries(["x", "y", "z"].flatMap((axis) => {
+        const base = physicalSizes[axis];
+        const selected = levelSizes?.[axis];
+        return base && selected ? [[axis, selected.size / base.size]] : [];
+      })),
       physicalSizes: {
         ...(source.meta?.physicalSizes || {}),
         ...physicalSizes,

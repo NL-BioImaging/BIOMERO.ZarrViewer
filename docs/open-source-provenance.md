@@ -7,7 +7,8 @@ influenced BIOMERO OME-Zarr Viewer. It distinguishes:
 - repositories and applications consulted only as references; and
 - functionality designed and implemented specifically for this project.
 
-The inventory was reviewed in July 2026. The dependency manifests and lock
+The runtime inventory was updated in October 2026; reference-only license
+observations below date from the original July review. The dependency manifests and lock
 files remain authoritative for exact versions.
 
 ## Summary
@@ -51,6 +52,7 @@ are recorded in [`frontend/package-lock.json`](https://github.com/NL-BioImaging/
 | [NumPy](https://github.com/numpy/numpy) | Numeric array handling for server-side previews, ROI rendering, and projections | `>=1.24,<3` | BSD-3-Clause |
 | [Pillow](https://github.com/python-pillow/Pillow) | PNG composition and encoding for server-rendered overview and ROI images | `>=10,<13` | HPND |
 | [Zarr-Python](https://github.com/zarr-developers/zarr-python) | Reading Zarr metadata and bounded array regions for server-rendered views | `>=2.18,<4` | MIT |
+| [scikit-image](https://github.com/scikit-image/scikit-image) | Bounded marching-cubes segmentation surfaces for Neuroglancer | `>=0.25,<1` | BSD-3-Clause |
 
 [Django](https://github.com/django/django) is supplied through the OMERO.web
 environment and is also installed directly for tests. It provides URL routing,
@@ -60,6 +62,9 @@ views, responses, configuration, templates, and cryptographic signing.
 
 | Project | Use in this project | Locked direct version | Upstream license |
 | --- | --- | --- | --- |
+| [Neuroglancer](https://github.com/google/neuroglancer) | Same-origin 3D intensity volumes and segmentation meshes | `2.41.2` | Apache-2.0 |
+| [Mediabunny](https://github.com/Vanilagy/mediabunny) | Browser-local MP4 encoding and muxing | `1.61.0` | MPL-2.0 |
+| [@math.gl/core](https://github.com/visgl/math.gl) | Physical volume transformations | `4.1.0` | MIT |
 | [Viv](https://github.com/hms-dbmi/viv) | GPU-backed multiscale OME-NGFF image layers and loaders | `0.22.0` | MIT |
 | [Zarrita](https://github.com/manzt/zarrita.js) | Zarr v2/v3 hierarchy access with a custom authenticated fetch store | `0.7.3` | MIT |
 | [deck.gl](https://github.com/visgl/deck.gl) | WebGL canvas, views, interaction, and layer composition used by Viv and the custom label extension | `9.3.7` | MIT |
@@ -107,8 +112,8 @@ bitmask-based label rendering. The findings are recorded in
 [`compatibility-spike.md`](compatibility-spike.md).
 
 Vitessce is not a production dependency, and no OMERO-Vitessce source file is
-included in the viewer. Production rendering uses Viv, Zarrita, deck.gl, and a
-viewer-specific label shader.
+included in the viewer. Production rendering uses Neuroglancer, Viv, Zarrita, deck.gl, and a
+viewer-specific 2D label shader.
 
 ### ome/omero-web-zarr
 
@@ -150,6 +155,13 @@ stylesheets, icons, or other assets were copied.
 The repository's license states “Copyright (c) 2025 Find Nuclei. All rights
 reserved.” It is therefore a public source reference, not an open-source code
 dependency.
+
+### OMERO.Analysis
+
+[OMERO.Analysis](https://github.com/NL-BioImaging/OMERO.Analysis) informed the
+help-window interaction and layout: a movable, resizable window with search
+and contents navigation. This viewer uses its own React component and styles,
+with its feature guide bundled directly from the documentation.
 
 ### NL-BIOMERO
 

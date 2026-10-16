@@ -5,8 +5,9 @@ import {
   VivViewer,
   VolumeView,
 } from "@hms-dbmi/viv";
-import type { ChannelState, VolumeCameraState } from "./types";
-import { activeVolumeChannels, volumeSelection } from "./volume-utils";
+import type { ChannelState, VolumeBlendMode, VolumeCameraState } from "./types";
+import { activeVolumeChannels, volumeModelMatrix, volumePhysicalScale, volumeSelection } from "./volume-utils";
+import { scaleBarSize, unitLabel } from "./physical-scale";
 
 const VolumeVivViewer = VivViewer as any;
 
@@ -17,6 +18,10 @@ interface Props {
   channels: ChannelState[];
   t: number;
   resolution: number;
+  blendMode?: VolumeBlendMode;
+  showScale?: boolean;
+  brightness?: number;
+  background?: string;
   camera?: VolumeCameraState;
   onCameraChange: (camera: VolumeCameraState) => void;
   onCancel: () => void;
@@ -94,6 +99,10 @@ function VolumeRenderer({
   channels,
   t,
   resolution,
+  blendMode = "additive",
+  showScale = true,
+  brightness = 1,
+  background = "#030406",
   camera,
   onCameraChange,
   onCancel,
@@ -105,6 +114,14 @@ function VolumeRenderer({
   const [loadError, setLoadError] = useState<string>();
   const [preparedKey, setPreparedKey] = useState("");
   const selectedChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
+  const extensions = useMemo(() => {
+    const Extension = blendMode === "maximum"
+      ? ColorPalette3DExtensions.MaximumIntensityProjectionExtension
+      : blendMode === "minimum"
+        ? ColorPalette3DExtensions.MinimumIntensityProjectionExtension
+        : ColorPalette3DExtensions.AdditiveBlendExtension;
+    return [new Extension({})];
+  }, [blendMode]);
   const onErrorRef = useRef(onError);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
   const reportError = useCallback((message: string) => {
@@ -115,6 +132,7 @@ function VolumeRenderer({
   // Each NGFF level already declares its Z downsampling. Passing one selected
   // level at resolution zero avoids Viv downsampling its depth a second time.
   const guardedLoader = useMemo(() => withVolumeErrorReporting([loader[resolution]], reportError), [loader, resolution, reportError]);
+  const modelMatrix = useMemo(() => volumeModelMatrix(loader, resolution), [loader, resolution]);
   const sourceLabels = guardedLoader[0]?.labels || [];
   const selectionAxes = Array.isArray(sourceLabels) ? sourceLabels.join(",") : "";
   const selectedChannelKey = selectedChannels.map((channel) => channel.index).join(",");
@@ -134,8 +152,9 @@ function VolumeRenderer({
     [selectedChannelKey, selectionAxes, t],
   );
   const defaultView = useMemo(
-    () => getDefaultInitialViewState(guardedLoader, { width, height }, 1, true) as any,
-    [guardedLoader, width, height, resolution],
+    // Viv 0.22 implements a Matrix4 fifth argument but declares it as boolean.
+    () => (getDefaultInitialViewState as any)(guardedLoader, { width, height }, 1, true, modelMatrix),
+    [guardedLoader, width, height, modelMatrix],
   );
   const viewState = {
     ...defaultView,
@@ -144,6 +163,10 @@ function VolumeRenderer({
     rotationX: camera?.tilt ?? 0,
     zoom: camera?.zoom ?? finite(defaultView.zoom, 0),
   };
+  const physicalScale = volumePhysicalScale(loader);
+  // OrbitView maps 2^zoom pixels per world unit at the camera target. Because
+  // it uses perspective, this bar describes the plane through the volume center.
+  const scaleBar = physicalScale ? scaleBarSize(physicalScale.size, viewState.zoom) : undefined;
   const view = useMemo(
     () => new VolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: true }),
     [width, height, defaultView.target],
@@ -165,12 +188,13 @@ function VolumeRenderer({
 
   const layerProps = [{
     loader: guardedLoader,
+    modelMatrix,
     selections,
     channelsVisible: selectedChannels.map(() => true),
     colors: selectedChannels.map((channel) => hexToRgb(channel.color)),
-    contrastLimits: selectedChannels.map((channel) => [channel.low, channel.high]),
+    contrastLimits: selectedChannels.map((channel) => [channel.low, channel.low + (channel.high - channel.low) / brightness]),
     resolution: 0,
-    extensions: [new ColorPalette3DExtensions.AdditiveBlendExtension({})],
+    extensions,
     useProgressIndicator: false,
     onUpdate: ({ progress: value }: { progress: number }) => setProgress(Math.max(0, Math.min(1, finite(value, 0)))),
       onViewportLoad: () => {
@@ -184,12 +208,19 @@ function VolumeRenderer({
       },
   }];
 
-  return <div className="volume-stage">
+  return <div className="volume-stage" style={{ backgroundColor: background }}>
+    {ready && !loadError && showScale && scaleBar && <div className="physical-scale"
+      aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit} at volume center`}>
+      <span style={{ width: `${scaleBar.pixels}px` }} />
+      <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
+      <small>at volume center</small>
+    </div>}
     {preparedKey === prepareKey && <VolumeVivViewer
       views={[view]}
       viewStates={[viewState]}
       layerProps={layerProps}
       useDevicePixels={false}
+      deckProps={{ style: { backgroundColor: background } }}
       onViewStateChange={({ viewId, viewState: next }: any) => {
         if (viewId !== "3d") return;
         onCameraChange({

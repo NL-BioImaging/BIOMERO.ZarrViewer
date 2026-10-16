@@ -133,3 +133,10 @@ Then:
 If capabilities work but chunks report **Failed to fetch**, compare the same
 relative store path below `biomero_zarr_web_mount_root` and
 `biomero_zarr_nginx_root`, and inspect the host Nginx error log.
+
+## Cache and large datasets
+
+See [configuration and security](configuration.md) for persistent volume/mesh
+cache setup, memory and label-surface limits, and the Nginx/Gunicorn request
+header limits needed by large shallow plates. Use the combined plugin image
+when updating an existing deployment; see [installation](installation.md).

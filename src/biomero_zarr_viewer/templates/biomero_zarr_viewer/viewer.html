@@ -14,7 +14,8 @@
   </div>
   <script>
     window.BIOMERO_ZARR_VIEWER = {
-      capabilitiesTemplate: "{% url 'biomero_zarr_viewer_capabilities' image_id=0 %}"
+      capabilitiesTemplate: "{% url 'biomero_zarr_viewer_capabilities' image_id=0 %}",
+      neuroglancerUrl: "{% static 'biomero_zarr_viewer/neuroglancer/index.html' %}?v={{ frontend_build }}"
     };
   </script>
   <script type="module" src="{% static 'biomero_zarr_viewer/app.js' %}?v={{ frontend_build }}"></script>

@@ -51,6 +51,7 @@ export class AuthenticatedZarrStore {
   }
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
+  get neuroglancerUrl(): string | undefined { return this.capability.store.neuroglancer_url; }
   get previewUrl(): string | undefined { return this.capability.store.preview_url; }
   get volumeIdentity(): string { return `${this.capability.store.binding_digest || ""}:${this.capability.store.uuid || ""}`; }
 

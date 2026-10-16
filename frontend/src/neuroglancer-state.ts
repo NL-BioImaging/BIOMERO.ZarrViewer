@@ -1,0 +1,47 @@
+import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
+
+export interface NeuroglancerCamera { position: number[]; orientation: number[]; scale: number }
+export interface NeuroglancerSource {
+  shape: number[]; resolution: number[]; translation: number[]; segmentation: boolean; segments?: string[];
+}
+export interface NeuroglancerPrepared { status: "ready"; url: string; sources: Record<string, NeuroglancerSource> }
+
+export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, background = "#030406", gain = -3) {
+  const dimensions = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] };
+  const source = (name: string, item: NeuroglancerSource) => ({
+    url: `precomputed://${new URL(prepared.url + name + "/", window.location.href).href}`,
+    // Neuroglancer converts the source's declared voxel units into output
+    // units itself. The matrix only adds translation; scaling again doubles it.
+    transform: { outputDimensions: dimensions, matrix: item.resolution.map((_, axis) => [
+      axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0, item.translation[axis],
+    ]) },
+  });
+  const layers: any[] = [];
+  for (const channel of channels.filter(c => c.visible).slice(0, 10)) {
+    const item = prepared.sources[`image-${channel.index}`];
+    if (!item) continue;
+    const rgb = [1, 3, 5].map(offset => (parseInt(channel.color.slice(offset, offset + 2), 16) / 255).toFixed(8));
+    const low = Number.isFinite(channel.low) ? channel.low : 0;
+    const range = Math.max(1e-12, channel.high - low);
+    layers.push({ type: "image", name: `Image ${channel.index + 1}: ${channel.label}`, source: source(`image-${channel.index}`, item),
+      volumeRendering: blend === "maximum" ? "max" : blend === "minimum" ? "min" : "on",
+      volumeRenderingGain: gain,
+      // Raw intensity values preserve the same contrast limits as the 2D view.
+      shaderControls: {}, opacity: 1,
+      shader: `void main() { float v = clamp((float(toRaw(getDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${rgb.join(",")}) * v, ${blend === "additive" ? "v" : "1.0"})); }`,
+    });
+  }
+  labels.filter(label => label.visible).forEach((label, index) => {
+    const item = prepared.sources[`label-${index}`];
+    if (!item) return;
+    const selected = label.highlightValues?.length ? label.highlightValues.map(String) : label.highlightValue ? [String(label.highlightValue)] : item.segments || [];
+    layers.push({ type: "segmentation", name: `Labels ${index + 1}: ${label.name}`, source: source(`label-${index}`, item),
+      segments: selected, objectAlpha: label.opacity, selectedAlpha: label.opacity, notSelectedAlpha: 0,
+      ...(label.color ? { segmentDefaultColor: label.color } : {}), hideSegmentZero: true });
+  });
+  const first = Object.values(prepared.sources)[0];
+  const extent = first.shape.slice().reverse().map((size, axis) => size * first.resolution[axis]);
+  return { dimensions, position: extent.map((size, axis) => size / 2 + first.translation[axis]), projectionScale: Math.max(...extent) * 1.5,
+    projectionOrientation: [0, 0, 0, 1], layers, layout: "3d", showSlices: false, showAxisLines: false,
+    showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: background, gpuMemoryLimit: 512 * 1024 * 1024, systemMemoryLimit: 512 * 1024 * 1024 };
+}

@@ -1,31 +1,29 @@
 # BIOMERO OME-Zarr Viewer
 
-BIOMERO OME-Zarr Viewer is the read-only OME-Zarr viewer for the
-[BIOMERO ecosystem](https://github.com/NL-BioImaging). It opens physical
-OME-Zarr images and HCS plates registered in OMERO, with multichannel display,
-Z/T navigation, label overlays, and Field, Well, and Plate navigation.
+Explore OME-Zarr images, segmentation labels, Z stacks, time series and plates
+from OMERO.web. View images in 2D, combine image volumes and label surfaces in
+Neuroglancer 3D, or choose Viv for intensity-only 3D rendering.
 
-## Start here
+## Start viewing
 
-- **Users:** read the [viewer guide](viewer-guide.md) for supported objects,
-  label controls, shallow-Zarr behavior, and current limitations.
-- **NL-BIOMERO administrators:** use the
-  [integrated deployment guide](deployment-nl-biomero.md).
-- **Custom OMERO administrators:** use the
-  [OMERO deployment-kit guide](deployment-omero-deployment-kit.md) as the
-  reference integration.
-- **Maintainers:** review the
-  [compatibility matrix](compatibility-spike.md) and
-  [open-source provenance](open-source-provenance.md).
+Select an OME-Zarr Image, Plate or Well and choose **Open With → OME-Zarr Viewer**.
+Read the [viewer guide](viewer-guide.md), also available from the viewer's Help
+button, for channels, labels, navigation, 3D controls and sharing.
+See [movie playback and export](movies.md) for temporal data.
 
-## What the viewer does
+## Administration
 
-The viewer resolves an OMERO Image, Plate, or Well to one authorized physical
-OME-Zarr store. For a BIOMERO shallow result, it combines canonical intensity
-pixels with the retained label paths from the shallow store. The browser sees
-one logical dataset, while OMERO permissions and short-lived signed contexts
-authorize every metadata and chunk request.
+- [Installation](installation.md) and [configuration](configuration.md)
+- [NL-BIOMERO deployment](deployment-nl-biomero.md)
+- [OMERO deployment kit](deployment-omero-deployment-kit.md)
+- [Supported data and OMERO registration](data-and-registration.md)
 
-The viewer does not import data, convert conventional OMERO pixels to Zarr, or
-edit segmentations. BIOMERO or another compatible importer must create and
-register the physical store first.
+The viewer is read-only and uses OMERO permissions. It requires an existing
+registered OME-Zarr store; it does not import images or edit segmentations.
+
+## Development
+
+- [Build and test](development.md)
+- [API and integrations](api.md)
+- [Compatibility checks](compatibility-spike.md)
+- [Open-source provenance](open-source-provenance.md)

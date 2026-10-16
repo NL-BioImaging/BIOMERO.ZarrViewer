@@ -1,5 +1,7 @@
 import { MAX_CHANNELS } from "@hms-dbmi/viv";
+import { Matrix4 } from "@math.gl/core";
 import type { ChannelState, VolumeLevel } from "./types";
+import type { PhysicalSize } from "./ngff-physical-sizes";
 
 export const VOLUME_RAW_BUDGET_BYTES = 256 * 1024 * 1024;
 
@@ -15,6 +17,29 @@ function axisSize(source: any, axis: string): number {
   const index = Array.isArray(source?.labels) ? source.labels.indexOf(axis) : -1;
   const value = index >= 0 ? Number(source?.shape?.[index]) : 1;
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 1;
+}
+
+/** Place a standalone pyramid level in the same physical space as level zero. */
+export function volumeModelMatrix(loader: any[], resolution: number): Matrix4 {
+  const source = loader[resolution];
+  const scale = ["x", "y", "z"].map((axis) => {
+    const declared = source?.meta?.volumeScale?.[axis];
+    // Without transforms, preserve the base extent using each axis's actual
+    // downsampling, including pyramids that do not downsample Z.
+    return Number.isFinite(declared) && declared > 0
+      ? declared
+      : axisSize(loader[0], axis) / axisSize(source, axis);
+  });
+  return new Matrix4().scale(scale);
+}
+
+/** Viv normalizes XYZ by the smallest base voxel size, in all pyramid levels. */
+export function volumePhysicalScale(loader: any[]): PhysicalSize | undefined {
+  const sizes = ["x", "y", "z"].map(axis => loader[0]?.meta?.physicalSizes?.[axis]);
+  if (sizes.some(value => !Number.isFinite(value?.size) || value.size <= 0 || !value.unit)) return undefined;
+  const unit = sizes[0].unit;
+  if (unit === "pixel" || unit === "px" || sizes.some(value => value.unit !== unit)) return undefined;
+  return { size: Math.min(...sizes.map(value => value.size)), unit };
 }
 
 export function activeVolumeChannels(channels: ChannelState[]): ChannelState[] {

@@ -214,7 +214,7 @@ def _reserve(key, scope, size, metadata):
     return True
 
 
-def describe_volume(array_path, axes, channel, timepoint):
+def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=False):
     array = zarr.open_array(str(array_path), mode="r")
     if len(axes) != array.ndim or "x" not in axes or "y" not in axes:
         raise InvalidROI("Invalid volume axes")
@@ -223,7 +223,7 @@ def describe_volume(array_path, axes, channel, timepoint):
             raise InvalidROI(f"Invalid {axis} selection")
     shape = [int(array.shape[axes.index(a)]) if a in axes else 1 for a in ("z", "y", "x")]
     dtype = np.dtype(array.dtype).newbyteorder("<")
-    if dtype.name not in ("uint8","uint16","uint32","int8","int16","int32","float32","float64"):
+    if dtype.name not in ("uint8","uint16","uint32","int8","int16","int32","float32","float64") and not (allow_integer64 and dtype.name in ("uint64", "int64")):
         raise InvalidROI("Unsupported volume pixel type")
     size = math.prod(shape) * dtype.itemsize
     if size > MAX_VOLUME_BYTES:

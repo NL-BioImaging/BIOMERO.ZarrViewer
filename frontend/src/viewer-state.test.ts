@@ -16,6 +16,32 @@ const labels: LabelState[] = [
 
 beforeEach(() => window.history.replaceState(null, "", "/viewer/?image=42"));
 
+test("Classic 3D round-trips in links while unconfigured and invalid links use the new default", () => {
+  const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeRenderer: "classic" });
+  expect(parseDeepLink(new URL(url, window.location.origin).search).volumeRenderer).toBe("classic");
+  expect(parseDeepLink("?v=2&viewer3d=unknown").volumeRenderer).toBeUndefined();
+  expect(writeDeepLink(42, { z: 0, t: 0, volumeRenderer: "neuroglancer" })).not.toContain("viewer3d");
+});
+
+test("3D display modes round-trip while old or invalid links keep the additive default", () => {
+  for (const volumeBlend of ["maximum", "minimum"] as const) {
+    const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeBlend });
+    expect(parseDeepLink(new URL(url, window.location.origin).search).volumeBlend).toBe(volumeBlend);
+  }
+  expect(writeDeepLink(42, { z: 0, t: 0, volumeBlend: "additive" })).not.toContain("volumeBlend");
+  expect(parseDeepLink("?v=2&render=3d").volumeBlend).toBeUndefined();
+  expect(parseDeepLink("?v=2&volumeBlend=unknown").volumeBlend).toBeUndefined();
+});
+
+test("3D appearance and Neuroglancer camera survive sharing, with bounded appearance inputs", () => {
+  const ngCamera = { position: [100, 200, 300], orientation: [0, 0, 0, 1], scale: 500 };
+  const url = writeDeepLink(42, { z: 0, t: 0, ngCamera, volumeBrightness: 2, volumeGain: -1, volumeBackground: "#FFFFFF" });
+  const parsed = parseDeepLink(new URL(url, window.location.origin).search);
+  expect(parsed).toMatchObject({ ngCamera, volumeBrightness: 2, volumeGain: -1, volumeBackground: "#FFFFFF" });
+  expect(parseDeepLink("?v=2&brightness3d=999&gain3d=-999&background3d=invalid")).toMatchObject({ volumeBrightness: 4, volumeGain: -5 });
+  expect(parseDeepLink("?v=2&ngCamera=invalid").ngCamera).toBeUndefined();
+});
+
 test("deep-link state round trips", () => {
   const url = writeDeepLink(42, {
     view: "well",

@@ -7,7 +7,7 @@ listed below. Each package remains subject to its upstream license. This file
 is generated from `frontend/package-lock.json` and the legal files installed
 with the non-development npm packages.
 
-Generated for frontend version `0.7.1` with 203 production packages.
+Generated for frontend version `0.7.1` with 220 production packages.
 
 ## Package inventory
 
@@ -103,25 +103,26 @@ Generated for frontend version `0.7.1` with 203 production packages.
 | `@math.gl/sun@4.1.0` | MIT | — | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
 | `@math.gl/types@4.1.0` | MIT | — | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
 | `@math.gl/web-mercator@4.1.0` | MIT | Uber Technologies, Inc. | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
-| `@nodable/entities@3.0.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/nodable/val-parsers) | [L011](#l011) |
-| `@petamoriken/float16@3.9.3` | MIT | Kenta Moriuchi <moriken@kimamass.com> (https://moriken.dev) | [source](https://github.com/petamoriken/float16) | [L012](#l012) |
+| `@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr-extract) | [L011](#l011) |
+| `@nodable/entities@3.0.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/nodable/val-parsers) | [L012](#l012) |
+| `@petamoriken/float16@3.9.3` | MIT | Kenta Moriuchi <moriken@kimamass.com> (https://moriken.dev) | [source](https://github.com/petamoriken/float16) | [L013](#l013) |
 | `@probe.gl/env@4.1.1` | MIT | — | [source](https://github.com/visgl/probe.gl) | [L001](#l001) |
 | `@probe.gl/log@4.1.1` | MIT | — | [source](https://github.com/visgl/probe.gl) | [L001](#l001) |
 | `@probe.gl/stats@4.1.1` | MIT | — | [source](https://github.com/visgl/probe.gl) | [L001](#l001) |
-| `@turf/boolean-clockwise@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@turf/clone@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@turf/helpers@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@turf/invariant@5.2.0` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@turf/meta@5.2.0` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@turf/rewind@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L013](#l013) |
-| `@types/brotli@1.3.5` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/crypto-js@4.2.2` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/dom-mediacapture-transform@0.1.12` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/dom-webcodecs@0.1.13` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/geojson@7946.0.16` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/node@25.9.5` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/offscreencanvas@2019.7.3` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
-| `@types/pako@1.0.7` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L014](#l014) |
+| `@turf/boolean-clockwise@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@turf/clone@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@turf/helpers@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@turf/invariant@5.2.0` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@turf/meta@5.2.0` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@turf/rewind@5.1.5` | MIT | Turf Authors | [source](https://github.com/Turfjs/turf) | [L014](#l014) |
+| `@types/brotli@1.3.5` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/crypto-js@4.2.2` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/dom-mediacapture-transform@0.1.12` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/dom-webcodecs@0.1.13` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/geojson@7946.0.16` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/node@25.9.5` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/offscreencanvas@2019.7.3` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
+| `@types/pako@1.0.7` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
 | `@vivjs/constants@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
 | `@vivjs/extensions@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
 | `@vivjs/layers@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
@@ -129,93 +130,109 @@ Generated for frontend version `0.7.1` with 203 production packages.
 | `@vivjs/types@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
 | `@vivjs/viewers@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
 | `@vivjs/views@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@zarrita/storage@0.1.4` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L015](#l015) |
-| `@zarrita/storage@0.2.0` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L015](#l015) |
-| `a5-js@0.7.3` | Apache-2.0 | — | [source](https://github.com/felixpalmer/a5) | [L044](#l044) |
-| `anynum@1.0.1` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/anynum) | [L016](#l016) |
-| `apache-arrow@21.2.0` | Apache-2.0 | Apache Software Foundation | [source](https://github.com/apache/arrow-js) | [L044](#l044), [L017](#l017) |
-| `argparse@1.0.10` | MIT | — | [source](nodeca/argparse) | [L018](#l018) |
-| `base64-js@1.5.1` | MIT | T. Jameson Little <t.jameson.little@gmail.com> | [source](https://github.com/beatgammit/base64-js) | [L019](#l019) |
-| `brotli@1.3.3` | MIT | Devon Govett <devongovett@gmail.com> | [source](https://github.com/devongovett/brotli.js) | [L020](#l020) |
-| `buf-compare@1.0.1` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/buf-compare) | [L021](#l021) |
-| `charenc@0.0.2` | BSD-3-Clause | Paul Vorbach <paul@vorb.de> (http://vorb.de) | [source](https://github.com/pvorb/node-charenc) | [L022](#l022) |
-| `core-assert@0.2.1` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/core-assert) | [L021](#l021) |
-| `core-util-is@1.0.3` | MIT | Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/) | [source](https://github.com/isaacs/core-util-is) | [L023](#l023) |
-| `crypt@0.0.2` | BSD-3-Clause | Paul Vorbach <paul@vorb.de> (http://vorb.de) | [source](https://github.com/pvorb/node-crypt) | [L022](#l022) |
-| `deep-strict-equal@0.2.0` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/deep-strict-equal) | [L021](#l021) |
-| `draco3d@1.5.7` | Apache-2.0 | Google Draco Team | [source](https://github.com/google/draco) | [L044](#l044) |
-| `earcut@2.2.4` | ISC | Vladimir Agafonkin | [source](https://github.com/mapbox/earcut) | [L024](#l024) |
-| `fast-deep-equal@3.1.3` | MIT | Evgeny Poberezkin | [source](https://github.com/epoberezkin/fast-deep-equal) | [L025](#l025) |
-| `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L016](#l016) |
-| `fast-xml-parser@5.11.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-parser) | [L026](#l026) |
-| `fflate@0.7.5` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L027](#l027) |
-| `fflate@0.8.3` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L028](#l028) |
-| `flatbuffers@25.9.23` | Apache-2.0 | The FlatBuffers project | [source](https://github.com/google/flatbuffers) | [L044](#l044) |
-| `geotiff@2.1.3` | MIT | Fabian Schindler | [source](https://github.com/geotiffjs/geotiff.js) | [L029](#l029) |
-| `gl-matrix@3.4.4` | MIT | — | [source](https://github.com/toji/gl-matrix) | [L030](#l030) |
-| `h3-js@4.5.0` | Apache-2.0 | Nick Rabinowitz <nickr@uber.com> | [source](https://github.com/uber/h3-js) | [L044](#l044), [L031](#l031) |
-| `ieee754@1.2.1` | BSD-3-Clause | Feross Aboukhadijeh <feross@feross.org> (https://feross.org) | [source](https://github.com/feross/ieee754) | [L032](#l032) |
-| `image-size@2.0.4` | MIT | netroy <aditya@netroy.in> (http://netroy.in/) | [source](https://codeberg.org/image-size/image-size) | [L033](#l033) |
-| `immediate@3.0.6` | MIT | — | [source](https://github.com/calvinmetcalf/immediate) | [L034](#l034) |
-| `inherits@2.0.4` | ISC | — | [source](https://github.com/isaacs/inherits) | [L035](#l035) |
-| `is-buffer@1.1.6` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org/) | [source](https://github.com/feross/is-buffer) | [L036](#l036) |
-| `is-error@2.2.2` | MIT | Raynos <raynos2@gmail.com> | [source](https://github.com/mk-pmb/is-error-js) | [L037](#l037) |
-| `is-unsafe@2.0.2` | MIT | Amit Gupta (https://solothought.com/) | [source](https://github.com/NaturalIntelligence/is-unsafe) | [L016](#l016) |
-| `isarray@1.0.0` | MIT | Julian Gruber <mail@juliangruber.com> (http://juliangruber.com) | [source](https://github.com/juliangruber/isarray) | [L038](#l038) |
-| `json-with-bigint@3.5.10` | MIT | Ivan Korolenko <iam@ivankorolenko.com> | [source](https://github.com/Ivan-Korolenko/json-with-bigint) | [L039](#l039) |
-| `jszip@3.10.2` | (MIT OR GPL-3.0-or-later) | Stuart Knightley <stuart@stuartk.com> | [source](https://github.com/Stuk/jszip) | [L040](#l040) |
-| `ktx-parse@0.7.1` | MIT | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/ktx-parse) | [L041](#l041) |
-| `lerc@3.0.0` | Apache-2.0 | Esri <dev_tools@esri.com> (http://developers.arcgis.com) | [source](https://github.com/Esri/lerc) | [L044](#l044) |
-| `lie@3.3.0` | MIT | — | [source](https://github.com/calvinmetcalf/lie) | [L042](#l042) |
-| `lodash@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L043](#l043) |
-| `long@3.2.0` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L044](#l044) |
-| `long@5.3.2` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L044](#l044) |
-| `lz4js@0.2.0` | ISC | John Chadwick | [source](ssh://git@github.com/Benzinga/lz4js) | [L045](#l045) |
-| `lzw-tiff-decoder@0.1.1` | MIT | Trevor James Manz | — | [L046](#l046) |
+| `@zarrita/storage@0.1.4` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
+| `@zarrita/storage@0.2.0` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
+| `a5-js@0.7.3` | Apache-2.0 | — | [source](https://github.com/felixpalmer/a5) | [L052](#l052) |
+| `anynum@1.0.1` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/anynum) | [L017](#l017) |
+| `apache-arrow@21.2.0` | Apache-2.0 | Apache Software Foundation | [source](https://github.com/apache/arrow-js) | [L052](#l052), [L018](#l018) |
+| `argparse@1.0.10` | MIT | — | [source](nodeca/argparse) | [L019](#l019) |
+| `base64-js@1.5.1` | MIT | T. Jameson Little <t.jameson.little@gmail.com> | [source](https://github.com/beatgammit/base64-js) | [L020](#l020) |
+| `brotli@1.3.3` | MIT | Devon Govett <devongovett@gmail.com> | [source](https://github.com/devongovett/brotli.js) | [L021](#l021) |
+| `buf-compare@1.0.1` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/buf-compare) | [L022](#l022) |
+| `charenc@0.0.2` | BSD-3-Clause | Paul Vorbach <paul@vorb.de> (http://vorb.de) | [source](https://github.com/pvorb/node-charenc) | [L023](#l023) |
+| `codemirror@5.65.21` | MIT | Marijn Haverbeke <marijn@haverbeke.berlin> (http://marijnhaverbeke.nl) | [source](https://github.com/codemirror/CodeMirror) | [L024](#l024) |
+| `core-assert@0.2.1` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/core-assert) | [L022](#l022) |
+| `core-js@3.50.0` | MIT | Denis Pushkarev <zloirock@zloirock.ru> (http://zloirock.ru) | [source](https://github.com/zloirock/core-js) | [L025](#l025) |
+| `core-util-is@1.0.3` | MIT | Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/) | [source](https://github.com/isaacs/core-util-is) | [L026](#l026) |
+| `crc-32@1.2.2` | Apache-2.0 | sheetjs | [source](https://github.com/SheetJS/js-crc32) | [L027](#l027) |
+| `crypt@0.0.2` | BSD-3-Clause | Paul Vorbach <paul@vorb.de> (http://vorb.de) | [source](https://github.com/pvorb/node-crypt) | [L023](#l023) |
+| `deep-strict-equal@0.2.0` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/deep-strict-equal) | [L022](#l022) |
+| `detect-libc@2.1.2` | Apache-2.0 | Lovell Fuller <npm@lovell.info> | [source](https://github.com/lovell/detect-libc) | [L028](#l028) |
+| `draco3d@1.5.7` | Apache-2.0 | Google Draco Team | [source](https://github.com/google/draco) | [L052](#l052) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
+| `earcut@2.2.4` | ISC | Vladimir Agafonkin | [source](https://github.com/mapbox/earcut) | [L030](#l030) |
+| `fast-deep-equal@3.1.3` | MIT | Evgeny Poberezkin | [source](https://github.com/epoberezkin/fast-deep-equal) | [L031](#l031) |
+| `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L017](#l017) |
+| `fast-xml-parser@5.11.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-parser) | [L032](#l032) |
+| `fflate@0.7.5` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L033](#l033) |
+| `fflate@0.8.3` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L034](#l034) |
+| `flatbuffers@25.9.23` | Apache-2.0 | The FlatBuffers project | [source](https://github.com/google/flatbuffers) | [L052](#l052) |
+| `geotiff@2.1.3` | MIT | Fabian Schindler | [source](https://github.com/geotiffjs/geotiff.js) | [L035](#l035) |
+| `gl-matrix@3.1.0` | MIT | — | [source](https://github.com/toji/gl-matrix) | [L036](#l036) |
+| `gl-matrix@3.4.4` | MIT | — | [source](https://github.com/toji/gl-matrix) | [L037](#l037) |
+| `h3-js@4.5.0` | Apache-2.0 | Nick Rabinowitz <nickr@uber.com> | [source](https://github.com/uber/h3-js) | [L052](#l052), [L038](#l038) |
+| `ieee754@1.2.1` | BSD-3-Clause | Feross Aboukhadijeh <feross@feross.org> (https://feross.org) | [source](https://github.com/feross/ieee754) | [L039](#l039) |
+| `ikonate@1.1.1` | MIT | Mikolaj Dobrucki <tease@mikolajdobrucki.com> | [source](https://github.com/eucalyptuss/ikonate) | [L040](#l040) |
+| `image-size@2.0.4` | MIT | netroy <aditya@netroy.in> (http://netroy.in/) | [source](https://codeberg.org/image-size/image-size) | [L041](#l041) |
+| `immediate@3.0.6` | MIT | — | [source](https://github.com/calvinmetcalf/immediate) | [L042](#l042) |
+| `inherits@2.0.4` | ISC | — | [source](https://github.com/isaacs/inherits) | [L043](#l043) |
+| `is-buffer@1.1.6` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org/) | [source](https://github.com/feross/is-buffer) | [L044](#l044) |
+| `is-error@2.2.2` | MIT | Raynos <raynos2@gmail.com> | [source](https://github.com/mk-pmb/is-error-js) | [L045](#l045) |
+| `is-unsafe@2.0.2` | MIT | Amit Gupta (https://solothought.com/) | [source](https://github.com/NaturalIntelligence/is-unsafe) | [L017](#l017) |
+| `isarray@1.0.0` | MIT | Julian Gruber <mail@juliangruber.com> (http://juliangruber.com) | [source](https://github.com/juliangruber/isarray) | [L046](#l046) |
+| `json-with-bigint@3.5.10` | MIT | Ivan Korolenko <iam@ivankorolenko.com> | [source](https://github.com/Ivan-Korolenko/json-with-bigint) | [L047](#l047) |
+| `jszip@3.10.2` | (MIT OR GPL-3.0-or-later) | Stuart Knightley <stuart@stuartk.com> | [source](https://github.com/Stuk/jszip) | [L048](#l048) |
+| `ktx-parse@0.7.1` | MIT | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/ktx-parse) | [L049](#l049) |
+| `lerc@3.0.0` | Apache-2.0 | Esri <dev_tools@esri.com> (http://developers.arcgis.com) | [source](https://github.com/Esri/lerc) | [L052](#l052) |
+| `lie@3.3.0` | MIT | — | [source](https://github.com/calvinmetcalf/lie) | [L050](#l050) |
+| `lodash-es@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L051](#l051) |
+| `lodash@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L051](#l051) |
+| `long@3.2.0` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L052](#l052) |
+| `long@5.3.2` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L052](#l052) |
+| `lz4js@0.2.0` | ISC | John Chadwick | [source](ssh://git@github.com/Benzinga/lz4js) | [L053](#l053) |
+| `lzw-tiff-decoder@0.1.1` | MIT | Trevor James Manz | — | [L054](#l054) |
 | `math.gl@4.1.0` | MIT | — | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
-| `md5@2.3.0` | BSD-3-Clause | Paul Vorbach <paul@vorba.ch> (http://paul.vorba.ch) | [source](https://github.com/pvorb/node-md5) | [L047](#l047) |
-| `mediabunny@1.61.0` | MPL-2.0 | Vanilagy | [source](https://github.com/Vanilagy/mediabunny) | [L048](#l048) |
-| `meshoptimizer@1.2.0` | MIT | Arseny Kapoulkine | [source](https://github.com/zeux/meshoptimizer) | [L049](#l049) |
-| `mjolnir.js@3.0.1` | MIT | — | [source](https://github.com/visgl/mjolnir.js) | [L050](#l050) |
-| `numcodecs@0.3.2` | MIT | Trevor Manz | [source](https://github.com/manzt/numcodecs.js) | [L051](#l051) |
-| `pako@1.0.11` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L052](#l052) |
-| `pako@2.2.0` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L052](#l052) |
-| `parse-headers@2.0.6` | MIT | David Björklund <david.bjorklund@gmail.com> | [source](https://github.com/kesla/parse-headers) | [L053](#l053) |
-| `path-expression-matcher@1.6.2` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/path-expression-matcher) | [L054](#l054) |
-| `pbf@3.3.0` | BSD-3-Clause | Konstantin Kaefer | [source](git@github.com:mapbox/pbf) | [L055](#l055) |
-| `preact@10.29.8` | MIT | — | [source](preactjs/preact) | [L056](#l056) |
-| `process-nextick-args@2.0.1` | MIT | — | [source](https://github.com/calvinmetcalf/process-nextick-args) | [L057](#l057) |
-| `protocol-buffers-schema@3.6.1` | MIT | Mathias Buus | [source](https://github.com/mafintosh/protocol-buffers-schema) | [L058](#l058) |
-| `quick-lru@6.1.2` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com) | [source](sindresorhus/quick-lru) | [L059](#l059) |
-| `quickselect@2.0.0` | ISC | Vladimir Agafonkin | — | [L060](#l060) |
-| `react-dom@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L061](#l061) |
-| `react@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L061](#l061) |
-| `readable-stream@2.3.8` | MIT | — | [source](https://github.com/nodejs/readable-stream) | [L062](#l062) |
-| `reference-spec-reader@0.2.0` | MIT | manzt <trevor.j.manz@gmail.com> | — | [L063](#l063) |
-| `resolve-protobuf-schema@2.1.0` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/mafintosh/resolve-protobuf-schema) | [L058](#l058) |
-| `safe-buffer@5.1.2` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org) | [source](https://github.com/feross/safe-buffer) | [L036](#l036) |
-| `scheduler@0.27.0` | MIT | — | [source](https://github.com/facebook/react) | [L061](#l061) |
-| `setimmediate@1.0.5` | MIT | YuzuJS | [source](YuzuJS/setImmediate) | [L064](#l064) |
-| `snappyjs@0.6.1` | MIT | Zhipeng Jia | [source](zhipeng-jia/snappyjs) | [L065](#l065) |
-| `sprintf-js@1.0.3` | BSD-3-Clause | Alexandru Marasteanu <hello@alexei.ro> (http://alexei.ro/) | [source](https://github.com/alexei/sprintf.js) | [L066](#l066) |
-| `string_decoder@1.1.1` | MIT | — | [source](https://github.com/nodejs/string_decoder) | [L062](#l062) |
-| `strnum@2.4.2` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/strnum) | [L067](#l067) |
-| `texture-compressor@1.0.2` | MIT | Tim van Scherpenzeel | — | [L068](#l068) |
-| `tslib@2.8.1` | 0BSD | Microsoft Corp. | [source](https://github.com/Microsoft/tslib) | [L069](#l069) |
-| `undici-types@7.24.6` | MIT | — | [source](https://github.com/nodejs/undici) | [L070](#l070) |
-| `unzipit@1.4.3` | MIT | — | [source](https://github.com/greggman/unzipit) | [L071](#l071) |
-| `unzipit@2.0.0` | MIT | — | [source](https://github.com/greggman/unzipit) | [L071](#l071) |
-| `util-deprecate@1.0.2` | MIT | Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/) | [source](https://github.com/TooTallNate/util-deprecate) | [L072](#l072) |
-| `uzip-module@1.0.3` | MIT | — | [source](https://github.com/greggman/uzip-module) | [L073](#l073) |
-| `web-worker@1.5.0` | Apache-2.0 | — | [source](developit/web-worker) | [L044](#l044) |
-| `xml-naming@0.3.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/xml-naming) | [L016](#l016) |
-| `xml-utils@1.10.2` | CC0-1.0 | Daniel J. Dufour | [source](https://github.com/DanielJDufour/xml-utils) | [L074](#l074) |
-| `zarrita@0.5.4` | MIT | — | — | [L015](#l015) |
-| `zarrita@0.7.3` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L015](#l015) |
-| `zod@3.25.76` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L075](#l075) |
-| `zod@4.6.5` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L075](#l075) |
-| `zstd-codec@0.1.5` | MIT | yoshihitoh | [source](https://github.com/yoshihitoh/zstd-codec) | [L076](#l076) |
-| `zstddec@0.1.0` | MIT AND BSD-3-Clause | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/zstddec) | [L077](#l077) |
+| `md5@2.3.0` | BSD-3-Clause | Paul Vorbach <paul@vorba.ch> (http://paul.vorba.ch) | [source](https://github.com/pvorb/node-md5) | [L055](#l055) |
+| `mediabunny@1.61.0` | MPL-2.0 | Vanilagy | [source](https://github.com/Vanilagy/mediabunny) | [L056](#l056) |
+| `meshoptimizer@1.2.0` | MIT | Arseny Kapoulkine | [source](https://github.com/zeux/meshoptimizer) | [L057](#l057) |
+| `mjolnir.js@3.0.1` | MIT | — | [source](https://github.com/visgl/mjolnir.js) | [L058](#l058) |
+| `msgpackr-extract@3.0.4` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr-extract) | [L059](#l059) |
+| `msgpackr@1.12.1` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr) | [L059](#l059) |
+| `neuroglancer@2.41.2` | Apache-2.0 | — | [source](https://github.com/google/neuroglancer) | [L052](#l052) |
+| `nifti-reader-js@0.6.9` | MIT | Michael Martinez | [source](https://github.com/rii-mango/NIFTI-Reader-JS) | [L060](#l060) |
+| `node-gyp-build-optional-packages@5.2.2` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/prebuild/node-gyp-build) | [L061](#l061) |
+| `numcodecs@0.3.2` | MIT | Trevor Manz | [source](https://github.com/manzt/numcodecs.js) | [L062](#l062) |
+| `pako@1.0.11` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L063](#l063) |
+| `pako@2.2.0` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L063](#l063) |
+| `parse-headers@2.0.6` | MIT | David Björklund <david.bjorklund@gmail.com> | [source](https://github.com/kesla/parse-headers) | [L064](#l064) |
+| `path-expression-matcher@1.6.2` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/path-expression-matcher) | [L065](#l065) |
+| `pbf@3.3.0` | BSD-3-Clause | Konstantin Kaefer | [source](git@github.com:mapbox/pbf) | [L066](#l066) |
+| `preact@10.29.8` | MIT | — | [source](preactjs/preact) | [L067](#l067) |
+| `process-nextick-args@2.0.1` | MIT | — | [source](https://github.com/calvinmetcalf/process-nextick-args) | [L068](#l068) |
+| `protocol-buffers-schema@3.6.1` | MIT | Mathias Buus | [source](https://github.com/mafintosh/protocol-buffers-schema) | [L069](#l069) |
+| `quick-lru@6.1.2` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com) | [source](sindresorhus/quick-lru) | [L070](#l070) |
+| `quickselect@2.0.0` | ISC | Vladimir Agafonkin | — | [L071](#l071) |
+| `react-dom@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L072](#l072) |
+| `react@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L072](#l072) |
+| `readable-stream@2.3.8` | MIT | — | [source](https://github.com/nodejs/readable-stream) | [L073](#l073) |
+| `reference-spec-reader@0.2.0` | MIT | manzt <trevor.j.manz@gmail.com> | — | [L074](#l074) |
+| `resolve-protobuf-schema@2.1.0` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/mafintosh/resolve-protobuf-schema) | [L069](#l069) |
+| `safe-buffer@5.1.2` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org) | [source](https://github.com/feross/safe-buffer) | [L044](#l044) |
+| `scheduler@0.27.0` | MIT | — | [source](https://github.com/facebook/react) | [L072](#l072) |
+| `setimmediate@1.0.5` | MIT | YuzuJS | [source](YuzuJS/setImmediate) | [L075](#l075) |
+| `snappyjs@0.6.1` | MIT | Zhipeng Jia | [source](zhipeng-jia/snappyjs) | [L076](#l076) |
+| `sprintf-js@1.0.3` | BSD-3-Clause | Alexandru Marasteanu <hello@alexei.ro> (http://alexei.ro/) | [source](https://github.com/alexei/sprintf.js) | [L077](#l077) |
+| `string_decoder@1.1.1` | MIT | — | [source](https://github.com/nodejs/string_decoder) | [L073](#l073) |
+| `strnum@2.4.2` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/strnum) | [L078](#l078) |
+| `texture-compressor@1.0.2` | MIT | Tim van Scherpenzeel | — | [L079](#l079) |
+| `tslib@2.8.1` | 0BSD | Microsoft Corp. | [source](https://github.com/Microsoft/tslib) | [L080](#l080) |
+| `undici-types@7.24.6` | MIT | — | [source](https://github.com/nodejs/undici) | [L081](#l081) |
+| `unzipit@1.4.3` | MIT | — | [source](https://github.com/greggman/unzipit) | [L082](#l082) |
+| `unzipit@2.0.0` | MIT | — | [source](https://github.com/greggman/unzipit) | [L082](#l082) |
+| `util-deprecate@1.0.2` | MIT | Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/) | [source](https://github.com/TooTallNate/util-deprecate) | [L083](#l083) |
+| `uzip-module@1.0.3` | MIT | — | [source](https://github.com/greggman/uzip-module) | [L084](#l084) |
+| `valibot@1.5.0` | MIT | Fabian Hiller | [source](https://github.com/open-circle/valibot) | [L085](#l085) |
+| `web-worker@1.5.0` | Apache-2.0 | — | [source](developit/web-worker) | [L052](#l052) |
+| `xml-naming@0.3.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/xml-naming) | [L017](#l017) |
+| `xml-utils@1.10.2` | CC0-1.0 | Daniel J. Dufour | [source](https://github.com/DanielJDufour/xml-utils) | [L086](#l086) |
+| `zarrita@0.5.4` | MIT | — | — | [L016](#l016) |
+| `zarrita@0.7.3` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
+| `zod@3.25.76` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L087](#l087) |
+| `zod@4.6.5` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L087](#l087) |
+| `zstd-codec@0.1.5` | MIT | yoshihitoh | [source](https://github.com/yoshihitoh/zstd-codec) | [L088](#l088) |
+| `zstddec@0.1.0` | MIT AND BSD-3-Clause | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/zstddec) | [L089](#l089) |
 
 ## Included license and notice texts
 
@@ -578,6 +595,32 @@ Cesium-derived code can be found in the submodule: modules/3d-tiles
 
 ### L011
 
+Packages: `@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4 (generated from package metadata)`
+
+````text
+Copyright Kris Zyp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### L012
+
 Packages: `@nodable/entities@3.0.0 (generated from package metadata)`
 
 ````text
@@ -602,7 +645,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L012
+### L013
 
 Packages: `@petamoriken/float16@3.9.3 (LICENSE)`
 
@@ -630,7 +673,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L013
+### L014
 
 Packages: `@turf/boolean-clockwise@5.1.5 (LICENSE)`, `@turf/clone@5.1.5 (LICENSE)`, `@turf/helpers@5.1.5 (LICENSE)`, `@turf/invariant@5.2.0 (LICENSE)`, `@turf/meta@5.2.0 (LICENSE)`, `@turf/rewind@5.1.5 (LICENSE)`
 
@@ -657,7 +700,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L014
+### L015
 
 Packages: `@types/brotli@1.3.5 (LICENSE)`, `@types/crypto-js@4.2.2 (LICENSE)`, `@types/dom-mediacapture-transform@0.1.12 (LICENSE)`, `@types/dom-webcodecs@0.1.13 (LICENSE)`, `@types/geojson@7946.0.16 (LICENSE)`, `@types/offscreencanvas@2019.7.3 (LICENSE)`, `@types/pako@1.0.7 (LICENSE)`, `@types/node@25.9.5 (LICENSE)`
 
@@ -685,7 +728,7 @@ MIT License
     SOFTWARE
 ````
 
-### L015
+### L016
 
 Packages: `@zarrita/storage@0.1.4 (LICENSE)`, `zarrita@0.5.4 (LICENSE)`, `@zarrita/storage@0.2.0 (LICENSE)`, `zarrita@0.7.3 (LICENSE)`
 
@@ -713,7 +756,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L016
+### L017
 
 Packages: `anynum@1.0.1 (LICENSE)`, `fast-xml-builder@1.3.1 (LICENSE)`, `is-unsafe@2.0.2 (LICENSE)`, `xml-naming@0.3.0 (LICENSE)`
 
@@ -741,7 +784,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L017
+### L018
 
 Packages: `apache-arrow@21.2.0 (NOTICE.txt)`
 
@@ -753,7 +796,7 @@ This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 ````
 
-### L018
+### L019
 
 Packages: `argparse@1.0.10 (LICENSE)`
 
@@ -781,7 +824,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L019
+### L020
 
 Packages: `base64-js@1.5.1 (LICENSE)`
 
@@ -809,7 +852,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L020
+### L021
 
 Packages: `brotli@1.3.3 (generated from package metadata)`
 
@@ -835,7 +878,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L021
+### L022
 
 Packages: `buf-compare@1.0.1 (license)`, `core-assert@0.2.1 (license)`, `deep-strict-equal@0.2.0 (license)`
 
@@ -863,7 +906,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L022
+### L023
 
 Packages: `charenc@0.0.2 (LICENSE.mkd)`, `crypt@0.0.2 (LICENSE.mkd)`
 
@@ -897,7 +940,62 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L023
+### L024
+
+Packages: `codemirror@5.65.21 (LICENSE)`
+
+````text
+MIT License
+
+Copyright (C) 2017 by Marijn Haverbeke <marijn@haverbeke.berlin> and others
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+````
+
+### L025
+
+Packages: `core-js@3.50.0 (LICENSE)`
+
+````text
+Copyright (c) 2013–2025 Denis Pushkarev (zloirock.ru)
+Copyright (c) 2025–2026 CoreJS Company (core-js.io)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+````
+
+### L026
 
 Packages: `core-util-is@1.0.3 (LICENSE)`
 
@@ -923,7 +1021,451 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ````
 
-### L024
+### L027
+
+Packages: `crc-32@1.2.2 (LICENSE)`
+
+````text
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "{}"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright (C) 2014-present   SheetJS LLC
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+````
+
+### L028
+
+Packages: `detect-libc@2.1.2 (LICENSE)`
+
+````text
+Apache License
+                           Version 2.0, January 2004
+                        http://www.apache.org/licenses/
+
+   TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+   1. Definitions.
+
+      "License" shall mean the terms and conditions for use, reproduction,
+      and distribution as defined by Sections 1 through 9 of this document.
+
+      "Licensor" shall mean the copyright owner or entity authorized by
+      the copyright owner that is granting the License.
+
+      "Legal Entity" shall mean the union of the acting entity and all
+      other entities that control, are controlled by, or are under common
+      control with that entity. For the purposes of this definition,
+      "control" means (i) the power, direct or indirect, to cause the
+      direction or management of such entity, whether by contract or
+      otherwise, or (ii) ownership of fifty percent (50%) or more of the
+      outstanding shares, or (iii) beneficial ownership of such entity.
+
+      "You" (or "Your") shall mean an individual or Legal Entity
+      exercising permissions granted by this License.
+
+      "Source" form shall mean the preferred form for making modifications,
+      including but not limited to software source code, documentation
+      source, and configuration files.
+
+      "Object" form shall mean any form resulting from mechanical
+      transformation or translation of a Source form, including but
+      not limited to compiled object code, generated documentation,
+      and conversions to other media types.
+
+      "Work" shall mean the work of authorship, whether in Source or
+      Object form, made available under the License, as indicated by a
+      copyright notice that is included in or attached to the work
+      (an example is provided in the Appendix below).
+
+      "Derivative Works" shall mean any work, whether in Source or Object
+      form, that is based on (or derived from) the Work and for which the
+      editorial revisions, annotations, elaborations, or other modifications
+      represent, as a whole, an original work of authorship. For the purposes
+      of this License, Derivative Works shall not include works that remain
+      separable from, or merely link (or bind by name) to the interfaces of,
+      the Work and Derivative Works thereof.
+
+      "Contribution" shall mean any work of authorship, including
+      the original version of the Work and any modifications or additions
+      to that Work or Derivative Works thereof, that is intentionally
+      submitted to Licensor for inclusion in the Work by the copyright owner
+      or by an individual or Legal Entity authorized to submit on behalf of
+      the copyright owner. For the purposes of this definition, "submitted"
+      means any form of electronic, verbal, or written communication sent
+      to the Licensor or its representatives, including but not limited to
+      communication on electronic mailing lists, source code control systems,
+      and issue tracking systems that are managed by, or on behalf of, the
+      Licensor for the purpose of discussing and improving the Work, but
+      excluding communication that is conspicuously marked or otherwise
+      designated in writing by the copyright owner as "Not a Contribution."
+
+      "Contributor" shall mean Licensor and any individual or Legal Entity
+      on behalf of whom a Contribution has been received by Licensor and
+      subsequently incorporated within the Work.
+
+   2. Grant of Copyright License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      copyright license to reproduce, prepare Derivative Works of,
+      publicly display, publicly perform, sublicense, and distribute the
+      Work and such Derivative Works in Source or Object form.
+
+   3. Grant of Patent License. Subject to the terms and conditions of
+      this License, each Contributor hereby grants to You a perpetual,
+      worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+      (except as stated in this section) patent license to make, have made,
+      use, offer to sell, sell, import, and otherwise transfer the Work,
+      where such license applies only to those patent claims licensable
+      by such Contributor that are necessarily infringed by their
+      Contribution(s) alone or by combination of their Contribution(s)
+      with the Work to which such Contribution(s) was submitted. If You
+      institute patent litigation against any entity (including a
+      cross-claim or counterclaim in a lawsuit) alleging that the Work
+      or a Contribution incorporated within the Work constitutes direct
+      or contributory patent infringement, then any patent licenses
+      granted to You under this License for that Work shall terminate
+      as of the date such litigation is filed.
+
+   4. Redistribution. You may reproduce and distribute copies of the
+      Work or Derivative Works thereof in any medium, with or without
+      modifications, and in Source or Object form, provided that You
+      meet the following conditions:
+
+      (a) You must give any other recipients of the Work or
+          Derivative Works a copy of this License; and
+
+      (b) You must cause any modified files to carry prominent notices
+          stating that You changed the files; and
+
+      (c) You must retain, in the Source form of any Derivative Works
+          that You distribute, all copyright, patent, trademark, and
+          attribution notices from the Source form of the Work,
+          excluding those notices that do not pertain to any part of
+          the Derivative Works; and
+
+      (d) If the Work includes a "NOTICE" text file as part of its
+          distribution, then any Derivative Works that You distribute must
+          include a readable copy of the attribution notices contained
+          within such NOTICE file, excluding those notices that do not
+          pertain to any part of the Derivative Works, in at least one
+          of the following places: within a NOTICE text file distributed
+          as part of the Derivative Works; within the Source form or
+          documentation, if provided along with the Derivative Works; or,
+          within a display generated by the Derivative Works, if and
+          wherever such third-party notices normally appear. The contents
+          of the NOTICE file are for informational purposes only and
+          do not modify the License. You may add Your own attribution
+          notices within Derivative Works that You distribute, alongside
+          or as an addendum to the NOTICE text from the Work, provided
+          that such additional attribution notices cannot be construed
+          as modifying the License.
+
+      You may add Your own copyright statement to Your modifications and
+      may provide additional or different license terms and conditions
+      for use, reproduction, or distribution of Your modifications, or
+      for any such Derivative Works as a whole, provided Your use,
+      reproduction, and distribution of the Work otherwise complies with
+      the conditions stated in this License.
+
+   5. Submission of Contributions. Unless You explicitly state otherwise,
+      any Contribution intentionally submitted for inclusion in the Work
+      by You to the Licensor shall be under the terms and conditions of
+      this License, without any additional terms or conditions.
+      Notwithstanding the above, nothing herein shall supersede or modify
+      the terms of any separate license agreement you may have executed
+      with Licensor regarding such Contributions.
+
+   6. Trademarks. This License does not grant permission to use the trade
+      names, trademarks, service marks, or product names of the Licensor,
+      except as required for reasonable and customary use in describing the
+      origin of the Work and reproducing the content of the NOTICE file.
+
+   7. Disclaimer of Warranty. Unless required by applicable law or
+      agreed to in writing, Licensor provides the Work (and each
+      Contributor provides its Contributions) on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+      implied, including, without limitation, any warranties or conditions
+      of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+      PARTICULAR PURPOSE. You are solely responsible for determining the
+      appropriateness of using or redistributing the Work and assume any
+      risks associated with Your exercise of permissions under this License.
+
+   8. Limitation of Liability. In no event and under no legal theory,
+      whether in tort (including negligence), contract, or otherwise,
+      unless required by applicable law (such as deliberate and grossly
+      negligent acts) or agreed to in writing, shall any Contributor be
+      liable to You for damages, including any direct, indirect, special,
+      incidental, or consequential damages of any character arising as a
+      result of this License or out of the use or inability to use the
+      Work (including but not limited to damages for loss of goodwill,
+      work stoppage, computer failure or malfunction, or any and all
+      other commercial damages or losses), even if such Contributor
+      has been advised of the possibility of such damages.
+
+   9. Accepting Warranty or Additional Liability. While redistributing
+      the Work or Derivative Works thereof, You may choose to offer,
+      and charge a fee for, acceptance of support, warranty, indemnity,
+      or other liability obligations and/or rights consistent with this
+      License. However, in accepting such obligations, You may act only
+      on Your own behalf and on Your sole responsibility, not on behalf
+      of any other Contributor, and only if You agree to indemnify,
+      defend, and hold each Contributor harmless for any liability
+      incurred by, or claims asserted against, such Contributor by reason
+      of your accepting any such warranty or additional liability.
+
+   END OF TERMS AND CONDITIONS
+
+   APPENDIX: How to apply the Apache License to your work.
+
+      To apply the Apache License to your work, attach the following
+      boilerplate notice, with the fields enclosed by brackets "{}"
+      replaced with your own identifying information. (Don't include
+      the brackets!)  The text should be enclosed in the appropriate
+      comment syntax for the file format. We also recommend that a
+      file or class name and description of purpose be included on the
+      same "printed page" as the copyright notice for easier
+      identification within third-party archives.
+
+   Copyright {yyyy} {name of copyright owner}
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+````
+
+### L029
+
+Packages: `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`
+
+````text
+MIT License
+
+Copyright (c) 2023 Denys Potapov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### L030
 
 Packages: `earcut@2.2.4 (LICENSE)`
 
@@ -945,7 +1487,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ````
 
-### L025
+### L031
 
 Packages: `fast-deep-equal@3.1.3 (LICENSE)`
 
@@ -973,7 +1515,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L026
+### L032
 
 Packages: `fast-xml-parser@5.11.1 (LICENSE)`
 
@@ -1001,7 +1543,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L027
+### L033
 
 Packages: `fflate@0.7.5 (LICENSE)`
 
@@ -1029,7 +1571,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L028
+### L034
 
 Packages: `fflate@0.8.3 (LICENSE)`
 
@@ -1057,7 +1599,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L029
+### L035
 
 Packages: `geotiff@2.1.3 (LICENSE)`
 
@@ -1085,7 +1627,33 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L030
+### L036
+
+Packages: `gl-matrix@3.1.0 (LICENSE.md)`
+
+````text
+Copyright (c) 2015-2019, Brandon Jones, Colin MacKenzie IV.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+````
+
+### L037
 
 Packages: `gl-matrix@3.4.4 (LICENSE.md)`
 
@@ -1111,7 +1679,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L031
+### L038
 
 Packages: `h3-js@4.5.0 (NOTICE)`
 
@@ -1131,7 +1699,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-### L032
+### L039
 
 Packages: `ieee754@1.2.1 (LICENSE)`
 
@@ -1149,7 +1717,35 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L033
+### L040
+
+Packages: `ikonate@1.1.1 (LICENSE)`
+
+````text
+The MIT License (MIT)
+
+Copyright (c) 2013-2017 Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### L041
 
 Packages: `image-size@2.0.4 (LICENSE)`
 
@@ -1165,7 +1761,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L034
+### L042
 
 Packages: `immediate@3.0.6 (LICENSE.txt)`
 
@@ -1192,7 +1788,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L035
+### L043
 
 Packages: `inherits@2.0.4 (LICENSE)`
 
@@ -1214,7 +1810,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L036
+### L044
 
 Packages: `is-buffer@1.1.6 (LICENSE)`, `safe-buffer@5.1.2 (LICENSE)`
 
@@ -1242,7 +1838,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L037
+### L045
 
 Packages: `is-error@2.2.2 (LICENSE)`
 
@@ -1268,7 +1864,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L038
+### L046
 
 Packages: `isarray@1.0.0 (generated from package metadata)`
 
@@ -1294,7 +1890,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L039
+### L047
 
 Packages: `json-with-bigint@3.5.10 (LICENSE)`
 
@@ -1322,7 +1918,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L040
+### L048
 
 Packages: `jszip@3.10.2 (LICENSE.markdown)`
 
@@ -1980,7 +2576,7 @@ copy of the Program in return for a fee.
                      END OF TERMS AND CONDITIONS
 ````
 
-### L041
+### L049
 
 Packages: `ktx-parse@0.7.1 (LICENSE)`
 
@@ -2008,7 +2604,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L042
+### L050
 
 Packages: `lie@3.3.0 (license.md)`
 
@@ -2022,9 +2618,9 @@ The above copyright notice and this permission notice shall be included in all c
 **THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.**
 ````
 
-### L043
+### L051
 
-Packages: `lodash@4.18.1 (LICENSE)`
+Packages: `lodash@4.18.1 (LICENSE)`, `lodash-es@4.18.1 (LICENSE)`
 
 ````text
 Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
@@ -2076,9 +2672,9 @@ licenses; we recommend you read them, as their terms may differ from the
 terms above.
 ````
 
-### L044
+### L052
 
-Packages: `long@5.3.2 (LICENSE)`, `a5-js@0.7.3 (LICENSE)`, `apache-arrow@21.2.0 (LICENSE.txt)`, `flatbuffers@25.9.23 (LICENSE)`, `h3-js@4.5.0 (LICENSE)`, `long@3.2.0 (LICENSE)`, `web-worker@1.5.0 (LICENSE)`, `draco3d@1.5.7 (generated from package metadata)`, `lerc@3.0.0 (generated from package metadata)`
+Packages: `long@5.3.2 (LICENSE)`, `a5-js@0.7.3 (LICENSE)`, `apache-arrow@21.2.0 (LICENSE.txt)`, `flatbuffers@25.9.23 (LICENSE)`, `h3-js@4.5.0 (LICENSE)`, `long@3.2.0 (LICENSE)`, `neuroglancer@2.41.2 (LICENSE)`, `web-worker@1.5.0 (LICENSE)`, `draco3d@1.5.7 (generated from package metadata)`, `lerc@3.0.0 (generated from package metadata)`
 
 ````text
 Apache License
@@ -2284,7 +2880,7 @@ Apache License
    limitations under the License.
 ````
 
-### L045
+### L053
 
 Packages: `lz4js@0.2.0 (generated from package metadata)`
 
@@ -2304,7 +2900,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L046
+### L054
 
 Packages: `lzw-tiff-decoder@0.1.1 (generated from package metadata)`
 
@@ -2330,7 +2926,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L047
+### L055
 
 Packages: `md5@2.3.0 (LICENSE)`
 
@@ -2364,7 +2960,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L048
+### L056
 
 Packages: `mediabunny@1.61.0 (LICENSE)`
 
@@ -2744,7 +3340,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ````
 
-### L049
+### L057
 
 Packages: `meshoptimizer@1.2.0 (LICENSE.md)`
 
@@ -2772,7 +3368,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L050
+### L058
 
 Packages: `mjolnir.js@3.0.1 (LICENSE)`
 
@@ -2800,7 +3396,89 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L051
+### L059
+
+Packages: `msgpackr@1.12.1 (LICENSE)`, `msgpackr-extract@3.0.4 (LICENSE)`
+
+````text
+MIT License
+
+Copyright (c) 2020 Kris Zyp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### L060
+
+Packages: `nifti-reader-js@0.6.9 (LICENSE)`
+
+````text
+Copyright (c) 2015 RII-UTHSCSA
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+````
+
+### L061
+
+Packages: `node-gyp-build-optional-packages@5.2.2 (LICENSE)`
+
+````text
+The MIT License (MIT)
+
+Copyright (c) 2017 Mathias Buus
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+````
+
+### L062
 
 Packages: `numcodecs@0.3.2 (LICENSE)`
 
@@ -2828,7 +3506,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L052
+### L063
 
 Packages: `pako@2.2.0 (LICENSE)`, `pako@1.0.11 (LICENSE)`
 
@@ -2856,7 +3534,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L053
+### L064
 
 Packages: `parse-headers@2.0.6 (LICENCE)`
 
@@ -2884,7 +3562,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L054
+### L065
 
 Packages: `path-expression-matcher@1.6.2 (LICENSE)`
 
@@ -2912,7 +3590,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L055
+### L066
 
 Packages: `pbf@3.3.0 (LICENSE)`
 
@@ -2946,7 +3624,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L056
+### L067
 
 Packages: `preact@10.29.8 (LICENSE)`
 
@@ -2974,7 +3652,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L057
+### L068
 
 Packages: `process-nextick-args@2.0.1 (license.md)`
 
@@ -3000,7 +3678,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.**
 ````
 
-### L058
+### L069
 
 Packages: `protocol-buffers-schema@3.6.1 (LICENSE)`, `resolve-protobuf-schema@2.1.0 (LICENSE)`
 
@@ -3028,7 +3706,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L059
+### L070
 
 Packages: `quick-lru@6.1.2 (license)`
 
@@ -3044,7 +3722,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L060
+### L071
 
 Packages: `quickselect@2.0.0 (LICENSE)`
 
@@ -3066,7 +3744,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ````
 
-### L061
+### L072
 
 Packages: `react@19.2.8 (LICENSE)`, `react-dom@19.2.8 (LICENSE)`, `scheduler@0.27.0 (LICENSE)`
 
@@ -3094,7 +3772,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L062
+### L073
 
 Packages: `readable-stream@2.3.8 (LICENSE)`, `string_decoder@1.1.1 (LICENSE)`
 
@@ -3148,7 +3826,7 @@ IN THE SOFTWARE.
 """
 ````
 
-### L063
+### L074
 
 Packages: `reference-spec-reader@0.2.0 (LICENSE)`
 
@@ -3176,7 +3854,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L064
+### L075
 
 Packages: `setimmediate@1.0.5 (LICENSE.txt)`
 
@@ -3203,7 +3881,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L065
+### L076
 
 Packages: `snappyjs@0.6.1 (LICENSE)`
 
@@ -3231,7 +3909,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L066
+### L077
 
 Packages: `sprintf-js@1.0.3 (LICENSE)`
 
@@ -3262,7 +3940,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L067
+### L078
 
 Packages: `strnum@2.4.2 (LICENSE)`
 
@@ -3290,7 +3968,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L068
+### L079
 
 Packages: `texture-compressor@1.0.2 (LICENSE)`
 
@@ -3318,7 +3996,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L069
+### L080
 
 Packages: `tslib@2.8.1 (LICENSE.txt)`
 
@@ -3337,7 +4015,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L070
+### L081
 
 Packages: `undici-types@7.24.6 (LICENSE)`
 
@@ -3365,7 +4043,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L071
+### L082
 
 Packages: `unzipit@1.4.3 (LICENSE.md)`, `unzipit@2.0.0 (LICENSE.md)`
 
@@ -3415,7 +4093,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L072
+### L083
 
 Packages: `util-deprecate@1.0.2 (LICENSE)`
 
@@ -3446,7 +4124,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L073
+### L084
 
 Packages: `uzip-module@1.0.3 (LICENSE)`
 
@@ -3474,7 +4152,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L074
+### L085
+
+Packages: `valibot@1.5.0 (LICENSE.md)`
+
+````text
+MIT License
+
+Copyright (c) Fabian Hiller
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+````
+
+### L086
 
 Packages: `xml-utils@1.10.2 (LICENSE)`
 
@@ -3602,7 +4296,7 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ````
 
-### L075
+### L087
 
 Packages: `zod@4.6.5 (LICENSE)`, `zod@3.25.76 (LICENSE)`
 
@@ -3630,7 +4324,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L076
+### L088
 
 Packages: `zstd-codec@0.1.5 (generated from package metadata)`
 
@@ -3656,7 +4350,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L077
+### L089
 
 Packages: `zstddec@0.1.0 (LICENSE)`
 

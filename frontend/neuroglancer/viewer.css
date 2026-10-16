@@ -1,0 +1,11 @@
+/* Navigation and display controls belong to the surrounding viewer toolbar. */
+.neuroglancer-data-panel-layout-controls,
+.neuroglancer-display-dimensions-widget {
+  display: none !important;
+}
+
+/* A single embedded pane does not need Neuroglancer's active-panel border. */
+.neuroglancer-show-panel-borders .neuroglancer-panel,
+.neuroglancer-panel:focus-within {
+  border: 0 !important;
+}

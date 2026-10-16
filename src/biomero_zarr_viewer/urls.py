@@ -1,8 +1,10 @@
 from django.urls import path
 
-from . import views
+from . import views, neuroglancer
 
 urlpatterns = [
+    path("api/images/<int:image_id>/neuroglancer/", neuroglancer.prepare, name="biomero_zarr_viewer_neuroglancer"),
+    path("api/images/<int:image_id>/neuroglancer/<str:context_id>/<path:data_key>", neuroglancer.data, name="biomero_zarr_viewer_neuroglancer_data"),
     path("api/images/<int:image_id>/previews/", views.cached_previews, name="biomero_zarr_viewer_previews"),
     path("api/images/<int:image_id>/volume/", views.cached_volume, name="biomero_zarr_viewer_volume"),
     path("", views.viewer, name="biomero_zarr_viewer_index"),

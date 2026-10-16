@@ -34,10 +34,16 @@ theme:
 nav:
   - Home: index.md
   - Viewer guide: viewer-guide.md
+  - Movies: movies.md
+  - Data and registration: data-and-registration.md
   - Deployment:
+      - Installation: installation.md
+      - Configuration and security: configuration.md
       - NL-BIOMERO: deployment-nl-biomero.md
       - OMERO deployment kit: deployment-omero-deployment-kit.md
   - Development:
+      - Build and test: development.md
+      - API and integrations: api.md
       - Compatibility matrix: compatibility-spike.md
       - Open-source provenance: open-source-provenance.md
 
