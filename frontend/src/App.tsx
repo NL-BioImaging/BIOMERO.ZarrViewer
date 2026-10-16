@@ -601,7 +601,7 @@ export default function App() {
       </header>
       <div className="workspace">
         <main className="viewer-host" ref={viewerRef}>
-          {loadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{loadProgress.phase}… {Math.round(loadProgress.fraction*100)}%</span><progress aria-label="Volume loading progress" max="1" value={loadProgress.fraction}/></div>}
+          {loadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && !(effectiveRenderMode === "3d" && useNeuroglancer) && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{loadProgress.phase}… {Math.round(loadProgress.fraction*100)}%</span><progress aria-label="Volume loading progress" max="1" value={loadProgress.fraction}/></div>}
           {capability?.plate && authStore && viewMode !== "field" ? (
             <OverviewGrid
               capability={capability}
