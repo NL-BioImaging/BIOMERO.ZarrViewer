@@ -8,7 +8,7 @@ import {
   OVERVIEW_VIEW_ID,
   VivViewer,
 } from "@hms-dbmi/viv";
-import type { ChannelState, LabelState, ViewportState } from "./types";
+import type { ChannelState, LabelState, ViewportState, ProjectionMode } from "./types";
 import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
@@ -33,6 +33,7 @@ interface Props {
   z: number;
   t: number;
   viewport?: ViewportState;
+  projection?: ProjectionMode;
   showMinimap: boolean;
   showScale: boolean;
   physicalScale?: { size: number; unit: string };
@@ -64,6 +65,7 @@ export function ViewerCanvas({
   z,
   t,
   viewport,
+  projection = "slice",
   showMinimap,
   showScale,
   physicalScale,
@@ -206,7 +208,7 @@ export function ViewerCanvas({
       }}
     >
       {labelTooltip.hits.map((hit) => <div key={hit.id} title={hit.path}><strong>{hit.name}</strong><span>mask #{hit.value}</span></div>)}
-      <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · z {z} · t {t}</small>
+      <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · {projection === "slice" ? `z ${z}` : "all Z (projected)"} · t {t}</small>
     </div>}
     {showScale && scaleBar && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit}`}>
       <span style={{ width: `${scaleBar.pixels}px` }} />

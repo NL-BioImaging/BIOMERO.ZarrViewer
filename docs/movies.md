@@ -22,6 +22,11 @@ the caller's upload limit. Processing is sequential and decoded frames are not
 retained for the entire sequence. Projection loading also reduces slices
 incrementally rather than requesting every slice at once.
 
+For Z projections, raster labels use the same categorical projection as the
+viewer: the first nonzero object ID along Z is retained at each pixel, after
+any focused-ID filtering. This applies to MIP, mean and minimum intensity
+projections; IDs are never averaged. Slice exports retain the selected Z plane.
+
 The additive render recipe uses `version: 2` and a `sequence` declaration with
 `version: 1`, `start`, `end`, optional `step`, and optional `fps` (default 5).
 The source is an explicitly verified store UUID or `source: {kind: "current-image"}`

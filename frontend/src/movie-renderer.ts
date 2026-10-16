@@ -3,6 +3,7 @@ import { loadOmeZarrFromStore } from '@hms-dbmi/viv';
 import { AuthenticatedZarrStore, PrefixStore } from './authenticated-store';
 import { fetchCapabilities } from './api';
 import { projectLoader } from './projection-loader';
+import { projectLabelLoader } from './label-projection';
 import { mappedTrackVectors, movieSequence, type MoviePanel, type MovieRecipe, type MovieVector } from './movie-recipe';
 import type { Capability } from './types';
 
@@ -132,7 +133,7 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
     } else if (!overlay.labelChannel) throw new Error('Choose an available label layer.');
     if (axisSize(loader[0], 'x') !== axisSize(image.data[0], 'x') || axisSize(loader[0], 'y') !== axisSize(image.data[0], 'y'))
       throw new Error('This label layer has a different pixel grid. Align it with the source image before exporting.');
-    overlays.push({ overlay, source: loader[0], channel });
+    overlays.push({ overlay, source: projectLabelLoader(loader, panel.projection || 'slice', overlay.values)[0], channel });
   }
   const vectors = mappedTrackVectors(panel);
   const channelSettings = panel.sourceChannels.map(c => {

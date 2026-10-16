@@ -5,6 +5,7 @@ import {
   fitRoiViewport,
   parseDeepLink,
   writeDeepLink,
+  defaultVolumeBlend,
 } from "./viewer-state";
 import type { ChannelState, LabelState } from "./types";
 
@@ -23,14 +24,19 @@ test("Classic 3D round-trips in links while unconfigured and invalid links use t
   expect(writeDeepLink(42, { z: 0, t: 0, volumeRenderer: "neuroglancer" })).not.toContain("viewer3d");
 });
 
-test("3D display modes round-trip while old or invalid links keep the additive default", () => {
-  for (const volumeBlend of ["maximum", "minimum"] as const) {
+test("3D display modes round-trip, including an explicit additive choice", () => {
+  for (const volumeBlend of ["additive", "maximum", "minimum"] as const) {
     const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeBlend });
     expect(parseDeepLink(new URL(url, window.location.origin).search).volumeBlend).toBe(volumeBlend);
   }
-  expect(writeDeepLink(42, { z: 0, t: 0, volumeBlend: "additive" })).not.toContain("volumeBlend");
   expect(parseDeepLink("?v=2&render=3d").volumeBlend).toBeUndefined();
   expect(parseDeepLink("?v=2&volumeBlend=unknown").volumeBlend).toBeUndefined();
+});
+
+test("unconfigured display uses maximum for Neuroglancer and additive for Viv", () => {
+  expect(defaultVolumeBlend()).toBe("maximum");
+  expect(defaultVolumeBlend("neuroglancer")).toBe("maximum");
+  expect(defaultVolumeBlend("classic")).toBe("additive");
 });
 
 test("3D appearance and Neuroglancer camera survive sharing, with bounded appearance inputs", () => {

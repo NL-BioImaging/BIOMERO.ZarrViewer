@@ -1,6 +1,10 @@
 import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeBlendMode, VolumeCameraState, VolumeRenderer } from "./types";
 import type { NeuroglancerCamera } from "./neuroglancer-state";
 
+export function defaultVolumeBlend(renderer: VolumeRenderer = "neuroglancer"): VolumeBlendMode {
+  return renderer === "neuroglancer" ? "maximum" : "additive";
+}
+
 export interface DeepLinkState {
   view?: "field" | "well" | "plate";
   plateField?: number;
@@ -227,7 +231,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.volumeGain != null && state.volumeGain !== -3) params.set("gain3d", String(state.volumeGain));
   if (state.volumeBackground && state.volumeBackground !== "#030406") params.set("background3d", state.volumeBackground);
   if (state.ngCamera) params.set("ngCamera", JSON.stringify(state.ngCamera));
-  if (state.volumeBlend && state.volumeBlend !== "additive") params.set("volumeBlend", state.volumeBlend);
+  if (state.volumeBlend) params.set("volumeBlend", state.volumeBlend);
   if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
   if (state.renderMode === "3d" && state.volumeCamera) {
     params.set("orbit", state.volumeCamera.orbit.toFixed(2));

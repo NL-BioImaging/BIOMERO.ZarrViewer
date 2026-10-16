@@ -39,6 +39,12 @@ In 2D, choose filled objects, outlines or both and adjust outline width.
 Hover over an object to see its label ID, including IDs from overlapping visible layers.
 Reorder layers to control which overlays are drawn on top.
 
+In MIP, Mean and Min views, labels are projected across all Z slices too.
+Object IDs are preserved: where objects overlap within one layer, the first
+non-background ID from the lowest Z slice is shown. IDs are never averaged.
+Hover reports the projected ID; switch to Slice or 3D to inspect objects hidden
+behind another object. Focused object selections are applied before projection.
+
 In Neuroglancer 3D, labels appear as object surfaces alongside the image.
 Their visibility, color and opacity are independent of intensity brightness.
 The 2D fill and outline controls do not define the appearance of 3D surfaces.
@@ -71,8 +77,10 @@ Perspective means objects nearer or farther from the center have a different app
 
 ## 3D display and brightness
 
-The **Display** menu offers **Additive blend** (default), **Maximum intensity**
-and **Minimum intensity**. Try the different modes to emphasize different
+The **Display** menu offers **Additive blend**, **Maximum intensity**
+and **Minimum intensity**. Neuroglancer defaults to Maximum intensity; Viv
+defaults to Additive blend. An explicitly saved choice in a viewer link takes
+precedence. Try the different modes to emphasize different
 structures in the intensity volume.
 
 Use **Background** to choose the canvas color and **Brightness** to adjust

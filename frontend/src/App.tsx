@@ -8,6 +8,7 @@ import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis } from "./channel-scaling";
 import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { projectLoader } from "./projection-loader";
+import { projectLabelLoader } from "./label-projection";
 import type {
   Capability,
   ChannelState,
@@ -28,6 +29,7 @@ import {
   fitRoiViewport,
   parseDeepLink,
   writeDeepLink,
+  defaultVolumeBlend,
   type DeepLinkState,
   type OverlayDeepLink,
 } from "./viewer-state";
@@ -303,7 +305,7 @@ export default function App() {
   const [renderMode, setRenderMode] = useState<RenderMode>(deepLink.renderMode || "2d");
   const [volumeLevel, setVolumeLevel] = useState<number | undefined>(deepLink.volumeLevel);
   const [volumeRenderer, setVolumeRenderer] = useState<VolumeRenderer>(deepLink.volumeRenderer || "neuroglancer");
-  const [volumeBlend, setVolumeBlend] = useState<VolumeBlendMode>(deepLink.volumeBlend || "additive");
+  const [selectedVolumeBlend, setVolumeBlend] = useState<VolumeBlendMode | undefined>(deepLink.volumeBlend);
   const [volumeBrightness, setVolumeBrightness] = useState(deepLink.volumeBrightness ?? 1);
   const [volumeBackground, setVolumeBackground] = useState(deepLink.volumeBackground || "#030406");
   const [volumeGain, setVolumeGain] = useState(deepLink.volumeGain ?? -3);
@@ -327,6 +329,12 @@ export default function App() {
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({busy:false,fraction:0,phase:""});
   const reportLoadProgress = useCallback((value: LoadProgress) => setLoadProgress(value), []);
   const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
+  const labelProjectionKey = JSON.stringify(labels.map(label => [label.id, label.highlightValues || (label.highlightValue ? [label.highlightValue] : [])]));
+  const displayLabels = useMemo(() => loaded?.labels.map(label => {
+    const state = labels.find(item => item.id === label.id);
+    const values = state?.highlightValues?.length ? state.highlightValues : state?.highlightValue ? [state.highlightValue] : undefined;
+    return { ...label, loader: projectLabelLoader(label.loader, projection, values) };
+  }) || [], [loaded, projection, labelProjectionKey]);
   const currentLoaded = loaded?.path === field ? loaded : null;
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const allVolumeLevels = useMemo(
@@ -342,6 +350,7 @@ export default function App() {
   );
   const ngAvailable = Boolean(authStore?.neuroglancerUrl);
   const useNeuroglancer = ngAvailable && volumeRenderer === "neuroglancer";
+  const volumeBlend = selectedVolumeBlend ?? defaultVolumeBlend(useNeuroglancer ? "neuroglancer" : "classic");
   const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && selectedVolumeLevel);
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
   const visibleChannelCount = channels.filter((channel) => channel.visible).length;
@@ -649,12 +658,13 @@ export default function App() {
               width={viewerSize.width}
               height={viewerSize.height}
               loader={displayLoader}
-              labels={currentLoaded.labels}
+              labels={displayLabels}
               channels={channels}
               labelStates={labels}
               z={zIndex}
               t={tIndex}
               viewport={viewport}
+              projection={projection}
               showMinimap={showMinimap}
               showScale={showScale}
               physicalScale={physicalScale(capability)}
