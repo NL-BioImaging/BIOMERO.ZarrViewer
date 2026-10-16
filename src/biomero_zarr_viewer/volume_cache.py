@@ -116,7 +116,56 @@ def scope_key(claims, image_id):
     return hashlib.sha256(json.dumps([claims["uid"], claims["gid"], image_id, claims["store"]]).encode()).hexdigest()
 
 
-def fingerprint(directory, mount):
+def _volume_chunk_filter(directory, axes, channel, timepoint, mount):
+    """Select stored chunks/shards intersecting one C/T volume, without pixels.
+
+    V3 chunk_grid describes the outer shard grid when sharding is enabled. A
+    shard containing several times must be checked, but unrelated shards need
+    not be visited. V2 slash/dot and V3 default/v2 key encodings are supported.
+    """
+    v3 = directory / "zarr.json"
+    metadata_path = v3 if v3.is_file() else directory / ".zarray"
+    if not metadata_path.resolve(strict=True).is_relative_to(mount):
+        raise UnsafePath("Volume metadata escapes the configured mount")
+    if metadata_path.stat().st_size > 4 * 1024 * 1024:
+        raise ROILimitExceeded("Volume metadata is too large")
+    metadata = json.loads(metadata_path.read_text())
+    if metadata_path == v3:
+        grid = metadata.get("chunk_grid", {})
+        if grid.get("name") != "regular":
+            raise InvalidROI("Unsupported volume chunk grid")
+        chunks = grid["configuration"]["chunk_shape"]
+        encoding = metadata.get("chunk_key_encoding", {})
+        encoding_name = encoding.get("name")
+        if encoding_name not in ("default", "v2"):
+            raise InvalidROI("Unsupported volume chunk key encoding")
+        separator = encoding.get("configuration", {}).get("separator", "/" if encoding_name == "default" else ".")
+        prefix = ["c"] if encoding_name == "default" else []
+    else:
+        chunks = metadata["chunks"]
+        separator = metadata.get("dimension_separator", ".")
+        prefix = []
+    if separator not in ("/", ".") or len(chunks) != len(axes) or any(type(c) is not int or c < 1 for c in chunks):
+        raise InvalidROI("Invalid volume chunk layout")
+    fixed = {i: (channel if a == "c" else timepoint if a == "t" else 0) // chunks[i]
+             for i, a in enumerate(axes) if a not in ("z", "y", "x")}
+
+    def relevant(relative):
+        name = relative.lstrip("/")
+        if name in (".zarray", ".zattrs", "zarr.json"):
+            return True
+        parts = name.split(separator)
+        if prefix:
+            if parts[:1] != prefix:
+                return False
+            parts = parts[1:]
+        if len(parts) > len(axes) or any(not p.isdecimal() for p in parts):
+            return False
+        return all(i >= len(parts) or int(parts[i]) == value for i, value in fixed.items())
+    return relevant
+
+
+def fingerprint(directory, mount, *, axes=None, channel=0, timepoint=0):
     # Resolve the root once. Regular scandir entries cannot introduce an escape;
     # only symbolic links need another canonical-path check. This avoids hundreds
     # of expensive Docker Desktop lstat calls for every tiny plate preview.
@@ -126,6 +175,7 @@ def fingerprint(directory, mount):
         directory.relative_to(mount)
     except ValueError as exc:
         raise UnsafePath("Volume data escapes the configured mount") from exc
+    relevant = _volume_chunk_filter(directory, axes, channel, timepoint, mount) if axes is not None else None
     digest = hashlib.sha256()
     count = 0
     def walk(folder, relative, ancestors):
@@ -134,6 +184,8 @@ def fingerprint(directory, mount):
             entries = sorted(iterator, key=lambda item: item.name)
         for item in entries:
             name = relative + "/" + item.name
+            if relevant is not None and not relevant(name):
+                continue
             if item.is_symlink():
                 target = Path(item.path).resolve(strict=True)
                 try:

@@ -419,7 +419,8 @@ def cached_volume(request, image_id, conn=None, **kwargs):
         array_key = field_prefix + dataset_path
         array_metadata, _ = _safe_data_path(claims["store"], array_key + ("/zarr.json" if group_path.name == "zarr.json" else "/.zarray"), claims.get("routes", []))
         description = volume_cache.describe_volume(array_metadata.parent, axes, channel, timepoint)
-        version = hashlib.sha256(group_path.read_bytes()).hexdigest() + volume_cache.fingerprint(array_metadata.parent, Path(mount_root()))
+        version = hashlib.sha256(group_path.read_bytes()).hexdigest() + volume_cache.fingerprint(
+            array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
         result = volume_cache.request_volume(array_metadata.parent, axes, channel, timepoint, scope, version, description=description)
     if request.GET.get("download") == "1" and result["status"] == "ready":
         try:

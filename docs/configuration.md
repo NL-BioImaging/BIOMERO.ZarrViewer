@@ -94,6 +94,12 @@ user, group, image, and token-expiry checks still apply.
 
 ## Neuroglancer volumes and segmentation surfaces
 
+Volume preparation and cache validation are scoped to the selected channel and
+timepoint. Validation skips unrelated temporal/channel chunk subtrees in Zarr v2
+and v3, including sharded arrays. A stored chunk/shard spanning several times
+must still be decoded as a unit, but only the requested timepoint is packed or
+projected. Changing time cancels the previous browser preparation request.
+
 Intensity ray sampling is derived from each selected volume's physical diagonal
 and smallest voxel spacing, targeting two samples per voxel (256–8192 samples
 per ray). This avoids the gaps in thin neurites produced by Neuroglancer's

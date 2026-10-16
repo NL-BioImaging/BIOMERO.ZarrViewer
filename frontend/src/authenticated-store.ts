@@ -46,8 +46,8 @@ export class AuthenticatedZarrStore {
     this.capability = capability;
   }
 
-  fetch(url: string): Promise<Response> {
-    return this.authorizedFetch(new Request(new URL(url, window.location.href), { cache: "no-store" }));
+  fetch(url: string, options?: { signal?: AbortSignal }): Promise<Response> {
+    return this.authorizedFetch(new Request(new URL(url, window.location.href), { cache: "no-store", signal: options?.signal }));
   }
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }

@@ -1,6 +1,16 @@
 import { withVolumeCache } from "./volume-loader";
 import { projectSource } from "./projection-loader";
 
+test("3D and projections request only the selected time and reuse it without prefetching neighbours", async () => {
+  const auth={volumeUrl:"/volume/",volumeIdentity:"temporal",fetch:vi.fn(async (url:string) => url.includes('download=1') ? new Response(new Uint16Array(8).buffer) : new Response(JSON.stringify({status:'ready',key:'job',shape:[2,2,2],dtype:'<u2',bytes:16})))};
+  const [source]=withVolumeCache([{labels:['t','c','z','y','x'],shape:[40,3,2,2,2],dtype:'Uint16'}],auth as any,'.',()=>{});
+  await source.getVolume({c:1,t:17});
+  await projectSource(source,'mip').getRaster({selection:{c:1,t:17}});
+  await projectSource(source,'mean').getRaster({selection:{c:1,t:18}});
+  const prepares=auth.fetch.mock.calls.map(([url])=>new URL(url,'http://localhost')).filter(url=>!url.searchParams.has('job'));
+  expect(prepares.map(url=>[url.searchParams.get('c'),url.searchParams.get('t')])).toEqual([['1','17'],['1','18']]);
+});
+
 test("one packed download serves slices and all projection modes", async () => {
   const values = new Uint16Array([1,10,2,20,3,30]);
   const fetch = vi.fn(async (url: string) => url.includes("download=1")

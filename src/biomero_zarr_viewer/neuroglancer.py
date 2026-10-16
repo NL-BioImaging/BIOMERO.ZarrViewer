@@ -107,7 +107,8 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
         raise UnsupportedStore("3D labels require integer label values")
     if segmentation and math.prod(shape) > MAX_MESH_VOXELS:
         raise ROILimitExceeded("Choose a lower 3D quality: labels must contain at most 32 million voxels")
-    version = hashlib.sha256(group_path.read_bytes()).hexdigest() + cache.fingerprint(array_metadata.parent, Path(mount_root()))
+    version = hashlib.sha256(group_path.read_bytes()).hexdigest() + cache.fingerprint(
+        array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
     job = cache.request_volume(array_metadata.parent, axes, channel, timepoint, scope, version, description=description)
     return {"key": job["key"], "shape": shape, "dtype": dtype.str, "resolution": resolution,
             "translation": translation, "segmentation": segmentation, "status": job["status"], "progress": job["progress"]}

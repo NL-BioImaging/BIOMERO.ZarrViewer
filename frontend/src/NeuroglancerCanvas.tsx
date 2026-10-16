@@ -37,9 +37,11 @@ export function NeuroglancerCanvas(props: Props) {
   const labelsKey = JSON.stringify(props.labels.filter(l => l.visible).map(l => ({ path: l.path, channel: l.id.startsWith("focused-channel-") ? Number(l.id.split("-").at(-1)) - 1 : 0 })));
   useEffect(() => {
     let cancelled = false;
+    const abort = new AbortController();
     let preparedOnce = false;
     let timer: ReturnType<typeof setTimeout>;
     setError(undefined);
+    setPrepared(undefined);
     setProgress("Preparing image and label volumes…");
     if (channelsKey === "[]" && labelsKey === "[]") {
       setPrepared(undefined);
@@ -49,7 +51,7 @@ export function NeuroglancerCanvas(props: Props) {
     const query = new URLSearchParams({ field: props.field, level: String(props.resolution), t: String(props.t), channels: channelsKey, labels: labelsKey });
     const prepare = async () => {
       try {
-        const response = await props.auth.fetch(`${props.auth.neuroglancerUrl}?${query}`);
+        const response = await props.auth.fetch(`${props.auth.neuroglancerUrl}?${query}`, { signal: abort.signal });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error?.message || `3D preparation failed (${response.status})`);
         if (cancelled) return;
@@ -68,7 +70,7 @@ export function NeuroglancerCanvas(props: Props) {
       }
     };
     void prepare();
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => { cancelled = true; clearTimeout(timer); abort.abort(); };
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
   const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.background, props.gain]);
   const state = useMemo(() => prepared ? neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.background, props.gain) : undefined,
