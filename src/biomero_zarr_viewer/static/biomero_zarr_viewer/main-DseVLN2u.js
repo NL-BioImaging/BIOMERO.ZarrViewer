@@ -28641,19 +28641,19 @@ const tc = {
 function ss(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => yz.set(i, e));
 }
-ss([void 0, 1], () => import("./raw-BvVQ-ZBd.js").then((t) => t.default));
-ss(5, () => import("./lzw-DBjReGN4.js").then((t) => t.default));
+ss([void 0, 1], () => import("./raw-BA0QUQZN.js").then((t) => t.default));
+ss(5, () => import("./lzw-7QdSEEZp.js").then((t) => t.default));
 ss(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-ss(7, () => import("./jpeg-C5tPPk8Q.js").then((t) => t.default));
-ss([8, 32946], () => import("./deflate-DdvamKGV.js").then((t) => t.default));
-ss(32773, () => import("./packbits-C_gTcA7d.js").then((t) => t.default));
+ss(7, () => import("./jpeg-C6xlF-yi.js").then((t) => t.default));
+ss([8, 32946], () => import("./deflate-De4wd_pJ.js").then((t) => t.default));
+ss(32773, () => import("./packbits-Bp16v6kg.js").then((t) => t.default));
 ss(
   34887,
-  () => import("./lerc-BTx9WVTE.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-b9-L2BXo.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-ss(50001, () => import("./webimage-Cjg6unKo.js").then((t) => t.default));
+ss(50001, () => import("./webimage-YFUAg19y.js").then((t) => t.default));
 function vz(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -55408,7 +55408,11 @@ function RK({
 function wK(t) {
   return /* @__PURE__ */ I.jsx(SK, { onError: t.onError, onCancel: t.onCancel, children: /* @__PURE__ */ I.jsx(RK, { ...t }) });
 }
-function BK(t, e, i, n, s, r = 1, l = "#030406", c = -3) {
+function BK(t) {
+  const e = t.resolution.map((s, r) => s * t.shape[2 - r]), i = Math.min(...t.resolution), n = Math.ceil(2 * Math.hypot(...e) / i) + 1;
+  return Number.isFinite(n) && i > 0 ? Math.max(256, Math.min(8192, n)) : 256;
+}
+function MK(t, e, i, n, s, r = 1, l = "#030406", c = -3) {
   const f = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] }, d = (y, v) => ({
     url: `precomputed://${new URL(t.url + y + "/", window.location.href).href}`,
     // Neuroglancer converts the source's declared voxel units into output
@@ -55430,10 +55434,11 @@ function BK(t, e, i, n, s, r = 1, l = "#030406", c = -3) {
       source: d(`image-${y.index}`, v),
       volumeRendering: n === "maximum" ? "max" : n === "minimum" ? "min" : "on",
       volumeRenderingGain: c,
+      volumeRenderingDepthSamples: BK(v),
       // Raw intensity values preserve the same contrast limits as the 2D view.
       shaderControls: {},
       opacity: 1,
-      shader: `void main() { float v = clamp((float(toRaw(getDataValue())) - ${b.toExponential(8)}) / ${x.toExponential(8)} * ${r.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${E.join(",")}) * v, ${n === "additive" ? "v" : "1.0"})); }`
+      shader: `void main() { float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${b.toExponential(8)}) / ${x.toExponential(8)} * ${r.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${E.join(",")}) * v, ${n === "additive" ? "v" : "1.0"})); }`
     });
   }
   i.filter((y) => y.visible).forEach((y, v) => {
@@ -55469,7 +55474,7 @@ function BK(t, e, i, n, s, r = 1, l = "#030406", c = -3) {
     systemMemoryLimit: 512 * 1024 * 1024
   };
 }
-function MK(t) {
+function NK(t) {
   const e = z.useRef(null), i = z.useRef(t);
   i.current = t;
   const [n, s] = z.useState(), [r, l] = z.useState(), [c, f] = z.useState("Preparing image and label volumes…"), [d, A] = z.useState(0), [g, _] = z.useState(0), [y, v] = z.useState(), E = z.useRef(void 0), [b, x] = z.useState();
@@ -55505,7 +55510,7 @@ function MK(t) {
     };
   }, [t.auth, t.field, t.resolution, t.t, w, R, g]);
   const M = JSON.stringify([t.channels, t.labels, t.blendMode, t.brightness, t.background, t.gain]), O = z.useMemo(
-    () => n ? BK(n, t.channels, t.labels, t.blendMode, !1, t.brightness, t.background, t.gain) : void 0,
+    () => n ? MK(n, t.channels, t.labels, t.blendMode, !1, t.brightness, t.background, t.gain) : void 0,
     [n, M]
   );
   z.useEffect(() => {
@@ -55554,7 +55559,7 @@ function MK(t) {
     ] })
   ] });
 }
-async function NK(t) {
+async function PK(t) {
   const e = tX(t), n = (await Kn(e, { kind: "group" })).attrs, r = (n.ome || n).multiscales?.[0];
   if (!r?.datasets?.length) throw new Error("Image has no multiscale datasets");
   const l = (r.axes || ["t", "c", "z", "y", "x"]).map((A) => typeof A == "string" ? A : A.name), c = r.datasets, f = await Kn(e.resolve(c[0].path), { kind: "array" }), d = (A, g, _) => {
@@ -55590,21 +55595,21 @@ function bS(t, e) {
   const i = t.plate;
   return `${i.rows[e.row_index]}${i.columns[e.column_index]}`;
 }
-const yt = 420, Us = 12, PK = 3;
-function OK(t) {
+const yt = 420, Us = 12, OK = 3;
+function DK(t) {
   const e = Math.max(1, ...t.plate?.wells.map((i) => i.fields.length) || []);
   return Math.floor((e - 1) / 2);
 }
-function DK(t, e, i, n) {
+function FK(t, e, i, n) {
   const s = t.plate, r = s.wells.find((l) => l.fields.some((c) => c.path === i)) || s.wells.find((l) => l.fields.length);
   return e === "well" ? (r?.fields || []).map((l, c) => ({ path: l.path, title: `Well ${bS(t, r)} · Field ${l.name || c}` })) : s.wells.filter((l) => l.fields.length).map((l) => {
     const c = Math.min(Math.max(0, n), l.fields.length - 1), f = l.fields[c];
     return { path: f.path, title: `Well ${bS(t, l)} · Field ${f.name || c}`, rowIndex: l.row_index, columnIndex: l.column_index };
   });
 }
-function FK(t, e) {
+function UK(t, e) {
   if (e === "well") {
-    const s = Math.min(PK, Math.max(1, t.length)), r = Math.max(1, Math.ceil(t.length / s));
+    const s = Math.min(OK, Math.max(1, t.length)), r = Math.max(1, Math.ceil(t.length / s));
     return {
       tiles: t.map((l, c) => ({ ...l, left: c % s * (yt + Us), top: Math.floor(c / s) * (yt + Us) })),
       width: s * yt + (s - 1) * Us,
@@ -55618,8 +55623,8 @@ function FK(t, e) {
     height: Math.max(1, i.length) * yt + Math.max(0, i.length - 1) * Us
   };
 }
-function UK({ capability: t, store: e, mode: i, selectedPath: n, plateFieldIndex: s, channels: r, z: l, t: c, showMinimap: f, showScale: d, onSelect: A, onOpen: g }) {
-  const _ = z.useMemo(() => DK(t, i, n, s), [t, i, s, n]), y = z.useMemo(() => FK(_, i), [i, _]), v = z.useRef(null), [E, b] = z.useState({ width: 1, height: 1 }), [x, w] = z.useState(0.1), [R, M] = z.useState(""), [O, U] = z.useState({ x: 0, y: 0 }), [j, W] = z.useState(!1), [L, q] = z.useState({}), [G, ae] = z.useState(), ie = z.useRef(void 0), ue = z.useRef(!1), ve = y.tiles.map((oe) => oe.path).join("|"), S = `${ve}:${E.width}:${E.height}`, N = z.useCallback(() => {
+function kK({ capability: t, store: e, mode: i, selectedPath: n, plateFieldIndex: s, channels: r, z: l, t: c, showMinimap: f, showScale: d, onSelect: A, onOpen: g }) {
+  const _ = z.useMemo(() => FK(t, i, n, s), [t, i, s, n]), y = z.useMemo(() => UK(_, i), [i, _]), v = z.useRef(null), [E, b] = z.useState({ width: 1, height: 1 }), [x, w] = z.useState(0.1), [R, M] = z.useState(""), [O, U] = z.useState({ x: 0, y: 0 }), [j, W] = z.useState(!1), [L, q] = z.useState({}), [G, ae] = z.useState(), ie = z.useRef(void 0), ue = z.useRef(!1), ve = y.tiles.map((oe) => oe.path).join("|"), S = `${ve}:${E.width}:${E.height}`, N = z.useCallback(() => {
     const oe = Math.max(0.1, Math.min(4, Math.min((E.width - 32) / y.width, (E.height - 32) / y.height)));
     M(S), w(oe), U({ x: (E.width - y.width * oe) / 2, y: (E.height - y.height * oe) / 2 });
   }, [S, y.height, y.width, E.height, E.width]);
@@ -55652,7 +55657,7 @@ function UK({ capability: t, store: e, mode: i, selectedPath: n, plateFieldIndex
     top: Math.max(0, -O.y / x),
     right: Math.min(y.width, (E.width - O.x) / x),
     bottom: Math.min(y.height, (E.height - O.y) / x)
-  }, fe = kK(t), de = fe && G ? QK(fe.size * G / ((yt - 16) * x)) : void 0;
+  }, fe = QK(t), de = fe && G ? LK(fe.size * G / ((yt - 16) * x)) : void 0;
   return /* @__PURE__ */ I.jsxs("div", { className: "overview-stage", children: [
     /* @__PURE__ */ I.jsx(
       "div",
@@ -55668,7 +55673,7 @@ function UK({ capability: t, store: e, mode: i, selectedPath: n, plateFieldIndex
           ue.current && (oe.preventDefault(), oe.stopPropagation(), ue.current = !1);
         },
         children: /* @__PURE__ */ I.jsx("div", { className: "overview-scene", style: { width: y.width, height: y.height, transform: `translate(${O.x}px, ${O.y}px) scale(${x})` }, children: y.tiles.map((oe) => /* @__PURE__ */ I.jsx(
-          VK,
+          HK,
           {
             store: e,
             path: oe.path,
@@ -55706,36 +55711,36 @@ function UK({ capability: t, store: e, mode: i, selectedPath: n, plateFieldIndex
       /* @__PURE__ */ I.jsxs("strong", { children: [
         de.value,
         " ",
-        LK(fe.unit)
+        zK(fe.unit)
       ] })
     ] })
   ] });
 }
-function kK(t) {
+function QK(t) {
   const e = t.axes.findIndex((r) => r.name === "x"), i = t.datasets?.[0]?.coordinate_transformations;
   if (e < 0 || !Array.isArray(i)) return;
   const n = i.find((r) => r?.type === "scale" && Array.isArray(r.scale)), s = Number(n?.scale?.[e]);
   return Number.isFinite(s) && s > 0 ? { size: s, unit: t.axes[e].unit || "px" } : void 0;
 }
-function QK(t) {
+function LK(t) {
   const e = t * 110, i = Math.pow(10, Math.floor(Math.log10(e))), n = e / i, s = (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * i;
   return { value: s, pixels: Math.max(45, Math.min(180, s / t)) };
 }
-function LK(t) {
+function zK(t) {
   return t === "micrometer" || t === "micrometre" || t === "µm" ? "µm" : t;
 }
-function zK(t, e, i, n) {
+function jK(t, e, i, n) {
   const s = t.labels || [], r = {}, l = (c, f) => {
     const d = s.indexOf(c);
     return d < 0 ? 0 : Math.max(0, Math.min(Number(t.shape[d]) - 1, f));
   };
   return s.includes("c") && (r.c = l("c", e)), s.includes("z") && (r.z = l("z", i)), s.includes("t") && (r.t = l("t", n)), r;
 }
-function jK(t) {
+function VK(t) {
   const e = t.replace("#", "");
   return [0, 2, 4].map((i) => Number.parseInt(e.slice(i, i + 2), 16));
 }
-function VK({ store: t, path: e, title: i, selected: n, channels: s, z: r, t: l, targetPixels: c, fullResolution: f, inView: d, style: A, onRendered: g, onSelect: _, onOpen: y }) {
+function HK({ store: t, path: e, title: i, selected: n, channels: s, z: r, t: l, targetPixels: c, fullResolution: f, inView: d, style: A, onRendered: g, onSelect: _, onOpen: y }) {
   const v = z.useRef(null), E = z.useRef(void 0), [b, x] = z.useState(null), [w, R] = z.useState(), [M, O] = z.useState();
   z.useEffect(() => {
     if (!t.getPreview || !d || !s.length) return;
@@ -55757,7 +55762,7 @@ function VK({ store: t, path: e, title: i, selected: n, channels: s, z: r, t: l,
     if (!t.getPreview && !(!d || b))
       return R(void 0), vS(async () => {
         if (W) return;
-        const L = await NK(new gc(t, e));
+        const L = await PK(new gc(t, e));
         W || x(L);
       }).catch((L) => {
         W || R(String(L));
@@ -55775,11 +55780,11 @@ function VK({ store: t, path: e, title: i, selected: n, channels: s, z: r, t: l,
         v.current?.getContext("2d")?.clearRect(0, 0, v.current.width, v.current.height);
         return;
       }
-      const ae = await Promise.all(G.map(async (V) => ({ channel: V, raster: await q.getRaster({ selection: zK(q, V.index, r, l) }) })));
+      const ae = await Promise.all(G.map(async (V) => ({ channel: V, raster: await q.getRaster({ selection: jK(q, V.index, r, l) }) })));
       if (W || !v.current || !ae.length) return;
       const ie = q.labels || [], ue = Number(ae[0].raster.width || q.shape[ie.indexOf("x")] || 1), ve = Number(ae[0].raster.height || q.shape[ie.indexOf("y")] || 1), S = new Uint8ClampedArray(ue * ve * 4);
       for (const { channel: V, raster: B } of ae) {
-        const F = jK(V.color), K = Math.max(Number.EPSILON, V.high - V.low), X = B.data;
+        const F = VK(V.color), K = Math.max(Number.EPSILON, V.high - V.low), X = B.data;
         for (let te = 0; te < ue * ve; te += 1) {
           const fe = Math.max(0, Math.min(1, (Number(X[te]) - V.low) / K));
           S[te * 4] = Math.min(255, S[te * 4] + fe * F[0]), S[te * 4 + 1] = Math.min(255, S[te * 4 + 1] + fe * F[1]), S[te * 4 + 2] = Math.min(255, S[te * 4 + 2] + fe * F[2]), S[te * 4 + 3] = 255;
@@ -55811,24 +55816,24 @@ function SS(t) {
   const e = document.createElement("canvas"), i = Math.min(1, 160 / Math.max(t.width, t.height));
   return e.width = Math.max(1, Math.round(t.width * i)), e.height = Math.max(1, Math.round(t.height * i)), e.getContext("2d")?.drawImage(t, 0, 0, e.width, e.height), e.toDataURL("image/jpeg", 0.72);
 }
-const HK = [[2, 3], [3, 4], [4, 6], [6, 8], [8, 12], [16, 24], [32, 48]];
-function WK(t) {
+const WK = [[2, 3], [3, 4], [4, 6], [6, 8], [8, 12], [16, 24], [32, 48]];
+function YK(t) {
   if (/^[A-Z]{1,2}$/i.test(t))
     return [...t.toUpperCase()].reduce((e, i) => e * 26 + i.charCodeAt(0) - 64, 0) - 1;
 }
-function YK(t) {
+function $K(t) {
   return t < 26 ? String.fromCharCode(65 + t) : `A${String.fromCharCode(65 + t - 26)}`;
 }
-function $K(t) {
+function XK(t) {
   const e = t.wells.map((r) => ({
     ...r,
-    row_index: WK(t.rows[r.row_index] || r.path.split("/")[0]) ?? r.row_index,
+    row_index: YK(t.rows[r.row_index] || r.path.split("/")[0]) ?? r.row_index,
     column_index: /^\d+$/.test(t.columns[r.column_index] || r.path.split("/")[1] || "") ? Number(t.columns[r.column_index] || r.path.split("/")[1]) - 1 : r.column_index
-  })), i = Math.max(t.rows.length, ...e.map((r) => r.row_index + 1)), n = Math.max(t.columns.length, ...e.map((r) => r.column_index + 1)), s = HK.find(([r, l]) => r >= i && l >= n);
-  return s ? { ...t, wells: e, rows: Array.from({ length: s[0] }, (r, l) => YK(l)), columns: Array.from({ length: s[1] }, (r, l) => String(l + 1)) } : t;
+  })), i = Math.max(t.rows.length, ...e.map((r) => r.row_index + 1)), n = Math.max(t.columns.length, ...e.map((r) => r.column_index + 1)), s = WK.find(([r, l]) => r >= i && l >= n);
+  return s ? { ...t, wells: e, rows: Array.from({ length: s[0] }, (r, l) => $K(l)), columns: Array.from({ length: s[1] }, (r, l) => String(l + 1)) } : t;
 }
 const TS = /* @__PURE__ */ new WeakMap();
-class XK {
+class KK {
   constructor(e, i) {
     this.auth = e, this.onProgress = i;
   }
@@ -55898,10 +55903,10 @@ class XK {
     return { data: new y(d.buffer), width: b, height: E, depth: v };
   }
 }
-function KK(t, e, i, n) {
+function qK(t, e, i, n) {
   if (!e.volumeUrl) return t;
   let s = TS.get(e);
-  return s || (s = new XK(e, n), TS.set(e, s)), s.onProgress = n, t.map((r, l) => {
+  return s || (s = new KK(e, n), TS.set(e, s)), s.onProgress = n, t.map((r, l) => {
     const c = r.labels, f = (A) => c.includes(A) ? Number(r.shape[c.indexOf(A)]) : 1;
     return f("z") > 1 && f("x") * f("y") * f("z") * HR(r.dtype) <= j0 ? new Proxy(r, {
       get(A, g, _) {
@@ -55919,7 +55924,7 @@ function KK(t, e, i, n) {
     }) : r;
   });
 }
-function qK() {
+function ZK() {
   const t = z.useRef(null), [e, i] = z.useState({ width: 800, height: 600 });
   return z.useEffect(() => {
     if (!t.current) return;
@@ -55938,7 +55943,7 @@ const IS = ["#FFFFFF", "#00FF00", "#FF00FF", "#00FFFF", "#FFFF00", "#FF0000"], R
   { name: "Green", value: "#00FF00" },
   { name: "Blue", value: "#0000FF" }
 ];
-function ZK(t, e) {
+function JK(t, e) {
   const i = e[0], n = i.labels.indexOf("c"), s = n >= 0 ? i.shape[n] : 1, [r, l] = RR(i.dtype || "uint16");
   return Array.from({ length: s }, (c, f) => {
     const d = t.channels[f], A = d?.window;
@@ -55954,7 +55959,7 @@ function ZK(t, e) {
     };
   });
 }
-function JK(t) {
+function GK(t) {
   return t.labels.map((e) => ({
     id: e.id,
     name: e.name,
@@ -55974,7 +55979,7 @@ function wS(t, e) {
   const i = Math.max(0, t - 1);
   return e == null ? Math.floor(i / 2) : Math.max(0, Math.min(i, e));
 }
-function GK({
+function eq({
   mode: t,
   disabled3d: e,
   onChange: i
@@ -55984,7 +55989,7 @@ function GK({
     /* @__PURE__ */ I.jsx("button", { className: t === "3d" ? "active" : "", "aria-pressed": t === "3d", disabled: e, title: e ? "No safe 3D level is available" : void 0, onClick: () => i("3d"), children: "3D" })
   ] });
 }
-function eq() {
+function tq() {
   const [t, e] = z.useState(!!document.fullscreenElement);
   z.useEffect(() => {
     const n = () => e(!!document.fullscreenElement);
@@ -56021,7 +56026,7 @@ function BS({ items: t, name: e, disabled: i = !1, onChange: n }) {
     }
   );
 }
-function tq(t) {
+function iq(t) {
   if (!t?.datasets?.length) return;
   const e = t.axes.findIndex((r) => r.name === "x"), i = t.datasets[0].coordinate_transformations;
   if (e < 0 || !Array.isArray(i)) return;
@@ -56031,8 +56036,8 @@ function tq(t) {
 function oc(t, e, i) {
   return e === "." ? t : t === e || t.startsWith(`${e}/`) ? `${i}${t.slice(e.length)}` : t;
 }
-function iq(t, e, i) {
-  const n = JK(t), s = i.overlays?.length ? i.overlays : i.labelPath || i.labelChannel ? [{
+function nq(t, e, i) {
+  const n = GK(t), s = i.overlays?.length ? i.overlays : i.labelPath || i.labelChannel ? [{
     ...i.labelPath ? { labelPath: i.labelPath } : { labelChannel: i.labelChannel },
     ...i.labelValue ? { values: [i.labelValue] } : {},
     mode: "outline",
@@ -56071,7 +56076,7 @@ function iq(t, e, i) {
   }
   return r;
 }
-function nq(t, e, i) {
+function sq(t, e, i) {
   return t.filter((n) => n.visible).slice(0, 8).map((n) => {
     const s = n.path.match(/:channel:(\d+)$/), r = e && i ? oc(n.path, e.initial_path, i) : n.path;
     return {
@@ -56084,7 +56089,7 @@ function nq(t, e, i) {
     };
   });
 }
-function sq(t, e, i) {
+function rq(t, e, i) {
   if (!t.store.roi_url || !e.roi) return;
   const n = new URL(t.store.roi_url, window.location.href);
   n.searchParams.set("field", e.field || t.initial_path), n.searchParams.set("roi", [e.roi.x0, e.roi.y0, e.roi.x1, e.roi.y1].join(",")), n.searchParams.set("z", String(e.z)), n.searchParams.set("t", String(e.t));
@@ -56093,12 +56098,12 @@ function sq(t, e, i) {
   const r = e.storeUuid || t.store.uuid;
   return r && n.searchParams.set("storeUuid", r), n.toString();
 }
-function rq() {
+function oq() {
   const t = z.useMemo(() => NS(), []), e = z.useMemo(() => nK(), []), [i, n] = z.useState(null), [s, r] = z.useState(null), [l, c] = z.useState(null), [f, d] = z.useState("Loading image metadata…"), [A, g] = z.useState(null), [_, y] = z.useState(e.field), [v, E] = z.useState([]), [b, x] = z.useState([]), [w, R] = z.useState([]), [M, O] = z.useState(e.z || 0), [U, j] = z.useState(e.t || 0), [W, L] = z.useState(e.projection || "slice"), [q, G] = z.useState(e.viewport), [ae, ie] = z.useState(e.renderMode || "2d"), [ue, ve] = z.useState(e.volumeLevel), [S, N] = z.useState(e.volumeRenderer || "neuroglancer"), [P, k] = z.useState(e.volumeBlend), [V, B] = z.useState(e.volumeBrightness ?? 1), [F, K] = z.useState(e.volumeBackground || "#030406"), [X, te] = z.useState(e.volumeGain ?? -3), [fe, de] = z.useState(e.volumeCamera), [oe, Ee] = z.useState(e.ngCamera), be = z.useRef(_);
   z.useEffect(() => {
     be.current != null && be.current !== _ && Ee(void 0), be.current = _;
   }, [_]);
-  const [at, $t] = z.useState(0), [wt, Si] = z.useState(null), [Se, Ue] = z.useState(e.view || "field"), [io, wa] = z.useState(e.plateField || 0), [rs, Ba] = z.useState(!0), [Hi, hd] = z.useState(!0), [dd, We] = qK(), Dc = z.useRef(!1), Ma = z.useRef(""), no = z.useRef(W), [yn, Ad] = z.useState({ busy: !1, fraction: 0, phase: "" }), Fc = z.useCallback((le) => Ad(le), []), os = z.useMemo(() => l ? Zf(l.image, W) : null, [l, W]), gd = JSON.stringify(w.map((le) => [le.id, le.highlightValues || (le.highlightValue ? [le.highlightValue] : [])])), nr = z.useMemo(() => l?.labels.map((le) => {
+  const [at, $t] = z.useState(0), [wt, Si] = z.useState(null), [Se, Ue] = z.useState(e.view || "field"), [io, wa] = z.useState(e.plateField || 0), [rs, Ba] = z.useState(!0), [Hi, hd] = z.useState(!0), [dd, We] = ZK(), Dc = z.useRef(!1), Ma = z.useRef(""), no = z.useRef(W), [yn, Ad] = z.useState({ busy: !1, fraction: 0, phase: "" }), Fc = z.useCallback((le) => Ad(le), []), os = z.useMemo(() => l ? Zf(l.image, W) : null, [l, W]), gd = JSON.stringify(w.map((le) => [le.id, le.highlightValues || (le.highlightValue ? [le.highlightValue] : [])])), nr = z.useMemo(() => l?.labels.map((le) => {
     const Lt = w.find((zt) => zt.id === le.id), pt = Lt?.highlightValues?.length ? Lt.highlightValues : Lt?.highlightValue ? [Lt.highlightValue] : void 0;
     return { ...le, loader: QR(le.loader, W, pt) };
   }) || [], [l, W, gd]), Te = l?.path === _ ? l : null, ii = z.useMemo(() => WR(v), [v]), Dt = z.useMemo(
@@ -56130,7 +56135,7 @@ function rq() {
     Pa().then((le) => {
       const Lt = new kR(le, Pa);
       r(Lt);
-      const pt = OK(le);
+      const pt = DK(le);
       wa(e.plateField ?? pt), y((zt) => {
         const vn = le.plate?.wells.flatMap((En) => En.fields.map((sn) => sn.path)) || [];
         if (zt && vn.includes(zt)) return zt;
@@ -56142,7 +56147,7 @@ function rq() {
     if (!i || !s || !_) return;
     let le = !1;
     return d("Opening multiscale image…"), g(null), (async () => {
-      const pt = await Ch(new gc(s.store, _)), zt = KK(mS(pt.data, pt.metadata), s, _, Fc), vn = await Promise.allSettled(i.labels.map(async (Pe) => {
+      const pt = await Ch(new gc(s.store, _)), zt = qK(mS(pt.data, pt.metadata), s, _, Fc), vn = await Promise.allSettled(i.labels.map(async (Pe) => {
         const Xt = oc(Pe.path, i.initial_path, _), Ii = await Ch(new gc(s.store, Xt));
         return { id: Pe.id, loader: mS(Ii.data, Ii.metadata) };
       }));
@@ -56166,7 +56171,7 @@ function rq() {
         sizeT: Yo(pt.data, "t")
       }, En = Dc.current ? wS(Ti.sizeZ, M) : wS(Ti.sizeZ, e.z), sn = Math.min(U, Ti.sizeT - 1);
       Dc.current = !0, d("Calculating automatic channel ranges…");
-      const rr = ZK(i, Ti.image), kc = Zf(Ti.image, W), Oa = await Pb(kc, rr, W === "slice" ? En : 0, sn);
+      const rr = JK(i, Ti.image), kc = Zf(Ti.image, W), Oa = await Pb(kc, rr, W === "slice" ? En : 0, sn);
       if (le) return;
       const rn = Ob(rr, Oa), Bt = rr.map((Pe, Xt) => {
         const Ii = i.channels[Xt]?.window;
@@ -56176,7 +56181,7 @@ function rq() {
         const Xt = sK(Bt, Pe.length ? Pe : e.channels);
         return !Pe.length && !e.channels ? rK(Xt, e.sourceChannels) : Xt;
       }), R((Pe) => {
-        const Xt = iq(i, _, e);
+        const Xt = nq(i, _, e);
         return oK(Xt, Pe.length ? Pe : e.labels);
       }), O(En), j(sn), d(vn.some((Pe) => Pe.status === "rejected") ? "Image ready; one or more label layers are unavailable for this field." : "Ready");
     })().catch((pt) => g(pt instanceof Error ? pt.message : "The OME-Zarr image could not be opened")), () => {
@@ -56239,7 +56244,7 @@ function rq() {
         labelPath: e.labelPath,
         labelChannel: e.labelChannel,
         labelValue: e.labelValue,
-        overlays: nq(w, i, _),
+        overlays: sq(w, i, _),
         storeUuid: e.storeUuid,
         channels: v,
         labels: w
@@ -56258,7 +56263,7 @@ function rq() {
       ] }),
       /* @__PURE__ */ I.jsxs("div", { className: "toolbar", children: [
         /* @__PURE__ */ I.jsx("span", { className: "status", "aria-live": "polite", children: A || f }),
-        Te && (Se !== "field" || ft === "2d") && /* @__PURE__ */ I.jsx(I.Fragment, { children: e.roi && i && /* @__PURE__ */ I.jsx("a", { className: "toolbar-button", href: sq(i, {
+        Te && (Se !== "field" || ft === "2d") && /* @__PURE__ */ I.jsx(I.Fragment, { children: e.roi && i && /* @__PURE__ */ I.jsx("a", { className: "toolbar-button", href: rq(i, {
           ...e,
           field: _,
           z: M,
@@ -56299,7 +56304,7 @@ function rq() {
         ),
         /* @__PURE__ */ I.jsxs("div", { className: "view-toolbar", role: "group", "aria-label": "View controls", children: [
           Te && Se === "field" && Te.sizeZ > 1 && /* @__PURE__ */ I.jsx(
-            GK,
+            eq,
             {
               mode: ft,
               disabled3d: !sr,
@@ -56332,7 +56337,7 @@ function rq() {
               /* @__PURE__ */ I.jsx("path", { d: "M7 7v5m5-5v3m5-3v5" })
             ] }) })
           ] }),
-          /* @__PURE__ */ I.jsx(eq, {}),
+          /* @__PURE__ */ I.jsx(tq, {}),
           /* @__PURE__ */ I.jsx(JX, {})
         ] })
       ] })
@@ -56349,7 +56354,7 @@ function rq() {
           /* @__PURE__ */ I.jsx("progress", { "aria-label": "Volume loading progress", max: "1", value: yn.fraction })
         ] }),
         i?.plate && s && Se !== "field" ? /* @__PURE__ */ I.jsx(
-          UK,
+          kK,
           {
             capability: i,
             store: s.store,
@@ -56369,7 +56374,7 @@ function rq() {
             }
           }
         ) : Te && s && tn && ft === "3d" && vt ? /* @__PURE__ */ I.jsx(
-          MK,
+          NK,
           {
             auth: s,
             field: Te.path,
@@ -56426,7 +56431,7 @@ function rq() {
             projection: W,
             showMinimap: rs,
             showScale: Hi,
-            physicalScale: tq(i),
+            physicalScale: iq(i),
             onViewportChange: G,
             onTileError: (le) => d(`Tile warning: ${le}`),
             onTilesLoaded: () => d((le) => le.startsWith("Tile warning:") ? "Ready" : le)
@@ -56434,7 +56439,7 @@ function rq() {
         ) : /* @__PURE__ */ I.jsx("div", { className: "loading", children: A || f })
       ] }),
       /* @__PURE__ */ I.jsx(
-        oq,
+        aq,
         {
           capability: i,
           field: _,
@@ -56480,7 +56485,7 @@ function rq() {
     ] })
   ] });
 }
-function oq(t) {
+function aq(t) {
   const [e, i] = z.useState("navigation"), [n, s] = z.useState("channels"), { capability: r } = t, l = !!(r?.plate && e === "navigation"), c = r?.plate?.name || r?.image.name || "Loading dataset…";
   return z.useEffect(() => {
     t.renderMode === "3d" && !t.labels3dAvailable && n === "labels" && s("channels");
@@ -56493,7 +56498,7 @@ function oq(t) {
       /* @__PURE__ */ I.jsx("button", { role: "tab", "aria-selected": e === "navigation", className: e === "navigation" ? "active" : "", onClick: () => i("navigation"), children: "Navigation" }),
       /* @__PURE__ */ I.jsx("button", { role: "tab", "aria-selected": e === "view", className: e === "view" ? "active" : "", onClick: () => i("view"), children: "View options" })
     ] }),
-    l && r ? /* @__PURE__ */ I.jsx(dq, { capability: r, field: t.field, onField: t.onField, mode: t.viewMode, onMode: t.onViewMode, plateFieldIndex: t.plateFieldIndex, onPlateFieldIndex: t.onPlateFieldIndex }) : /* @__PURE__ */ I.jsxs(I.Fragment, { children: [
+    l && r ? /* @__PURE__ */ I.jsx(Aq, { capability: r, field: t.field, onField: t.onField, mode: t.viewMode, onMode: t.onViewMode, plateFieldIndex: t.plateFieldIndex, onPlateFieldIndex: t.onPlateFieldIndex }) : /* @__PURE__ */ I.jsxs(I.Fragment, { children: [
       /* @__PURE__ */ I.jsxs("div", { className: "panel-tabs content-tabs", role: "tablist", "aria-label": "Image layers", children: [
         /* @__PURE__ */ I.jsxs("div", { className: "layer-tab", role: "presentation", children: [
           /* @__PURE__ */ I.jsx(BS, { items: t.channels, name: "channels", onChange: (f) => t.onChannels(t.channels.map((d) => ({ ...d, visible: f }))) }),
@@ -56514,7 +56519,7 @@ function oq(t) {
       ] }),
       /* @__PURE__ */ I.jsx("div", { className: "panel-scroll", children: n === "channels" ? /* @__PURE__ */ I.jsxs(I.Fragment, { children: [
         /* @__PURE__ */ I.jsx(
-          aq,
+          lq,
           {
             channels: t.channels,
             analyses: t.channelAnalyses,
@@ -56530,7 +56535,7 @@ function oq(t) {
           }
         ),
         t.renderMode === "3d" ? /* @__PURE__ */ I.jsx(
-          fq,
+          hq,
           {
             sizeT: t.sizeT,
             t: t.t,
@@ -56543,8 +56548,8 @@ function oq(t) {
             onRenderer: t.onVolumeRenderer,
             neuroglancerAvailable: t.neuroglancerAvailable
           }
-        ) : /* @__PURE__ */ I.jsx(uq, { sizeZ: t.sizeZ, sizeT: t.sizeT, z: t.z, t: t.t, projection: t.projection, onZ: t.onZ, onT: t.onT, onProjection: t.onProjection })
-      ] }) : /* @__PURE__ */ I.jsx(hq, { labels: t.labels, onChange: t.onLabels, volume: t.renderMode === "3d" }) })
+        ) : /* @__PURE__ */ I.jsx(fq, { sizeZ: t.sizeZ, sizeT: t.sizeT, z: t.z, t: t.t, projection: t.projection, onZ: t.onZ, onT: t.onT, onProjection: t.onProjection })
+      ] }) : /* @__PURE__ */ I.jsx(dq, { labels: t.labels, onChange: t.onLabels, volume: t.renderMode === "3d" }) })
     ] }),
     r && /* @__PURE__ */ I.jsxs("div", { className: "source-strip", children: [
       /* @__PURE__ */ I.jsxs("span", { children: [
@@ -56560,7 +56565,7 @@ function oq(t) {
     ] })
   ] });
 }
-function aq({ channels: t, analyses: e, onChange: i, volumeBlend: n = "additive", onVolumeBlend: s, volumeBrightness: r = 1, onVolumeBrightness: l, volumeBackground: c = "#030406", onVolumeBackground: f, volumeGain: d = -3, onVolumeGain: A }) {
+function lq({ channels: t, analyses: e, onChange: i, volumeBlend: n = "additive", onVolumeBlend: s, volumeBrightness: r = 1, onVolumeBrightness: l, volumeBackground: c = "#030406", onVolumeBackground: f, volumeGain: d = -3, onVolumeGain: A }) {
   const [g, _] = z.useState(/* @__PURE__ */ new Set()), y = new Map(e.map((x) => [x.index, x])), v = (x, w) => i(t.map((R) => R.index === x ? { ...R, ...w } : R)), E = (x, w) => {
     const R = y.get(x.index);
     R && v(x.index, w === "auto" ? { low: R.autoLow, high: R.autoHigh } : { low: R.fitLow, high: R.fitHigh });
@@ -56617,17 +56622,17 @@ function aq({ channels: t, analyses: e, onChange: i, volumeBlend: n = "additive"
             /* @__PURE__ */ I.jsx("button", { className: R ? "active" : "", "aria-pressed": R, onClick: () => b(x.index), disabled: !w, children: "HIST" })
           ] })
         ] }),
-        R && w && /* @__PURE__ */ I.jsx(lq, { values: w.histogram, color: x.color }),
-        /* @__PURE__ */ I.jsx(cq, { channel: x, analysis: w, onChange: (M) => v(x.index, M) })
+        R && w && /* @__PURE__ */ I.jsx(cq, { values: w.histogram, color: x.color }),
+        /* @__PURE__ */ I.jsx(uq, { channel: x, analysis: w, onChange: (M) => v(x.index, M) })
       ] }, x.index);
     })
   ] });
 }
-function lq({ values: t, color: e }) {
+function cq({ values: t, color: e }) {
   const i = Math.max(1, ...t);
   return /* @__PURE__ */ I.jsx("div", { className: "histogram", "aria-label": "Sampled intensity histogram", children: t.map((n, s) => /* @__PURE__ */ I.jsx("i", { style: { height: `${Math.max(2, Math.log1p(n) / Math.log1p(i) * 100)}%`, backgroundColor: e } }, s)) });
 }
-function cq({ channel: t, analysis: e, onChange: i }) {
+function uq({ channel: t, analysis: e, onChange: i }) {
   const n = e?.fitLow ?? t.domainMin, s = e?.fitHigh ?? t.domainMax, r = Math.max(Number.EPSILON, s - n), l = Math.max(n, Math.min(s, t.low)), c = Math.max(l, Math.min(s, t.high)), f = (l - n) / r * 100, d = (c - n) / r * 100, A = Number.isInteger(n) && Number.isInteger(s) ? 1 : r / 1e3, g = { "--range-start": `${f}%`, "--range-end": `${d}%`, "--range-color": t.color };
   return /* @__PURE__ */ I.jsxs("div", { className: "dual-range", children: [
     /* @__PURE__ */ I.jsxs("div", { className: "range-track", style: g, children: [
@@ -56640,7 +56645,7 @@ function cq({ channel: t, analysis: e, onChange: i }) {
     ] })
   ] });
 }
-function uq({ sizeZ: t, sizeT: e, z: i, t: n, projection: s, onZ: r, onT: l, onProjection: c }) {
+function fq({ sizeZ: t, sizeT: e, z: i, t: n, projection: s, onZ: r, onT: l, onProjection: c }) {
   if (t === 1 && e === 1) return null;
   const f = [
     { value: "slice", label: "Slice" },
@@ -56681,7 +56686,7 @@ function uq({ sizeZ: t, sizeT: e, z: i, t: n, projection: s, onZ: r, onT: l, onP
     ] })
   ] });
 }
-function fq({
+function hq({
   sizeT: t,
   t: e,
   onT: i,
@@ -56751,7 +56756,7 @@ function fq({
     ] })
   ] });
 }
-function hq({ labels: t, onChange: e, volume: i = !1 }) {
+function dq({ labels: t, onChange: e, volume: i = !1 }) {
   const n = (r, l) => e(t.map((c) => c.id === r ? { ...c, ...l } : c)), s = (r, l) => {
     const c = [...t], f = r + l;
     f < 0 || f >= c.length || ([c[r], c[f]] = [c[f], c[r]], e(c));
@@ -56800,7 +56805,7 @@ function hq({ labels: t, onChange: e, volume: i = !1 }) {
     ] }, r.id))
   ] });
 }
-function dq({ capability: t, field: e, onField: i, mode: n, onMode: s, plateFieldIndex: r, onPlateFieldIndex: l }) {
+function Aq({ capability: t, field: e, onField: i, mode: n, onMode: s, plateFieldIndex: r, onPlateFieldIndex: l }) {
   const c = t.plate, f = c.wells.find((E) => E.fields.some((b) => b.path === e)), d = [...c.wells].filter((E) => E.fields.length).sort((E, b) => E.row_index - b.row_index || E.column_index - b.column_index), A = Math.max(0, d.findIndex((E) => E === f)), g = f?.fields.find((E) => E.path === e), _ = f ? `${c.rows[f.row_index]}/${c.columns[f.column_index]}` : "—", y = (E) => d[E]?.fields[0] && i(d[E].fields[0].path), v = Math.max(1, ...d.map((E) => E.fields.length));
   return /* @__PURE__ */ I.jsxs("div", { className: "navigation-panel", children: [
     /* @__PURE__ */ I.jsx("div", { className: "panel-tabs navigation-tabs", role: "tablist", "aria-label": "Plate navigation level", children: ["field", "well", "plate"].map((E) => /* @__PURE__ */ I.jsx("button", { role: "tab", "aria-selected": n === E, className: n === E ? "active" : "", onClick: () => s(E), children: E[0].toUpperCase() + E.slice(1) }, E)) }),
@@ -56837,11 +56842,11 @@ function dq({ capability: t, field: e, onField: i, mode: n, onMode: s, plateFiel
       " fields are shown in the image area. Double-click a field to open it."
     ] }),
     n === "plate" && /* @__PURE__ */ I.jsx("p", { className: "overview-hint", children: "One field per populated well is shown in the image area. Double-click a well to inspect all its fields." }),
-    /* @__PURE__ */ I.jsx(Aq, { capability: t, field: e, onField: i, expanded: n !== "well" })
+    /* @__PURE__ */ I.jsx(gq, { capability: t, field: e, onField: i, expanded: n !== "well" })
   ] });
 }
-function Aq({ capability: t, field: e, onField: i, expanded: n }) {
-  const s = $K(t.plate), r = new Map(s.wells.map((l) => [`${l.row_index}:${l.column_index}`, l]));
+function gq({ capability: t, field: e, onField: i, expanded: n }) {
+  const s = XK(t.plate), r = new Map(s.wells.map((l) => [`${l.row_index}:${l.column_index}`, l]));
   return /* @__PURE__ */ I.jsxs("details", { className: "plate-map", open: n, children: [
     /* @__PURE__ */ I.jsxs("summary", { children: [
       /* @__PURE__ */ I.jsxs("span", { children: [
@@ -56864,7 +56869,7 @@ function Aq({ capability: t, field: e, onField: i, expanded: n }) {
     ] })
   ] });
 }
-$X.createRoot(document.getElementById("root")).render(/* @__PURE__ */ I.jsx(z.StrictMode, { children: new URLSearchParams(location.search).get("movie") === "1" ? /* @__PURE__ */ I.jsx(LX, {}) : /* @__PURE__ */ I.jsx(rq, {}) }));
+$X.createRoot(document.getElementById("root")).render(/* @__PURE__ */ I.jsx(z.StrictMode, { children: new URLSearchParams(location.search).get("movie") === "1" ? /* @__PURE__ */ I.jsx(LX, {}) : /* @__PURE__ */ I.jsx(oq, {}) }));
 export {
   xz as B,
   MS as g

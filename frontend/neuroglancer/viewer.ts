@@ -60,6 +60,7 @@ try {
             layer.fragmentMain.value = spec.shader;
             layer.volumeRenderingMode.restoreState(spec.volumeRendering);
             layer.volumeRenderingGain.value = spec.volumeRenderingGain;
+            layer.volumeRenderingDepthSamplesTarget.value = spec.volumeRenderingDepthSamples;
           } else {
             layer.displayState.objectAlpha.value = spec.objectAlpha;
             layer.displayState.selectedAlpha.value = spec.selectedAlpha;

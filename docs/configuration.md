@@ -94,6 +94,14 @@ user, group, image, and token-expiry checks still apply.
 
 ## Neuroglancer volumes and segmentation surfaces
 
+Intensity ray sampling is derived from each selected volume's physical diagonal
+and smallest voxel spacing, targeting two samples per voxel (256–8192 samples
+per ray). This avoids the gaps in thin neurites produced by Neuroglancer's
+64-sample default. Intensity shaders use trilinear interpolation. Segmentation
+meshes and their object IDs are unaffected; no source pixels or calibration
+metadata are altered. Very large or extremely anisotropic volumes can reach
+the sampling ceiling; a coarser quality level reduces their rendering cost.
+
 Neuroglancer requests use the current OMERO session and a user/group/image-bound
 read context. No source credentials or pixel data are sent to an external viewer.
 Surfaces are generated on demand from the selected label pyramid level and

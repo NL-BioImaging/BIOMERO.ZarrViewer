@@ -1,4 +1,4 @@
-import { neuroglancerState, type NeuroglancerPrepared } from "./neuroglancer-state";
+import { neuroglancerState, volumeDepthSamples, type NeuroglancerPrepared } from "./neuroglancer-state";
 import type { ChannelState, LabelState } from "./types";
 import { coordinateTransformSpecificationFromJson, makeCoordinateSpace, makeIdentityTransform, makeIdentityTransformedBoundingBox, WatchableCoordinateSpaceTransform } from "neuroglancer/unstable/coordinate_transform.js";
 
@@ -27,8 +27,27 @@ test("image and segmentation use their own XYZ calibration in one physical coord
   }
   expect(state.layers[1].segments).toEqual(["1", "9007199254741009"]);
   expect(state.layers[0].volumeRendering).toBe("on");
-  expect(state.layers[0].shader).toContain("toRaw(getDataValue())");
+  expect(state.layers[0].shader).toContain("toRaw(getInterpolatedDataValue())");
   expect(state.showScaleBar).toBe(true);
+});
+
+test("ray spacing resolves thin neurites at arbitrary rotations and uses physical anisotropy", () => {
+  const neuron = { shape: [60, 512, 512], resolution: [329.648522, 329.648522, 998.8], translation: [0,0,0], segmentation: false };
+  const diagonal = Math.hypot(...neuron.resolution.map((spacing, i) => spacing * neuron.shape[2-i]));
+  expect(diagonal / (64-1)).toBeGreaterThan(neuron.resolution[0] * 10);
+  expect(diagonal / (volumeDepthSamples(neuron)-1)).toBeLessThanOrEqual(neuron.resolution[0] / 2);
+  const coarser = { ...neuron, shape: [60,256,256], resolution: [659.297044,659.297044,998.8] };
+  expect(volumeDepthSamples(coarser)).toBeLessThan(volumeDepthSamples(neuron));
+  // Merely changing physical units cannot change the chosen sampling density.
+  expect(volumeDepthSamples({ ...neuron, resolution: neuron.resolution.map(x => x/1000) })).toBe(volumeDepthSamples(neuron));
+});
+
+test("intensity sampling is bounded and never changes segmentation sampling", () => {
+  expect(volumeDepthSamples({ shape: [10000,10000,10000], resolution: [1,1,1], translation: [0,0,0], segmentation: false })).toBe(8192);
+  const state = neuroglancerState(prepared, channels, labels, "maximum", true);
+  expect(state.layers[0].volumeRenderingDepthSamples).toBeGreaterThan(64);
+  expect(state.layers[1]).not.toHaveProperty("volumeRenderingDepthSamples");
+  expect(state.layers[1]).not.toHaveProperty("shader");
 });
 
 test("label appearance, visibility and intensity projection modes are applied independently", () => {

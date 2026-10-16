@@ -6,6 +6,17 @@ export interface NeuroglancerSource {
 }
 export interface NeuroglancerPrepared { status: "ready"; url: string; sources: Record<string, NeuroglancerSource> }
 
+/** Sample at least twice per smallest physical voxel along any viewing angle.
+ * Neuroglancer's default is 64 samples across the whole volume, not per chunk.
+ * Use the physical diagonal as a rotation-independent upper bound on ray depth.
+ */
+export function volumeDepthSamples(source: NeuroglancerSource): number {
+  const extent = source.resolution.map((spacing, axis) => spacing * source.shape[2 - axis]);
+  const minimumSpacing = Math.min(...source.resolution);
+  const samples = Math.ceil(2 * Math.hypot(...extent) / minimumSpacing) + 1;
+  return Number.isFinite(samples) && minimumSpacing > 0 ? Math.max(256, Math.min(8192, samples)) : 256;
+}
+
 export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, background = "#030406", gain = -3) {
   const dimensions = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] };
   const source = (name: string, item: NeuroglancerSource) => ({
@@ -26,9 +37,10 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
     layers.push({ type: "image", name: `Image ${channel.index + 1}: ${channel.label}`, source: source(`image-${channel.index}`, item),
       volumeRendering: blend === "maximum" ? "max" : blend === "minimum" ? "min" : "on",
       volumeRenderingGain: gain,
+      volumeRenderingDepthSamples: volumeDepthSamples(item),
       // Raw intensity values preserve the same contrast limits as the 2D view.
       shaderControls: {}, opacity: 1,
-      shader: `void main() { float v = clamp((float(toRaw(getDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${rgb.join(",")}) * v, ${blend === "additive" ? "v" : "1.0"})); }`,
+      shader: `void main() { float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${rgb.join(",")}) * v, ${blend === "additive" ? "v" : "1.0"})); }`,
     });
   }
   labels.filter(label => label.visible).forEach((label, index) => {
