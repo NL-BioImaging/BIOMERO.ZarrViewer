@@ -28641,19 +28641,19 @@ const tc = {
 function ss(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => yz.set(i, e));
 }
-ss([void 0, 1], () => import("./raw-DLrTFI1m.js").then((t) => t.default));
-ss(5, () => import("./lzw-DEmDbDfh.js").then((t) => t.default));
+ss([void 0, 1], () => import("./raw-Do-0OFuz.js").then((t) => t.default));
+ss(5, () => import("./lzw-D0xyRuGe.js").then((t) => t.default));
 ss(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-ss(7, () => import("./jpeg-qdS69-6r.js").then((t) => t.default));
-ss([8, 32946], () => import("./deflate-DcuJPmLu.js").then((t) => t.default));
-ss(32773, () => import("./packbits-CpSGC01I.js").then((t) => t.default));
+ss(7, () => import("./jpeg-CV0oPhtZ.js").then((t) => t.default));
+ss([8, 32946], () => import("./deflate-DCEUnZF3.js").then((t) => t.default));
+ss(32773, () => import("./packbits-C2S47R_s.js").then((t) => t.default));
 ss(
   34887,
-  () => import("./lerc-C7r4RqV_.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-BQvsXV-F.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-ss(50001, () => import("./webimage-B80Nq9bn.js").then((t) => t.default));
+ss(50001, () => import("./webimage-nQ5Nirky.js").then((t) => t.default));
 function vz(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -56519,8 +56519,8 @@ function aq(t) {
           ] })
         ] })
       ] }),
-      /* @__PURE__ */ I.jsx("div", { className: "panel-scroll", children: n === "channels" ? /* @__PURE__ */ I.jsxs(I.Fragment, { children: [
-        /* @__PURE__ */ I.jsx(
+      /* @__PURE__ */ I.jsxs("div", { className: "panel-scroll", children: [
+        n === "channels" ? /* @__PURE__ */ I.jsx(
           lq,
           {
             channels: t.channels,
@@ -56535,7 +56535,7 @@ function aq(t) {
             volumeGain: t.volumeGain,
             onVolumeGain: t.onVolumeGain
           }
-        ),
+        ) : /* @__PURE__ */ I.jsx(dq, { labels: t.labels, onChange: t.onLabels, volume: t.renderMode === "3d" }),
         t.renderMode === "3d" ? /* @__PURE__ */ I.jsx(
           hq,
           {
@@ -56551,7 +56551,7 @@ function aq(t) {
             neuroglancerAvailable: t.neuroglancerAvailable
           }
         ) : /* @__PURE__ */ I.jsx(fq, { sizeZ: t.sizeZ, sizeT: t.sizeT, z: t.z, t: t.t, projection: t.projection, onZ: t.onZ, onT: t.onT, onProjection: t.onProjection })
-      ] }) : /* @__PURE__ */ I.jsx(dq, { labels: t.labels, onChange: t.onLabels, volume: t.renderMode === "3d" }) })
+      ] })
     ] }),
     r && /* @__PURE__ */ I.jsxs("div", { className: "source-strip", children: [
       /* @__PURE__ */ I.jsxs("span", { children: [
@@ -56744,12 +56744,15 @@ function hq({
         xK(A.rawBytes)
       ] }, A.index)) })
     ] }),
-    /* @__PURE__ */ I.jsx("p", { className: "projection-note", children: "Only visible intensity channels are loaded. Quality and visibility changes reload the volume." }),
+    /* @__PURE__ */ I.jsxs("p", { className: "projection-note", children: [
+      c === "neuroglancer" ? "Visible channels and labels are loaded for the selected timepoint." : "Visible intensity channels are loaded for the selected timepoint.",
+      " Changes to quality, visibility or timepoint reload the view."
+    ] }),
     l && /* @__PURE__ */ I.jsx("p", { className: "volume-warning", role: "status", children: l }),
     t > 1 && /* @__PURE__ */ I.jsx(zR, { sizeT: t, t: e, onT: i }),
     t > 1 && /* @__PURE__ */ I.jsxs("label", { className: "slider", children: [
-      "T ",
-      /* @__PURE__ */ I.jsx("input", { type: "range", min: "0", max: t - 1, value: e, onChange: (A) => i(Number(A.target.value)) }),
+      "Timepoint ",
+      /* @__PURE__ */ I.jsx("input", { "aria-label": "Timepoint", type: "range", min: "0", max: t - 1, value: e, onChange: (A) => i(Number(A.target.value)) }),
       /* @__PURE__ */ I.jsxs("output", { children: [
         e + 1,
         "/",

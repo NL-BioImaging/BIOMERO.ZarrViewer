@@ -787,12 +787,13 @@ export function ViewerPanel(props: ViewerPanelProps) {
         </div>
       </div>
       <div className="panel-scroll">
-        {viewTab === "channels" ? <>
+        {viewTab === "channels" ?
           <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels}
             volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
             volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
             volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
             volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
+          : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} />}
           {props.renderMode === "3d"
             ? <VolumeControls
                 sizeT={props.sizeT}
@@ -805,7 +806,6 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
             : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
-        </> : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} />}
       </div>
     </>}
     {capability && <div className="source-strip">
@@ -972,10 +972,12 @@ export function VolumeControls({
         </option>)}
       </select>
     </label>
-    <p className="projection-note">Only visible intensity channels are loaded. Quality and visibility changes reload the volume.</p>
+    <p className="projection-note">{renderer === "neuroglancer"
+      ? "Visible channels and labels are loaded for the selected timepoint."
+      : "Visible intensity channels are loaded for the selected timepoint."} Changes to quality, visibility or timepoint reload the view.</p>
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
     {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
-    {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
+    {sizeT > 1 && <label className="slider">Timepoint <input aria-label="Timepoint" type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }
 

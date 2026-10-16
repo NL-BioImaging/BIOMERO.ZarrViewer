@@ -93,6 +93,22 @@ test("3D viewer selector defaults to Neuroglancer and offers Viv", () => {
   expect(onRenderer).toHaveBeenCalledWith("classic");
 });
 
+test("3D time and quality remain available while inspecting labels", () => {
+  const onT = vi.fn();
+  render(<ViewerPanel capability={null} channels={channels} channelAnalyses={[]} onChannels={() => {}}
+    labels={[{id:"cells",name:"Cells",path:"labels/cells",visible:true,opacity:.3,mode:"fill"}]} onLabels={() => {}}
+    onField={() => {}} sizeZ={31} sizeT={40} z={0} t={17} onZ={() => {}} onT={onT} projection="slice" onProjection={() => {}}
+    renderMode="3d" labels3dAvailable volumeRenderer="neuroglancer" volumeLevels={levels} onVolumeLevel={() => {}}
+    viewMode="field" onViewMode={() => {}} plateFieldIndex={0} onPlateFieldIndex={() => {}} />);
+  fireEvent.click(screen.getByRole("tab", {name:"Labels (1)"}));
+  const time = screen.getByRole("slider", {name:"Timepoint"});
+  expect(time).toHaveValue("17");
+  expect(screen.getByRole("combobox", {name:"3D volume quality"})).toBeInTheDocument();
+  expect(screen.getByText(/Visible channels and labels are loaded for the selected timepoint/)).toBeInTheDocument();
+  fireEvent.change(time, {target:{value:"39"}});
+  expect(onT).toHaveBeenCalledWith(39);
+});
+
 test("bulk visibility checkboxes handle partial selection and toggle both groups independently", () => {
   function Panel() {
     const [items, setItems] = useState([...channels, { ...channels[0], index: 1, label: "RNA", visible: false }]);
