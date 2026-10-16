@@ -36,6 +36,10 @@ for limits, recipes, and Chrome acceptance.
 - the OME-Zarr storage visible to OMERO.web and read-only to Nginx;
 - one of the supported Nginx-fronted deployment paths above.
 
+Use Python 3.12 with Zarr-Python 3 for OME-Zarr 0.5/Zarr v3 data, including
+server-side previews, exports and 3D preparation. Python 3.10 resolves to the
+older Zarr-Python 2 reader and supports those operations on Zarr v2 stores.
+
 The current data backend requires Nginx to process `X-Accel-Redirect`.
 Connecting directly to Gunicorn can load capabilities but cannot deliver
 metadata or chunks because Django deliberately does not stream file bodies.

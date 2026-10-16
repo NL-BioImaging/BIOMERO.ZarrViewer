@@ -4,13 +4,13 @@ from urllib.parse import urlencode
 
 import numpy as np
 import pytest
-import zarr
 
 from biomero_zarr_viewer import neuroglancer as ng, volume_cache as cache
 from biomero_zarr_viewer.errors import UnsupportedStore
 from biomero_zarr_viewer.tokens import make_read_context
 from .test_views import _request
 from .fakes import FakeConnection
+from .zarr_helpers import write_volume_group
 
 
 def test_spatial_transform_composes_dataset_then_global_transforms_by_named_axis():
@@ -38,7 +38,7 @@ def test_label_mesh_preserves_physical_bounds_and_closes_edge_objects():
 
 
 @pytest.fixture(params=["uint64", "int8"])
-def scene(configure_storage, tmp_path, monkeypatch, request):
+def scene(configure_storage, tmp_path, monkeypatch, request, zarr_format):
     _, mount = configure_storage
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_MAX_BYTES", "100000000")
@@ -49,9 +49,7 @@ def scene(configure_storage, tmp_path, monkeypatch, request):
     attrs = {"version": "0.5", "multiscales": [{"axes": [{"name": "c"}] + [{"name": a, "unit": "micrometer"} for a in "zyx"],
               "datasets": [{"path": "0", "coordinateTransformations": [{"type": "scale", "scale": [1, .5, .2, .1]}]}]}]}
     for path, values in [("image.zarr", pixels), ("image.zarr/labels/0", labels)]:
-        group = zarr.open_group(str(mount / path), mode="w", zarr_format=3)
-        group.create_array("0", data=values, chunks=(1, 2, 7, 8))
-        group.attrs["ome"] = attrs
+        write_volume_group(mount / path, values, (1, 2, 7, 8), attrs, zarr_format)
     conn = FakeConnection()
     token, _ = make_read_context(_request("/"), conn, 42, "image.zarr")
     request = _request("/?" + urlencode({"channels": "[0]", "labels": json.dumps([{"path": "labels/0"}])}), token=token)

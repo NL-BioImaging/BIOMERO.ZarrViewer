@@ -68,6 +68,10 @@ Supported data:
 - HCS plates with plate, well, acquisition, and field metadata;
 - labels declared through the NGFF label group and stored as integer arrays.
 
+Server-side reading of Zarr v3 arrays requires Zarr-Python 3. Use Python 3.12
+for that deployment; Python 3.10 uses the Zarr-Python 2 backend. See
+[installation](installation.md).
+
 Channel names, colors, and display windows are read from NGFF `omero`
 metadata when present. Missing or incomplete values receive safe viewer
 defaults. The viewer does not repair malformed metadata or generate an

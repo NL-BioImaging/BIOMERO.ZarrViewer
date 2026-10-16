@@ -5,15 +5,16 @@ import zarr
 
 from biomero_zarr_viewer import volume_cache as cache
 from biomero_zarr_viewer.errors import DataNotFound, InvalidROI, ROILimitExceeded
+from .zarr_helpers import format_options, write_volume_group
 
 
 @pytest.fixture
-def source(tmp_path, monkeypatch):
+def source(tmp_path, monkeypatch, zarr_format):
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_MAX_BYTES", "100000")
     pixels = np.arange(2*5*7*9, dtype=np.uint16).reshape(2,5,7,9)
     path = tmp_path / "array"
-    array = zarr.open_array(str(path), mode="w", shape=pixels.shape, dtype="uint16", chunks=(1,2,7,9), zarr_format=3)
+    array = zarr.open_array(str(path), mode="w", shape=pixels.shape, dtype="uint16", chunks=(1,2,7,9), **format_options(zarr_format))
     array[:] = pixels
     return path, pixels
 
@@ -109,7 +110,7 @@ def test_safe_route_index_reuses_parsing_and_longest_prefix(configure_storage):
     assert _route_index.cache_info().hits==2
 
 
-def test_volume_endpoint_authentication_traversal_and_binary_response(configure_storage,tmp_path,monkeypatch):
+def test_volume_endpoint_authentication_traversal_and_binary_response(configure_storage,tmp_path,monkeypatch,zarr_format):
     from biomero_zarr_viewer.views import cached_volume
     from biomero_zarr_viewer.tokens import make_read_context
     from .test_views import _request
@@ -117,10 +118,9 @@ def test_volume_endpoint_authentication_traversal_and_binary_response(configure_
     _,mount=configure_storage
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_DIR",str(tmp_path/"cache"))
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_MAX_BYTES","100000")
-    group=zarr.open_group(str(mount/"volume.zarr"),mode="w",zarr_format=3)
     pixels=np.arange(24,dtype=np.uint16).reshape(1,3,2,4)
-    group.create_array("0",data=pixels,chunks=(1,1,2,4))
-    group.attrs["ome"]={"version":"0.5","multiscales":[{"axes":[{"name":a} for a in "czyx"],"datasets":[{"path":"0"}]}]}
+    attrs={"version":"0.5","multiscales":[{"axes":[{"name":a} for a in "czyx"],"datasets":[{"path":"0"}]}]}
+    write_volume_group(mount/"volume.zarr",pixels,(1,1,2,4),attrs,zarr_format)
     conn=FakeConnection()
     token,_=make_read_context(_request("/"),conn,42,"volume.zarr")
     monkeypatch.setattr(cache._pool,"submit",lambda function,*args:function(*args))
