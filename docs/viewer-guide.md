@@ -93,7 +93,8 @@ Use the Labels tab to adjust segmentation surfaces separately.
 Use **Field**, **Well** and **Plate** views to move between a detailed image and
 the broader experiment. Choose the acquisition and field where available.
 Open a field to inspect labels or switch to 3D. Well and Plate overviews show
-intensity thumbnails in 2D. Pan and zoom to explore the overview.
+intensity thumbnails in 2D. Well fields form a compact, near-square grid: 36 fields
+use 6 × 6 tiles and 81 fields use 9 × 9. Pan and zoom to explore the overview.
 
 Shallow segmentation results show their labels over the linked original image
 without needing a second copy of the intensity data.

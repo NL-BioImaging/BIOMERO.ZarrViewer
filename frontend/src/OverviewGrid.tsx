@@ -39,7 +39,6 @@ interface LayoutTile extends OverviewTile {
 
 const TILE_SIZE = 420;
 const TILE_GAP = 12;
-const WELL_COLUMNS = 3;
 
 export function defaultPlateFieldIndex(capability: Capability): number {
   const count = Math.max(1, ...(capability.plate?.wells.map(well => well.fields.length) || []));
@@ -61,7 +60,7 @@ export function overviewTiles(capability: Capability, mode: "well" | "plate", se
 
 export function overviewLayout(tiles: OverviewTile[], mode: "well" | "plate"): { tiles: LayoutTile[]; width: number; height: number } {
   if (mode === "well") {
-    const columns = Math.min(WELL_COLUMNS, Math.max(1, tiles.length));
+    const columns = Math.max(1, Math.ceil(Math.sqrt(tiles.length)));
     const rows = Math.max(1, Math.ceil(tiles.length / columns));
     return {
       tiles: tiles.map((tile, index) => ({ ...tile, left: (index % columns) * (TILE_SIZE + TILE_GAP), top: Math.floor(index / columns) * (TILE_SIZE + TILE_GAP) })),
