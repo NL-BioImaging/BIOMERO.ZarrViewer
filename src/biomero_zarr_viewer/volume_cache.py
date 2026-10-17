@@ -223,7 +223,7 @@ def entry(key, scope):
         return result
 
 
-def _reserve(key, scope, size, metadata):
+def _reserve(key, scope, size, metadata, *, queue_limit=None):
     root = cache_root()
     limit = cache_limit()
     if not limit or size > limit:
@@ -251,6 +251,10 @@ def _reserve(key, scope, size, metadata):
                 total -= old["size"]
             if total > limit: raise ROILimitExceeded("Cache is busy applying its new size limit")
             return False
+        if queue_limit is not None:
+            pending = db.execute("SELECT COUNT(*) FROM entries WHERE status IN ('queued','building')").fetchone()[0]
+            if pending >= queue_limit:
+                return None
         db.execute("DELETE FROM entries WHERE key=?", (key,))
         # Reservations count towards the limit, including files still being built.
         total = db.execute("SELECT COALESCE(SUM(size),0) FROM entries").fetchone()[0]
@@ -266,9 +270,9 @@ def _reserve(key, scope, size, metadata):
     return True
 
 
-def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=False):
+def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=False, bounded=True):
     array = zarr.open_array(str(array_path), mode="r")
-    if len(axes) != array.ndim or "x" not in axes or "y" not in axes:
+    if len(axes) != array.ndim or len(set(axes)) != len(axes) or "x" not in axes or "y" not in axes:
         raise InvalidROI("Invalid volume axes")
     for axis, value in (("c", channel), ("t", timepoint)):
         if value < 0 or (axis in axes and value >= array.shape[axes.index(axis)]) or (axis not in axes and value != 0):
@@ -278,7 +282,7 @@ def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=Fal
     if dtype.name not in ("uint8","uint16","uint32","int8","int16","int32","float32","float64") and not (allow_integer64 and dtype.name in ("uint64", "int64")):
         raise InvalidROI("Unsupported volume pixel type")
     size = math.prod(shape) * dtype.itemsize
-    if size > MAX_VOLUME_BYTES:
+    if bounded and size > MAX_VOLUME_BYTES:
         raise ROILimitExceeded("Select a smaller pyramid level: volume exceeds 256 MiB")
     return shape, dtype, size
 
@@ -326,6 +330,45 @@ def _build(key, array_path, axes, channel, timepoint, metadata):
     except Exception as exc:
         if output is not None:
             del output
+        temporary.unlink(missing_ok=True)
+        with database() as db:
+            db.execute("UPDATE entries SET status='error',size=0,error=? WHERE key=?", (str(exc)[:500], key))
+
+
+def request_blob(key, scope, reservation, metadata, build):
+    """Queue bounded derived work without occupying a request worker.
+
+    SQLite coalesces jobs across Gunicorn processes. Reservations also bound the
+    shared queue; deferred jobs are retried by the preparation poll.
+    """
+    limit = max(1, min(64, int(os.environ.get("BIOMERO_ZARR_MAX_PENDING_JOBS", "8"))))
+    try:
+        previous = entry(key, scope)
+        if previous["status"] == "error":
+            return previous
+    except DataNotFound:
+        pass
+    reserved = _reserve(key, scope, reservation, metadata, queue_limit=limit)
+    if reserved is None:
+        return {"key": key, "status": "deferred", "progress": 0}
+    if reserved:
+        _pool.submit(_build_blob, key, reservation, build)
+    return entry(key, scope)
+
+
+def _build_blob(key, reservation, build):
+    temporary = cache_root() / (key + ".part")
+    try:
+        with database() as db:
+            db.execute("UPDATE entries SET status='building' WHERE key=?", (key,))
+        content = build()
+        if len(content) > reservation:
+            raise ROILimitExceeded("Derived display data exceeds its reserved cache budget")
+        temporary.write_bytes(content)
+        temporary.replace(cache_root() / (key + ".bin"))
+        with database() as db:
+            db.execute("UPDATE entries SET status='ready',progress=1,size=?,accessed=? WHERE key=?", (len(content), time.time(), key))
+    except Exception as exc:
         temporary.unlink(missing_ok=True)
         with database() as db:
             db.execute("UPDATE entries SET status='error',size=0,error=? WHERE key=?", (str(exc)[:500], key))

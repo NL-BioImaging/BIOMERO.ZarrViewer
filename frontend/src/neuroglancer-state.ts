@@ -2,9 +2,9 @@ import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
 
 export interface NeuroglancerCamera { position: number[]; orientation: number[]; scale: number }
 export interface NeuroglancerSource {
-  shape: number[]; resolution: number[]; translation: number[]; segmentation: boolean; segments?: string[];
+  shape: number[]; resolution: number[]; translation: number[]; segmentation: boolean; segments?: string[]; transport?: "zarr" | "chunks"; browser_segments?: string[]; mesh_errors?: Record<string, string>;
 }
-export interface NeuroglancerPrepared { status: "ready"; url: string; sources: Record<string, NeuroglancerSource> }
+export interface NeuroglancerPrepared { status: "ready"; pending?: boolean; url: string; sources: Record<string, NeuroglancerSource> }
 
 /** Sample at least twice per smallest physical voxel along any viewing angle.
  * Neuroglancer's default is 64 samples across the whole volume, not per chunk.
@@ -20,11 +20,15 @@ export function volumeDepthSamples(source: NeuroglancerSource): number {
 export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, background = "#030406", gain = -3) {
   const dimensions = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] };
   const source = (name: string, item: NeuroglancerSource) => ({
-    url: `precomputed://${new URL(prepared.url + name + "/", window.location.href).href}`,
+    url: item.transport === "zarr" && !item.segmentation
+      ? `${new URL(prepared.url + name + "/zarr/", window.location.href).href}|zarr2:`
+      : `precomputed://${new URL(prepared.url + name + "/", window.location.href).href}`,
     // Neuroglancer converts the source's declared voxel units into output
     // units itself. The matrix only adds translation; scaling again doubles it.
     transform: { outputDimensions: dimensions, matrix: item.resolution.map((_, axis) => [
-      axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0, item.translation[axis],
+      ...(item.transport === "zarr" && !item.segmentation
+        ? [axis === 2 ? 1 : 0, axis === 1 ? 1 : 0, axis === 0 ? 1 : 0]
+        : [axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0]), item.translation[axis],
     ]) },
   });
   const layers: any[] = [];
@@ -47,8 +51,13 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
     const item = prepared.sources[`label-${index}`];
     if (!item) return;
     const selected = label.highlightValues?.length ? label.highlightValues.map(String) : label.highlightValue ? [String(label.highlightValue)] : item.segments || [];
-    layers.push({ type: "segmentation", name: `Labels ${index + 1}: ${label.name}`, source: source(`label-${index}`, item),
-      segments: selected, objectAlpha: label.opacity, selectedAlpha: label.opacity, notSelectedAlpha: 0,
+    const native = source(`label-${index}`, item);
+    const labelSource: any = item.browser_segments?.length ? [
+      { ...native, subsources: { default: true, mesh: false } },
+      { ...native, url: `biomeromesh://${encodeURIComponent(new URL(prepared.url + `label-${index}/`, window.location.href).href)}/${item.browser_segments.join(",")}/|neuroglancer-precomputed:#type=mesh` },
+    ] : native;
+    layers.push({ type: "segmentation", name: `Labels ${index + 1}: ${label.name}`, source: labelSource,
+      segments: selected.filter(id => (item.segments || []).includes(id)), objectAlpha: label.opacity, selectedAlpha: label.opacity, notSelectedAlpha: 0,
       ...(label.color ? { segmentDefaultColor: label.color } : {}), hideSegmentZero: true });
   });
   const first = Object.values(prepared.sources)[0];

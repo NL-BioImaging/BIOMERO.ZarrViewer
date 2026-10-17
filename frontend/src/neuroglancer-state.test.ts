@@ -67,3 +67,24 @@ test("3D brightness changes only image shaders and leaves segmentation appearanc
   expect(bright.layers[0].volumeRenderingGain).toBe(-1);
   expect(bright.projectionBackgroundColor).toBe("#FFFFFF");
 });
+
+test("native Zarr streaming maps ZYX axes into the same physical XYZ space", () => {
+  const native: NeuroglancerPrepared = { ...prepared, sources: { "image-0": { ...prepared.sources["image-0"], transport: "zarr" } } };
+  const state = neuroglancerState(native, channels, [], "maximum", true);
+  expect(state.layers[0].source.url).toContain("/image-0/zarr/|zarr2:");
+  const item = native.sources["image-0"];
+  const input = makeCoordinateSpace({rank:3,names:["z","y","x"],units:["m","m","m"],
+    scales:Float64Array.from(item.resolution.slice().reverse().map(v=>v*1e-9)),
+    boundingBoxes:[makeIdentityTransformedBoundingBox({lowerBounds:new Float64Array(3),upperBounds:Float64Array.from(item.shape)})]});
+  const transform = new WatchableCoordinateSpaceTransform(makeIdentityTransform(input));
+  transform.spec = coordinateTransformSpecificationFromJson(state.layers[0].source.transform);
+  Array.from(transform.value.outputSpace.bounds.upperBounds).forEach((v,a)=>
+    expect(v).toBeCloseTo(item.shape[2-a]*item.resolution[a]+item.translation[a],5));
+});
+
+test("only small explicitly selected browser meshes use the worker provider", () => {
+  const scene: NeuroglancerPrepared = {...prepared,sources:{...prepared.sources,"label-0":{...prepared.sources["label-0"],browser_segments:["1"]}}};
+  const state=neuroglancerState(scene,channels,labels,"maximum",true);
+  expect(state.layers[1].source[0].subsources).toEqual({default:true,mesh:false});
+  expect(state.layers[1].source[1].url).toContain("biomeromesh://");
+});

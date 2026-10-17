@@ -1,4 +1,5 @@
 import "neuroglancer";
+import "../src/browser-mesh-store";
 import { makeDefaultViewer } from "neuroglancer/unstable/ui/default_viewer.js";
 import { setDefaultInputEventBindings } from "neuroglancer/unstable/ui/default_input_event_bindings.js";
 import "./viewer.css";
@@ -28,6 +29,7 @@ try {
   let updating = false;
   let wasReady = false;
   let lastError = "";
+  let layerSources = new Map<string, string>();
   let segmentSelections = new Map<string, string>();
   let timer: ReturnType<typeof setTimeout>;
   const camera = () => ({ position: Array.from(viewer.position.value), orientation: Array.from(viewer.projectionOrientation.orientation), scale: viewer.projectionScale.value });
@@ -48,6 +50,7 @@ try {
       const previous = initialized && resetKey === reset && sceneKey === scene ? camera() : event.data.camera;
       if (!initialized) {
         viewer.state.restoreState({ ...state, ...(previous ? { position: previous.position, projectionOrientation: previous.orientation, projectionScale: previous.scale } : {}) });
+        layerSources = new Map(state.layers.map((spec: any) => [spec.name, JSON.stringify(spec.source)]));
         segmentSelections = new Map(state.layers.filter((spec: any) => spec.type === "segmentation").map((spec: any) => [spec.name, JSON.stringify(spec.segments)]));
       } else {
         // Update appearance in place. Recreating the layout during async chunk
@@ -56,6 +59,13 @@ try {
         for (const spec of state.layers) {
           const layer: any = viewer.layerManager.managedLayers.find(item => item.name === spec.name)?.layer;
           if (!layer) continue;
+          const sources = JSON.stringify(spec.source);
+          if (sources !== layerSources.get(spec.name)) {
+            for (const oldSource of [...layer.dataSources]) oldSource.dispose();
+            layer.dataSources.length = 0;
+            for (const source of layer.getDataSourceSpecifications(spec)) layer.addDataSource(source);
+            layerSources.set(spec.name, sources);
+          }
           if (spec.type === "image") {
             layer.fragmentMain.value = spec.shader;
             layer.volumeRenderingMode.restoreState(spec.volumeRendering);

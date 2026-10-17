@@ -88,7 +88,7 @@ def test_cached_projection_and_neuroglancer_prepare_only_requested_time(configur
     np.testing.assert_array_equal(np.fromfile(cache.cache_root()/(result['key']+'.bin'),dtype='<u2').reshape(3,2,4),pixels[2,1])
     response=ng.prepare(_request('/?'+urlencode({'t':2,'channels':'[1]','labels':'[]'}),token=token),42,conn=conn)
     assert response.status_code==200,response.content
-    assert calls==[(1,2)] # Both endpoints reuse the same selected C/T volume.
+    assert calls==[(1,2)] # The projection packs C/T once; Neuroglancer streams the original chunks.
     response=ng.prepare(_request('/?'+urlencode({'t':3,'channels':'[1]','labels':'[]'}),token=token),42,conn=conn)
     assert response.status_code==200
-    assert calls==[(1,2),(1,3)]
+    assert calls==[(1,2)]

@@ -17,7 +17,7 @@ export function NeuroglancerCanvas(props: Props) {
   const latest = useRef(props); latest.current = props;
   const [prepared, setPrepared] = useState<NeuroglancerPrepared>();
   const [error, setError] = useState<string>();
-  const [progress, setProgress] = useState("Preparing image and label volumes…");
+  const [progress, setProgress] = useState("Opening 3D data…");
   const [initialized, setInitialized] = useState(0);
   const [retry, setRetry] = useState(0);
   const [depthStep, setDepthStep] = useState<number>();
@@ -34,7 +34,8 @@ export function NeuroglancerCanvas(props: Props) {
     return () => abort.abort();
   }, []);
   const channelsKey = JSON.stringify(props.channels.filter(c => c.visible).slice(0, 10).map(c => c.index));
-  const labelsKey = JSON.stringify(props.labels.filter(l => l.visible).map(l => ({ path: l.path, channel: l.id.startsWith("focused-channel-") ? Number(l.id.split("-").at(-1)) - 1 : 0 })));
+  const labelsKey = JSON.stringify(props.labels.filter(l => l.visible).map(l => ({ path: l.path, channel: l.id.startsWith("focused-channel-") ? Number(l.id.split("-").at(-1)) - 1 : 0,
+    ...(l.highlightValues?.length || l.highlightValue ? { segments: (l.highlightValues?.length ? l.highlightValues : [l.highlightValue!]).map(String), interactive: true } : {}) })));
   useEffect(() => {
     let cancelled = false;
     const abort = new AbortController();
@@ -42,7 +43,7 @@ export function NeuroglancerCanvas(props: Props) {
     let timer: ReturnType<typeof setTimeout>;
     setError(undefined);
     setPrepared(undefined);
-    setProgress("Preparing image and label volumes…");
+    setProgress("Opening 3D data…");
     if (channelsKey === "[]" && labelsKey === "[]") {
       setPrepared(undefined);
       setProgress("");
@@ -60,7 +61,7 @@ export function NeuroglancerCanvas(props: Props) {
           if (!preparedOnce) setProgress("Loading image and segmentation surfaces…");
           preparedOnce = true;
           // Renew the server-side context through the existing authorized client.
-          timer = setTimeout(prepare, 60_000);
+          timer = setTimeout(prepare, result.pending ? 500 : 60_000);
         } else {
           setProgress(`Preparing image and labels… ${Math.round((result.progress || 0) * 100)}%`);
           timer = setTimeout(prepare, 500);
@@ -102,6 +103,8 @@ export function NeuroglancerCanvas(props: Props) {
   return <div className="volume-stage">
     {depthStep != null && <div className="volume-depth-feedback" role="status">Depth step: {depthStep > 0 ? "+" : ""}{Number(depthStep.toPrecision(3))} µm</div>}
     {channelsKey === "[]" && labelsKey === "[]" && <div className="volume-empty" role="status">All channels and labels are hidden.</div>}
+    {prepared && Object.values(prepared.sources).some(source => Object.keys(source.mesh_errors || {}).length) &&
+      <div className="volume-depth-feedback" role="status">Some label surfaces exceed the rendering limits. Choose a lower 3D quality.</div>}
     {prepared && viewerHtml && <iframe key={`${prepared.url}:${retry}`} ref={iframe} title="3D image and segmentation" className="neuroglancer-frame" srcDoc={viewerHtml} />}
     {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
     {props.showScale && scaleBar && !progress && !error && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} micrometer at volume center`}>
