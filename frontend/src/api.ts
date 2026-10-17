@@ -1,5 +1,7 @@
 import type { ApiFailure, Capability } from "./types";
 
+const fieldOrder = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+
 export class ViewerApiError extends Error {
   code: string;
   status: number;
@@ -37,6 +39,18 @@ export async function fetchCapabilities(imageId: number): Promise<Capability> {
   }
   if (payload.schema_version !== 1) {
     throw new ViewerApiError("unsupported_schema", "The server returned an unsupported viewer schema", response.status);
+  }
+  if (payload.plate) {
+    return {
+      ...payload,
+      plate: {
+        ...payload.plate,
+        wells: payload.plate.wells.map(well => ({
+          ...well,
+          fields: [...well.fields].sort((a, b) => fieldOrder.compare(a.name || a.path, b.name || b.path)),
+        })),
+      },
+    };
   }
   return payload;
 }
