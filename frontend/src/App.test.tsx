@@ -179,6 +179,11 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
   />);
   expect(screen.getByRole("tab", { name: "Labels (1)" })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: "3D volume quality" })).toBeInTheDocument();
+
+  const background=screen.getByLabelText("3D background color");
+  const brightness=screen.getByRole("slider",{name:"3D intensity brightness"});
+  expect(background.closest(".appearance-line")).toContainElement(brightness);
+  expect(screen.getByRole("region",{name:"Volume options"}).firstElementChild).toHaveClass("volume-appearance-controls");
   const display = screen.getByRole("button", { name: "Additive blend" });
   expect(display).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(screen.getByRole("button", {name:"Maximum intensity"}));

@@ -792,14 +792,15 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
                 channelWarning={props.volumeChannelWarning}
+                appearance={<DisplayOptions volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
+          volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
+          volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
+          volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />}
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
             : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
-        <DisplayOptions volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
-          volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
-          volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
-          volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
+
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
           <LayerVisibilityCheckbox items={props.channels} name="channels" onChange={visible => props.onChannels(props.channels.map(item => ({ ...item, visible })))} />
@@ -836,13 +837,13 @@ function DisplayOptions({ volumeBlend = "additive", onVolumeBlend, volumeBrightn
   onVolumeGain?: (value: number) => void;
 }) {
   if (!onVolumeBlend) return null;
-  return <section className="panel-section display-options">
-    <div className="volume-appearance">
-      <label className="layer-heading"><span>Background</span><input aria-label="3D background color" type="color" value={volumeBackground} onChange={event => onVolumeBackground?.(event.target.value)} /></label>
-      <label className="slider">Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event => onVolumeBrightness?.(Number(event.target.value))} /><output>{volumeBrightness.toFixed(1)}×</output></label>
-      {onVolumeGain && volumeBlend === "additive" && <label className="slider">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event => onVolumeGain(Number(event.target.value))} /><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}
+  return <div className="volume-appearance-controls">
+    <div className="appearance-line">
+      <label>Background<input aria-label="3D background color" type="color" value={volumeBackground} onChange={event=>onVolumeBackground?.(event.target.value)}/></label>
+      <label>Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event=>onVolumeBrightness?.(Number(event.target.value))}/><output>{volumeBrightness.toFixed(1)}×</output></label>
     </div>
-  </section>;
+    {onVolumeGain && volumeBlend === "additive" && <label className="slider volume-gain">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event=>onVolumeGain(Number(event.target.value))}/><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}
+  </div>;
 }
 
 function ChannelPanel({ channels, analyses, onChange }: {
@@ -945,7 +946,7 @@ export function VolumeControls({
   renderer = "neuroglancer",
   onRenderer,
   neuroglancerAvailable = true,
-  view = "3d", onView, blend = "additive", onBlend,
+  view = "3d", onView, blend = "additive", onBlend, appearance,
 }: {
   sizeT: number;
   t: number;
@@ -959,8 +960,10 @@ export function VolumeControls({
   neuroglancerAvailable?: boolean;
   view?: VolumeView; onView?: (view: VolumeView) => void;
   blend?: VolumeBlendMode; onBlend?: (blend:VolumeBlendMode) => void;
+  appearance?: ReactNode;
 }) {
   return <section className="panel-section position-section volume-controls" aria-label="Volume options">
+    {appearance}
     {onView && <div className="quality-control"><span>View</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="Volume view">
       {([["3d","Volume"],["slice","Slice"],["orthogonal","Orthogonal"]] as const).map(([value,label]) =>
         <button key={value} className={view === value ? "active" : ""} aria-pressed={view === value} onClick={()=>onView(value)}>{label}</button>)}

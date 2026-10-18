@@ -317,3 +317,11 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .metadata-table th, .metadata-table td, .metadata-table td * { white-space: normal; overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
 .metadata-table .metadata-value { display: block; max-width: 100%; }
 .metadata-table pre { white-space: pre-wrap; }
+
+.volume-appearance-controls { padding: .1rem 0 .3rem; }
+.appearance-line { display: grid; grid-template-columns: auto 1.45rem auto minmax(40px, 1fr) 2.8rem; align-items: center; gap: .4rem; color: #aeb5cd; font-size: .72rem; }
+.appearance-line label { display: contents; }
+.appearance-line input[type="color"] { width: 1.45rem; height: 1.3rem; padding: 0; border: 1px solid #505570; border-radius: 3px; background: transparent; }
+.appearance-line input[type="range"] { width: 100%; min-width: 0; margin: 0; accent-color: var(--accent); }
+.appearance-line output { text-align: right; font-variant-numeric: tabular-nums; }
+.volume-appearance-controls .volume-gain { margin-top: .25rem; }
