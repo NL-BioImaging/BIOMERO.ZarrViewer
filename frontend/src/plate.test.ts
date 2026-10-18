@@ -41,9 +41,9 @@ test("well and plate overviews choose the expected fields", () => {
   expect(overviewLayout(overviewTiles(plateCapability, "well", "A/1/0", 0), "well").tiles.map((tile) => [tile.left, tile.top])).toEqual([[0, 0], [432, 0]]);
 });
 
-test("NGFF labels default to thirty percent opacity", () => {
+test("NGFF labels default to seventy percent opacity", () => {
   const capability = { ...plateCapability, labels: [{ id: "nuclei", name: "Nuclei", path: "labels/nuclei", axes: [], datasets: [] }] };
-  expect(labelStates(capability)[0].opacity).toBe(0.3);
+  expect(labelStates(capability)[0].opacity).toBe(0.7);
 });
 
 test("Z stacks start at the middle unless a deep link requests a slice", () => {

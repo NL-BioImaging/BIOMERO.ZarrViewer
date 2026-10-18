@@ -59,6 +59,23 @@ test("loader failures are surfaced with a return-to-2D action", async () => {
   expect(screen.getByText("Unable to load this volume")).toBeInTheDocument();
 });
 
+test("Viv slice and orthogonal modes keep the selected volume while changing slab coordinates", () => {
+  const source = loader();
+  const props = { width:800, height:600, loader:source, channels, t:0, resolution:0,
+    onCameraChange:vi.fn(), onCancel:vi.fn(), onError:vi.fn(), onReady:vi.fn() };
+  const { rerender } = render(<VolumeCanvas {...props} view="3d" />);
+  const selected = viv.props.layerProps[0].selections;
+  rerender(<VolumeCanvas {...props} view="slice" plane="xz" />);
+  expect(viv.props.layerProps[0].selections).toBe(selected);
+  expect(viv.props.layerProps[0].ySlice).toEqual([20,25]);
+  expect(viv.props.viewStates[0].rotationX).toBe(90);
+  rerender(<VolumeCanvas {...props} view="orthogonal" />);
+  expect(viv.props.viewStates.map((state: any) => state.id)).toEqual(["xy","xz","3d","yz"]);
+  expect(viv.props.layerProps[0].zSlice).toEqual([30,45]);
+  expect(viv.props.layerProps[3].xSlice).toEqual([10,12.5]);
+  expect(viv.props.layerProps[2]).not.toHaveProperty("xSlice");
+});
+
 test("viewport changes report a compact camera state", () => {
   const onCameraChange = vi.fn();
   render(<VolumeCanvas width={800} height={600} loader={loader()} channels={channels} t={0} resolution={0}

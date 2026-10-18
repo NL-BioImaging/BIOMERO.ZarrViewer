@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { FullscreenButton, focusedLabelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
+import { FullscreenButton, focusedLabelStates, labelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
 import type { Capability, ChannelState, LabelState, VolumeLevel } from "./types";
 
 const channels: ChannelState[] = [{
@@ -56,6 +56,10 @@ const capability: Capability = {
     initial_path: "A/1/0",
   },
 };
+
+test("new labels default to 70% opacity", () => {
+  expect(labelStates(capability)[0].opacity).toBe(.7);
+});
 
 test("3D labels expose visibility, colors and opacity without 2D outline controls", () => {
   const onChange = vi.fn();

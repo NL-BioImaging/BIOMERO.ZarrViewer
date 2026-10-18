@@ -1,6 +1,6 @@
 import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
 
-export interface NeuroglancerCamera { position: number[]; orientation: number[]; scale: number }
+export interface NeuroglancerCamera { position: number[]; orientation: number[]; scale: number; crossSectionScale?: number }
 export interface NeuroglancerSource {
   shape: number[]; resolution: number[]; translation: number[]; segmentation: boolean; segments?: string[]; transport?: "zarr" | "chunks"; browser_segments?: string[]; mesh_errors?: Record<string, string>;
 }
@@ -43,8 +43,8 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
       volumeRenderingGain: gain,
       volumeRenderingDepthSamples: volumeDepthSamples(item),
       // Raw intensity values preserve the same contrast limits as the 2D view.
-      shaderControls: {}, opacity: 1,
-      shader: `void main() { float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); emitRGBA(vec4(vec3(${rgb.join(",")}) * v, ${blend === "additive" ? "v" : "1.0"})); }`,
+      shaderControls: {}, opacity: 1, blend: "additive",
+      shader: `void main() { float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); float alpha = 1.0;\n#ifdef VOLUME_RENDERING\nalpha = ${blend === "additive" ? "v" : "1.0"};\n#endif\nemitRGBA(vec4(vec3(${rgb.join(",")}) * v, alpha)); }`,
     });
   }
   labels.filter(label => label.visible).forEach((label, index) => {
@@ -63,6 +63,7 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
   const first = Object.values(prepared.sources)[0];
   const extent = first.shape.slice().reverse().map((size, axis) => size * first.resolution[axis]);
   return { dimensions, position: extent.map((size, axis) => size / 2 + first.translation[axis]), projectionScale: Math.max(...extent) * 1.5,
+    crossSectionScale: Math.max(...extent) / 500, crossSectionOrientation: [0, 0, 0, 1],
     projectionOrientation: [0, 0, 0, 1], layers, layout: "3d", showSlices: false, showAxisLines: false,
     showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: background, gpuMemoryLimit: 512 * 1024 * 1024, systemMemoryLimit: 512 * 1024 * 1024 };
 }

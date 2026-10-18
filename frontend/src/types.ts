@@ -129,6 +129,8 @@ export interface VolumeCameraState {
   orbit: number;
   tilt: number;
   zoom: number;
+  slicePosition?: number[];
+  sliceZoom?: number;
 }
 
 export type VolumeBlendMode = "additive" | "maximum" | "minimum";

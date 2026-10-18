@@ -2,17 +2,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { AuthenticatedZarrStore } from "./authenticated-store";
 import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
 import { neuroglancerState, type NeuroglancerCamera, type NeuroglancerPrepared } from "./neuroglancer-state";
+import { SliceControls, volumeLayout, type VolumeView, type SlicePlane } from "./VolumeViewControls";
 import { scaleBarSize } from "./physical-scale";
 
 interface Props {
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
   brightness: number; background: string; gain: number; height: number;
+  view?: VolumeView; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
   camera?: NeuroglancerCamera; onCameraChange: (camera: NeuroglancerCamera) => void;
   onError: (message: string) => void; onReady: () => void; onCancel: () => void;
 }
 
 export function NeuroglancerCanvas(props: Props) {
+  const view = props.view || "3d";
+  const plane = props.plane || "xy";
+  const [positionCommand, setPositionCommand] = useState<{ position: number[]; id: number }>();
   const iframe = useRef<HTMLIFrameElement>(null);
   const latest = useRef(props); latest.current = props;
   const [prepared, setPrepared] = useState<NeuroglancerPrepared>();
@@ -74,8 +79,11 @@ export function NeuroglancerCanvas(props: Props) {
     return () => { cancelled = true; clearTimeout(timer); abort.abort(); };
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
   const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.background, props.gain]);
-  const state = useMemo(() => prepared ? neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.background, props.gain) : undefined,
-    [prepared, displayKey]);
+  const state = useMemo(() => prepared ? {
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, view !== "3d" && props.showScale, props.brightness, props.background, props.gain),
+    layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
+    crossSectionBackgroundColor: props.background,
+  } : undefined, [prepared, displayKey, view, plane, props.showScale]);
   useEffect(() => {
     const receive = (event: MessageEvent) => {
       if (event.source !== iframe.current?.contentWindow || event.origin !== window.location.origin) return;
@@ -96,18 +104,31 @@ export function NeuroglancerCanvas(props: Props) {
   useEffect(() => {
     if (initialized && state) iframe.current?.contentWindow?.postMessage({ type: "biomero-ng-state", state,
       sceneKey: props.field, resetKey: props.resetKey, camera: latest.current.camera,
+      positionCommand,
+      voxelSizeNm: prepared && Object.values(prepared.sources)[0]?.resolution,
       voxelDepthNm: prepared && Object.values(prepared.sources)[0]?.resolution[2] }, window.location.origin);
-  }, [initialized, state, props.resetKey, props.field]);
+  }, [initialized, state, props.resetKey, props.field, positionCommand]);
   const scale = props.camera?.scale || state?.projectionScale;
   const scaleBar = scale ? scaleBarSize(scale / Math.max(1, props.height) / 1000, 0) : undefined;
+  const source = prepared && Object.values(prepared.sources)[0];
   return <div className="volume-stage">
+    {source && <SliceControls view={view} plane={plane} onPlane={value => props.onPlane?.(value)} source={source}
+      camera={props.camera} onPosition={position => {
+        setPositionCommand(previous => ({ position, id: (previous?.id || 0) + 1 }));
+        props.onCameraChange({ position, orientation: props.camera?.orientation || [0, 0, 0, 1],
+          scale: props.camera?.scale || state!.projectionScale, crossSectionScale: props.camera?.crossSectionScale || state!.crossSectionScale });
+      }} />}
+
     {depthStep != null && <div className="volume-depth-feedback" role="status">Depth step: {depthStep > 0 ? "+" : ""}{Number(depthStep.toPrecision(3))} µm</div>}
     {channelsKey === "[]" && labelsKey === "[]" && <div className="volume-empty" role="status">All channels and labels are hidden.</div>}
     {prepared && Object.values(prepared.sources).some(source => Object.keys(source.mesh_errors || {}).length) &&
       <div className="volume-depth-feedback" role="status">Some label surfaces exceed the rendering limits. Choose a lower 3D quality.</div>}
-    {prepared && viewerHtml && <iframe key={`${prepared.url}:${retry}`} ref={iframe} title="3D image and segmentation" className="neuroglancer-frame" srcDoc={viewerHtml} />}
+    {prepared && viewerHtml && <iframe key={`${prepared.url}:${retry}`} ref={iframe} title="Volume image and segmentation" className="neuroglancer-frame" srcDoc={viewerHtml} />}
+    {view === "orthogonal" && <div className="orthogonal-panel-labels" aria-label="Orthogonal panels">
+      <span>XY</span><span>XZ</span><span>3D</span><span>YZ</span>
+    </div>}
     {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
-    {props.showScale && scaleBar && !progress && !error && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} micrometer at volume center`}>
+    {view === "3d" && props.showScale && scaleBar && !progress && !error && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} micrometer at volume center`}>
       <span style={{ width: `${scaleBar.pixels}px` }} /><strong>{scaleBar.value} µm</strong><small>at volume center</small>
     </div>}
     {error && <div className="volume-error" role="alert"><strong>Unable to load 3D labels</strong><p>{error}</p>

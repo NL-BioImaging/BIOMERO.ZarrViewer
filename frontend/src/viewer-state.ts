@@ -1,4 +1,5 @@
 import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeBlendMode, VolumeCameraState, VolumeRenderer } from "./types";
+import type { VolumeView, SlicePlane } from "./VolumeViewControls";
 import type { NeuroglancerCamera } from "./neuroglancer-state";
 
 export function defaultVolumeBlend(renderer: VolumeRenderer = "neuroglancer"): VolumeBlendMode {
@@ -21,6 +22,8 @@ export interface DeepLinkState {
   volumeGain?: number;
   volumeCamera?: VolumeCameraState;
   ngCamera?: NeuroglancerCamera;
+  volumeView?: VolumeView;
+  slicePlane?: SlicePlane;
   field?: string;
   roi?: RoiBounds;
   sourceChannels?: number[];
@@ -69,9 +72,16 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
       const value = JSON.parse(ngCamera);
       if (Array.isArray(value.position) && value.position.length === 3 && value.position.every(Number.isFinite)
         && Array.isArray(value.orientation) && value.orientation.length === 4 && value.orientation.every(Number.isFinite)
-        && Number.isFinite(value.scale) && value.scale > 0 && Math.hypot(...value.orientation) > 0) state.ngCamera = value;
+        && Number.isFinite(value.scale) && value.scale > 0 && Math.hypot(...value.orientation) > 0) state.ngCamera = {
+          position: value.position, orientation: value.orientation, scale: value.scale,
+          ...(Number.isFinite(value.crossSectionScale) && value.crossSectionScale > 0 ? { crossSectionScale: value.crossSectionScale } : {}),
+        };
     } catch { /* Ignore invalid optional camera state. */ }
   }
+  const volumeView = params.get("volumeView");
+  if (volumeView === "3d" || volumeView === "slice" || volumeView === "orthogonal") state.volumeView = volumeView;
+  const slicePlane = params.get("slicePlane");
+  if (slicePlane === "xy" || slicePlane === "xz" || slicePlane === "yz") state.slicePlane = slicePlane;
   const view = params.get("view");
   if (params.has("plateField")) state.plateField = Math.floor(finite(params.get("plateField"),0,0,1535));
   if (view === "field" || view === "well" || view === "plate") state.view = view;
@@ -101,6 +111,16 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
       tilt: finite(params.get("tilt"), 0, -90, 90),
       zoom: finite(params.get("zoom3d"), 0, -30, 30),
     };
+  }
+  const vivSlices = params.get("vivSlices");
+  if (vivSlices && vivSlices.length < 1000) {
+    try {
+      const value = JSON.parse(vivSlices);
+      if (Array.isArray(value.position) && value.position.length === 3 && value.position.every((v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1)) {
+        state.volumeCamera = { orbit: 0, tilt: 0, zoom: 0, ...state.volumeCamera, slicePosition: value.position,
+          sliceZoom: finite(value.zoom, 0, -20, 20) };
+      }
+    } catch { /* Ignore invalid optional slice state. */ }
   }
   if (params.get("field")) state.field = params.get("field")!;
   const roi = (params.get("roi") || "").split(",");
@@ -230,10 +250,13 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.volumeBrightness != null && state.volumeBrightness !== 1) params.set("brightness3d", String(state.volumeBrightness));
   if (state.volumeGain != null && state.volumeGain !== -3) params.set("gain3d", String(state.volumeGain));
   if (state.volumeBackground && state.volumeBackground !== "#030406") params.set("background3d", state.volumeBackground);
+  if (state.volumeView && state.volumeView !== "3d") params.set("volumeView", state.volumeView);
+  if (state.slicePlane && state.slicePlane !== "xy") params.set("slicePlane", state.slicePlane);
   if (state.ngCamera) params.set("ngCamera", JSON.stringify(state.ngCamera));
   if (state.volumeBlend) params.set("volumeBlend", state.volumeBlend);
   if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
   if (state.renderMode === "3d" && state.volumeCamera) {
+    if (state.volumeCamera.slicePosition) params.set("vivSlices", JSON.stringify({ position: state.volumeCamera.slicePosition, zoom: state.volumeCamera.sliceZoom || 0 }));
     params.set("orbit", state.volumeCamera.orbit.toFixed(2));
     params.set("tilt", state.volumeCamera.tilt.toFixed(2));
     params.set("zoom3d", state.volumeCamera.zoom.toFixed(3));

@@ -42,3 +42,11 @@ test("zoom has consistent, reversible notch and smooth trackpad speeds", () => {
   expect(wheelZoomFactor(10, 0)).toBeLessThan(1.12);
   expect(wheelZoomFactor(10000, 0)).toBeCloseTo(1.12 ** 4);
 });
+import { sliceWheelStep } from "./neuroglancer-controls";
+
+test("slice wheel steps follow each calibrated section normal", () => {
+  expect(sliceWheelStep([0,0,1], [300,400,1500], 100)).toBe(-1500);
+  expect(sliceWheelStep([0,-1,0], [300,400,1500], -100)).toBe(400);
+  expect(sliceWheelStep([1,0,0], [300,400,1500], 100, true)).toBe(-3000);
+  expect(sliceWheelStep([0,0,1], [300,400,1500], 0)).toBe(0);
+});

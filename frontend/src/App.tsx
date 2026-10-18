@@ -35,6 +35,8 @@ import {
 } from "./viewer-state";
 import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
+import { ChannelColorPicker } from "./ChannelColorPicker";
+import type { VolumeView, SlicePlane } from "./VolumeViewControls";
 import { NeuroglancerCanvas } from "./NeuroglancerCanvas";
 import type { NeuroglancerCamera } from "./neuroglancer-state";
 import { OverviewGrid, defaultPlateFieldIndex } from "./OverviewGrid";
@@ -111,7 +113,7 @@ export function labelStates(capability: Capability): LabelState[] {
     name: label.name,
     path: label.path,
     visible: true,
-    opacity: 0.3,
+    opacity: 0.7,
     mode: "fill",
     color: label.color,
     outlineWidth: 2,
@@ -310,6 +312,8 @@ export default function App() {
   const [volumeBackground, setVolumeBackground] = useState(deepLink.volumeBackground || "#030406");
   const [volumeGain, setVolumeGain] = useState(deepLink.volumeGain ?? -3);
   const [volumeCamera, setVolumeCamera] = useState<VolumeCameraState | undefined>(deepLink.volumeCamera);
+  const [volumeView, setVolumeView] = useState<VolumeView>(deepLink.volumeView || "3d");
+  const [slicePlane, setSlicePlane] = useState<SlicePlane>(deepLink.slicePlane || "xy");
   const [ngCamera, setNgCamera] = useState<NeuroglancerCamera | undefined>(deepLink.ngCamera);
   const ngCameraField = useRef(field);
   useEffect(() => {
@@ -339,9 +343,9 @@ export default function App() {
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const allVolumeLevels = useMemo(
     () => currentLoaded && maxTextureSize != null
-      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize)
+      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize, volumeRenderer === "classic" && volumeView === "orthogonal" ? 64 * 1024 * 1024 : 256 * 1024 * 1024)
       : [],
-    [currentLoaded, volumeChannels.length, maxTextureSize],
+    [currentLoaded, volumeChannels.length, maxTextureSize, volumeRenderer, volumeView],
   );
   const availableVolumeLevels = useMemo(() => safeVolumeLevels(allVolumeLevels), [allVolumeLevels]);
   const selectedVolumeLevel = useMemo(
@@ -535,7 +539,7 @@ export default function App() {
         volumeBackground,
         volumeGain,
         volumeCamera,
-        ngCamera,
+        ngCamera, volumeView, slicePlane,
         field,
         roi: deepLink.roi,
         sourceChannels: deepLink.sourceChannels,
@@ -550,7 +554,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -579,11 +583,16 @@ export default function App() {
                 })) }]
             } as MovieRecipe} />}
           <div className="view-toolbar" role="group" aria-label="View controls">
-            {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 && <RenderModeToggle
-              mode={effectiveRenderMode} disabled3d={!volumeAvailable} onChange={mode => {
-                if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index);
-                setRenderMode(mode);
-              }} />}
+            {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 ?
+              <label className="volume-view-menu">View <select aria-label="View mode" value={effectiveRenderMode === "2d" ? "2d" : volumeView}
+                onChange={event => {
+                  const value = event.target.value;
+                  if (value === "2d") setRenderMode("2d");
+                  else { setVolumeView(value as VolumeView); setRenderMode("3d"); if (selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); }
+                }}>
+                <option value="2d">2D image</option><option value="3d" disabled={!volumeAvailable}>3D</option>
+                <option value="slice" disabled={!volumeAvailable}>Slice</option><option value="orthogonal" disabled={!volumeAvailable}>Orthogonal</option>
+              </select></label> : null}
             {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
               <button className="icon-button" aria-label="Reset 3D View" title="Reset 3D View" onClick={() => {
                 setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
@@ -632,9 +641,10 @@ export default function App() {
               t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
               brightness={volumeBrightness} background={volumeBackground}
               gain={volumeGain} height={viewerSize.height}
+              view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               resetKey={volumeReset} camera={ngCamera} onCameraChange={setNgCamera}
               onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
-              onReady={() => setStatus("3D image and labels ready")} />
+              onReady={() => setStatus(volumeView === "3d" ? "3D image and labels ready" : volumeView === "slice" ? "Slice ready" : "Orthogonal views ready")} />
           ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <VolumeCanvas
               key={`${currentLoaded.path}:${tIndex}:${selectedVolumeLevel.index}:${volumeChannels.map((channel) => channel.index).join(",")}:${volumeReset}`}
@@ -647,7 +657,7 @@ export default function App() {
               blendMode={volumeBlend}
               brightness={volumeBrightness} background={volumeBackground}
               showScale={showScale}
-              camera={volumeCamera}
+              camera={volumeCamera} view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               onCameraChange={setVolumeCamera}
               onCancel={() => setRenderMode("2d")}
               onError={(message) => setStatus(`3D warning: ${message}`)}
@@ -696,7 +706,7 @@ export default function App() {
           projection={projection}
           onProjection={setProjection}
           renderMode={effectiveRenderMode}
-          labels3dAvailable={useNeuroglancer}
+          labels3dAvailable={useNeuroglancer} volumeView={volumeView}
           volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
           onVolumeRenderer={setVolumeRenderer} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
@@ -737,6 +747,7 @@ interface ViewerPanelProps {
   onProjection: (value: ProjectionMode) => void;
   renderMode: RenderMode;
   labels3dAvailable?: boolean;
+  volumeView?: VolumeView;
   volumeRenderer?: VolumeRenderer;
   onVolumeRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
@@ -793,7 +804,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
             volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
             volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
             volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
-          : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} />}
+          : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} volumeDescription={props.volumeView === "slice" ? "Slice labels" : props.volumeView === "orthogonal" ? "Slices and 3D surfaces" : undefined} />}
           {props.renderMode === "3d"
             ? <VolumeControls
                 sizeT={props.sizeT}
@@ -865,7 +876,7 @@ function ChannelPanel({ channels, analyses, onChange, volumeBlend = "additive", 
       const analysis = analysisByIndex.get(channel.index);
       const showHistogram = histograms.has(channel.index);
       return <div className="layer-card" key={channel.index}>
-        <label className="layer-heading"><input type="checkbox" checked={channel.visible} onChange={(event) => update(channel.index, { visible: event.target.checked })}/><strong>{channel.label}</strong><input aria-label={`${channel.label} color`} type="color" value={channel.color} onChange={(event) => update(channel.index, { color: event.target.value })}/></label>
+        <div className="layer-heading"><input type="checkbox" aria-label={`${channel.label} visibility`} checked={channel.visible} onChange={(event) => update(channel.index, { visible: event.target.checked })}/><strong>{channel.label}</strong><ChannelColorPicker name={channel.label} color={channel.color} onChange={color => update(channel.index, { color })}/></div>
         <div className="contrast-heading"><span>Contrast</span><div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis}>HIST</button></div></div>
         {showHistogram && analysis && <Histogram values={analysis.histogram} color={channel.color} />}
         <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} />
@@ -981,7 +992,7 @@ export function VolumeControls({
   </section>;
 }
 
-export function LabelPanel({ labels, onChange, volume = false }: { labels: LabelState[]; onChange: (value: LabelState[]) => void; volume?: boolean }) {
+export function LabelPanel({ labels, onChange, volume = false, volumeDescription = "3D surfaces" }: { labels: LabelState[]; onChange: (value: LabelState[]) => void; volume?: boolean; volumeDescription?: string }) {
   const update = (id: string, patch: Partial<LabelState>) => onChange(labels.map((item) => item.id === id ? { ...item, ...patch } : item));
   const move = (index: number, delta: number) => { const copy = [...labels]; const target = index + delta; if (target < 0 || target >= copy.length) return; [copy[index], copy[target]] = [copy[target], copy[index]]; onChange(copy); };
   return <section className="panel-section label-panel">{labels.length === 0 && <div className="empty-state"><strong>No NGFF label images</strong><p>This field has no segmentation layers advertised in its label-group metadata.</p></div>}{labels.map((label, index) => <div className="layer-card" key={label.id}>
@@ -989,7 +1000,7 @@ export function LabelPanel({ labels, onChange, volume = false }: { labels: Label
     <label className="slider">Opacity<input type="range" min="0" max="1" step="0.05" value={label.opacity} onChange={(e) => update(label.id, { opacity: Number(e.target.value) })}/><output>{Math.round(label.opacity * 100)}%</output></label>
     {!volume && label.mode === "outline" && <label className="slider">Outline width<input aria-label={`${label.name} outline width`} type="range" min="1" max="20" step="1" value={label.outlineWidth || 2} onChange={(e) => update(label.id, { outlineWidth: Number(e.target.value) })}/><output>{label.outlineWidth || 2}px</output></label>}
     <div className="label-actions">
-      {volume ? <span className="muted">3D surfaces</span> : <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
+      {volume ? <span className="muted">{volumeDescription}</span> : <div className="mode-toggle" role="group" aria-label={`${label.name} display mode`}>
         <button className={label.mode === "fill" ? "active" : ""} aria-pressed={label.mode === "fill"} onClick={() => update(label.id, { mode: "fill" })}>Fill</button>
         <button className={label.mode === "outline" ? "active" : ""} aria-pressed={label.mode === "outline"} onClick={() => update(label.id, { mode: "outline" })}>Outline</button>
       </div>}

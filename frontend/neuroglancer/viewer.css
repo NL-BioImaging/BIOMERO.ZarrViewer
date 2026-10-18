@@ -3,6 +3,7 @@
 .neuroglancer-display-dimensions-widget {
   display: none !important;
 }
+.perspective-panel-show-slice-views { display: none !important; }
 
 /* A single embedded pane does not need Neuroglancer's active-panel border. */
 .neuroglancer-show-panel-borders .neuroglancer-panel,

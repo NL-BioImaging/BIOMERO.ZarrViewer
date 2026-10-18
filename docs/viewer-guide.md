@@ -20,7 +20,9 @@ your image pixels or segmentation labels.
 
 Use the checkbox beside **Channels** to show or hide all intensity channels.
 A partial check means that only some channels are visible. Individual channels
-have their own visibility checkbox, color and display range.
+have their own visibility checkbox, color and display range. Open a channel color
+swatch to choose Red, Green, Blue, Cyan, Magenta, Yellow or Grayscale, or use a custom color.
+Grayscale maps intensities from black to white. These presets work in both engines.
 
 - **Auto** estimates a useful contrast range from sampled image data.
 - **Fit** fits the display range to the sampled values.
@@ -33,6 +35,7 @@ These controls change the display only. They do not change the underlying measur
 
 Use the checkbox beside **Labels** to show or hide all segmentation layers.
 The Labels tab provides individual visibility, opacity and color controls.
+New label layers start at 70% opacity; saved links retain their explicit opacity.
 Keep multicolor object colors or select a single color to compare segmentation results.
 
 In 2D, choose filled objects, outlines or both and adjust outline width.
@@ -52,7 +55,7 @@ Viv 3D displays intensity channels only; return to Neuroglancer or 2D to view la
 
 ## Choose a 3D renderer
 
-For a compatible Z stack, select **3D** in the top toolbar. Under
+For a compatible Z stack, select **3D** from the **View** menu in the top toolbar. Under
 **3D Volume → Viewer**, choose the rendering engine:
 
 - **Neuroglancer** is the default and displays intensity channels with segmentation surfaces.
@@ -62,6 +65,22 @@ Choose **Quality** to select a stored resolution level. Level 0 is the finest;
 higher level numbers are coarser and usually faster. Physical XYZ proportions
 are preserved across levels. Switching renderers keeps channel and label settings.
 The navigator is available in 2D only and is hidden in 3D.
+
+## Slices and orthogonal views
+
+The **View** menu provides **2D image**, **3D**, **Slice** and **Orthogonal**.
+The existing 2D image view retains projections, labels, the navigator and movie export.
+Both Neuroglancer and Viv provide the other three modes.
+
+- **Slice** displays one section. Choose **XY**, **XZ** or **YZ** and move its position slider.
+- **Orthogonal** displays XY, XZ and YZ sections alongside a 3D volume. The X, Y and Z sliders select the common intersection.
+- In Neuroglancer, the sections share a center and show their planes in the 3D panel. Drag to pan; the mouse wheel steps sections and Ctrl+wheel zooms. Positions and slice zoom survive changing modes and shared links.
+- In Viv, sections use calibrated, one-voxel-thick slabs of the cached intensity volume. Scroll to zoom a section; its orientation stays fixed. Position sliders move the slabs, and section zoom is shared. Viv remains intensity-only.
+
+Slice positions refer to the selected quality level and are displayed starting at 1.
+Changing quality preserves physical position in Neuroglancer and relative position in Viv.
+Viv orthogonal mode uses a smaller per-volume budget to allow for four rendered panels.
+Use **Reset 3D View** to recenter sections and reset the volume camera.
 
 ## Move around in 3D
 

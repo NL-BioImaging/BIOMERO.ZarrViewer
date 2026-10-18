@@ -17,3 +17,9 @@ export function configureVolumeWheel(bindings: { set: (key: string, action: { ac
   bindings.set("at:wheel", { action: "biomero-zoom-via-wheel", preventDefault: true });
   bindings.set("at:control+wheel", { action: "biomero-depth-via-wheel", preventDefault: true });
 }
+
+/** The embedded coordinate system uses nanometers, so one native step is not a source voxel. */
+export function sliceWheelStep(normal: ArrayLike<number>, resolution: number[], delta: number, fast = false) {
+  const axis = [0, 1, 2].reduce((largest, i) => Math.abs(normal[i]) > Math.abs(normal[largest]) ? i : largest, 0);
+  return delta === 0 ? 0 : (delta > 0 ? -1 : 1) * resolution[axis] * (fast ? 10 : 1);
+}
