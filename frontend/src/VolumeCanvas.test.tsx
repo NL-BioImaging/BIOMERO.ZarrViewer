@@ -78,6 +78,14 @@ test("Viv sections share calibrated zoom and linked navigation, with scale bars 
   expect(viv.panels.get("xz").viewStates[0].target).toEqual([3.2,9.6,0]);
   expect(viv.panels.get("yz").viewStates[0].zoom).toBe(viv.panels.get("xy").viewStates[0].zoom);
   expect(viv.panels.get("xz").layerProps[0].modelMatrix.getScale()).toEqual([1,4,1]);
+  const initialZoom = viv.panels.get("xy").viewStates[0].zoom;
+  expect(viv.panels.get("3d").viewStates[0].zoom).toBe(initialZoom);
+  viv.panels.get("3d").onViewStateChange({viewId:"3d",viewState:{rotationOrbit:20,rotationX:15,zoom:initialZoom+.25}});
+  const zoomed = change.mock.calls.at(-1)![0];
+  expect(zoomed.sliceZoom).toBeCloseTo(.25);
+  rerender(<VolumeCanvas {...props} camera={zoomed} view="orthogonal" />);
+  for (const id of ["3d","xy","xz","yz"]) expect(viv.panels.get(id).viewStates[0].zoom).toBeCloseTo(initialZoom+.25);
+  rerender(<VolumeCanvas {...props} view="orthogonal" />);
   const xz = viv.panels.get("xz");
   xz.onViewStateChange({viewState:{target:[2,8,0],zoom:xz.viewStates[0].zoom+1}});
   expect(change).toHaveBeenLastCalledWith(expect.objectContaining({sliceTarget:[.25,.3,.5],sliceZoom:1}));

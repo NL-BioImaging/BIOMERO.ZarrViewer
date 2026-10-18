@@ -107,6 +107,7 @@ export function NeuroglancerCanvas(props: Props) {
     if (initialized && state) iframe.current?.contentWindow?.postMessage({ type: "biomero-ng-state", state,
       sceneKey: props.field, resetKey: props.resetKey, camera: latest.current.camera,
       positionCommand,
+      physicalExtentNm: prepared && (() => { const source = Object.values(prepared.sources)[0]; return source.shape.slice().reverse().map((n, i) => n * source.resolution[i]); })(),
       voxelSizeNm: prepared && Object.values(prepared.sources)[0]?.resolution,
       voxelDepthNm: prepared && Object.values(prepared.sources)[0]?.resolution[2] }, window.location.origin);
   }, [initialized, state, props.resetKey, props.field, positionCommand]);

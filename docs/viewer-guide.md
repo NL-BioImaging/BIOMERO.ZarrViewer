@@ -56,7 +56,7 @@ Viv 3D displays intensity channels only; return to Neuroglancer or 2D to view la
 ## Choose a 3D renderer
 
 For a compatible Z stack, select **3D** using the **2D / 3D** buttons in the top toolbar. Under
-**3D Volume → Viewer**, choose the rendering engine:
+**Viewer**, choose the rendering engine:
 
 - **Neuroglancer** is the default and displays intensity channels with segmentation surfaces.
 - **Viv** is the alternative intensity-only volume renderer.
@@ -69,18 +69,20 @@ The navigator is available in 2D only and is hidden in 3D.
 ## Slices and orthogonal views
 
 The top **2D / 3D** buttons switch between the image tools and volume tools.
-Within **3D Volume**, the **Volume**, **Slice** and **Orthogonal** buttons choose the layout,
+At the top of the sidebar, the **Volume**, **Slice** and **Orthogonal** buttons choose the layout,
 beside the existing Neuroglancer / Viv engine choices. The 2D view retains projections,
 labels, the navigator and movie export. Both engines provide all three volume layouts.
 
 - **Slice** displays one section. Choose **XY**, **XZ** or **YZ** and move its position slider.
 - **Orthogonal** displays XY, XZ and YZ sections alongside a 3D volume. The X, Y and Z sliders select the common intersection.
-- In Neuroglancer, the sections share a center and show their planes in the 3D panel. Drag to pan; the mouse wheel steps sections and Ctrl+wheel zooms. Positions and slice zoom survive changing modes and shared links.
+- In Neuroglancer, the sections share a center and show their planes in the 3D panel. Drag to pan; the mouse wheel zooms, while Ctrl+wheel steps sections and Shift+wheel steps ten sections. Positions and slice zoom survive changing modes and shared links.
 - In Viv, sections display actual XY, XZ and YZ voxel planes from the cached intensity volume. Crosshairs show the same selected voxel in every section. Click a section or use the sliders to move the common position. Drag to pan and scroll to zoom; section navigation is linked and framing preserves physical XYZ proportions. Viv remains intensity-only.
 
 Slice positions refer to the selected quality level and are displayed starting at 1.
 Changing quality preserves physical position in Neuroglancer and relative position in Viv.
 Viv reuses one cached volume and three lightweight section images, so Level 0 is available whenever it fits the shared 200 MiB level limit and GPU texture limits.
+In Orthogonal mode, all four panels share the same physical zoom. The 3D panel uses orthographic projection to keep sizes consistent through the volume. Zooming any panel updates the others. The initial scale fits the complete sections, and Viv uses gentle wheel zoom in both the 3D and slice panels. Standalone Volume mode retains perspective.
+
 Scale bars use the same style as 2D in every panel, follow zoom and remain visible during slice changes when **Scale bar** is enabled and calibration is available.
 Use **Reset 3D View** to recenter sections and reset the volume camera.
 
@@ -163,3 +165,17 @@ Open **Help** to the right of Fullscreen. Search for a feature or select a
 section from Contents. Drag the title bar to move the window and drag its
 bottom-right corner to resize it. You can keep it open while using the viewer.
 Use **Close help**, or press Escape while focused inside help, to close it.
+
+
+## Inspect image metadata
+
+Select the **Image metadata** icon immediately after **Fullscreen** in the top toolbar.
+The movable, resizable popup groups stored dimensions, calibration, channels,
+resolution levels, labels and plate information. Search names, keys or values;
+expand **All OME-Zarr metadata** to inspect custom attributes and complete array
+metadata. No pixel chunks are read for this inspection.
+
+The lower categories show readable OMERO image, acquisition, pixels, channel and
+instrument details, annotations and key-values, parent container annotations,
+and original import metadata when available. Missing or unreadable optional
+metadata is reported in the Availability section. Close with the cross or Escape.

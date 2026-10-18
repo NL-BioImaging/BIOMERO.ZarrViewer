@@ -1,7 +1,8 @@
+import { ViewerMetadata } from "./MetadataWindow";
 import { MovieExport, TimePlayback } from "./MovieControls";
 import { ViewerHelp } from "./HelpWindow";
 import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
@@ -596,6 +597,7 @@ export default function App() {
               <button className={`icon-button ${showScale ? "active" : ""}`} aria-label="Scale bar" title="Scale bar" aria-pressed={showScale} onClick={() => setShowScale(value => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v5m5-5v3m5-3v5"/></svg></button>
             </>}
             <FullscreenButton />
+            <ViewerMetadata imageId={imageId} field={field || "."} />
             <ViewerHelp />
           </div>
         </div>
@@ -780,6 +782,24 @@ export function ViewerPanel(props: ViewerPanelProps) {
       <button role="tab" aria-selected={plateTab === "view"} className={plateTab === "view" ? "active" : ""} onClick={() => setPlateTab("view")}>View options</button>
     </div>}
     {showNavigation && capability ? <PlateNavigation capability={capability} field={props.field} onField={props.onField} mode={props.viewMode} onMode={props.onViewMode} plateFieldIndex={props.plateFieldIndex} onPlateFieldIndex={props.onPlateFieldIndex} /> : <>
+      <div className="panel-scroll">
+          {props.renderMode === "3d"
+            ? <VolumeControls
+                sizeT={props.sizeT}
+                t={props.t}
+                onT={props.onT}
+                levels={props.volumeLevels}
+                level={props.volumeLevel}
+                onLevel={props.onVolumeLevel}
+                channelWarning={props.volumeChannelWarning}
+                view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
+                renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
+              />
+            : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
+        <DisplayOptions volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
+          volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
+          volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
+          volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
           <LayerVisibilityCheckbox items={props.channels} name="channels" onChange={visible => props.onChannels(props.channels.map(item => ({ ...item, visible })))} />
@@ -790,27 +810,10 @@ export function ViewerPanel(props: ViewerPanelProps) {
           <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={props.renderMode === "3d" && !props.labels3dAvailable} title={props.renderMode === "3d" && !props.labels3dAvailable ? "Viv 3D displays intensity channels only" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
         </div>
       </div>
-      <div className="panel-scroll">
         {viewTab === "channels" ?
-          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels}
-            volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
-            volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
-            volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
-            volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />
+          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
           : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} volumeDescription={props.volumeView === "slice" ? "Slice labels" : props.volumeView === "orthogonal" ? "Slices and 3D surfaces" : undefined} />}
-          {props.renderMode === "3d"
-            ? <VolumeControls
-                sizeT={props.sizeT}
-                t={props.t}
-                onT={props.onT}
-                levels={props.volumeLevels}
-                level={props.volumeLevel}
-                onLevel={props.onVolumeLevel}
-                channelWarning={props.volumeChannelWarning}
-                view={props.volumeView} onView={props.onVolumeView}
-                renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
-              />
-            : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
+
       </div>
     </>}
     {capability && <div className="source-strip">
@@ -822,10 +825,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
   </aside>;
 }
 
-function ChannelPanel({ channels, analyses, onChange, volumeBlend = "additive", onVolumeBlend, volumeBrightness = 1, onVolumeBrightness, volumeBackground = "#030406", onVolumeBackground, volumeGain = -3, onVolumeGain }: {
-  channels: ChannelState[];
-  analyses: ChannelAnalysis[];
-  onChange: (value: ChannelState[]) => void;
+function DisplayOptions({ volumeBlend = "additive", onVolumeBlend, volumeBrightness = 1, onVolumeBrightness, volumeBackground = "#030406", onVolumeBackground, volumeGain = -3, onVolumeGain }: {
   volumeBlend?: VolumeBlendMode;
   onVolumeBlend?: (value: VolumeBlendMode) => void;
   volumeBrightness?: number;
@@ -834,6 +834,19 @@ function ChannelPanel({ channels, analyses, onChange, volumeBlend = "additive", 
   onVolumeBackground?: (value: string) => void;
   volumeGain?: number;
   onVolumeGain?: (value: number) => void;
+}) {
+  if (!onVolumeBlend) return null;
+  return <section className="panel-section display-options">
+    <div className="volume-appearance">
+      <label className="layer-heading"><span>Background</span><input aria-label="3D background color" type="color" value={volumeBackground} onChange={event => onVolumeBackground?.(event.target.value)} /></label>
+      <label className="slider">Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event => onVolumeBrightness?.(Number(event.target.value))} /><output>{volumeBrightness.toFixed(1)}×</output></label>
+      {onVolumeGain && volumeBlend === "additive" && <label className="slider">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event => onVolumeGain(Number(event.target.value))} /><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}
+    </div>
+  </section>;
+}
+
+function ChannelPanel({ channels, analyses, onChange }: {
+  channels: ChannelState[]; analyses: ChannelAnalysis[]; onChange: (value: ChannelState[]) => void;
 }) {
   const [histograms, setHistograms] = useState<Set<number>>(new Set());
   const analysisByIndex = new Map(analyses.map((analysis) => [analysis.index, analysis]));
@@ -852,28 +865,15 @@ function ChannelPanel({ channels, analyses, onChange, volumeBlend = "additive", 
   });
 
   return <section className="panel-section channel-panel">
-    <div className="settings-row"><strong>Display</strong>{onVolumeBlend
-      ? <select aria-label="3D display mode" value={volumeBlend} onChange={(event) => onVolumeBlend(event.target.value as VolumeBlendMode)}>
-          <option value="additive">Additive blend</option>
-          <option value="maximum">Maximum intensity</option>
-          <option value="minimum">Minimum intensity</option>
-        </select>
-      : <span>additive blend</span>}</div>
-    {onVolumeBlend && <div className="volume-appearance">
-      <label className="layer-heading"><span>Background</span><input aria-label="3D background color" type="color" value={volumeBackground} onChange={event => onVolumeBackground?.(event.target.value)} /></label>
-      <label className="slider">Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event => onVolumeBrightness?.(Number(event.target.value))} /><output>{volumeBrightness.toFixed(1)}×</output></label>
-      {onVolumeGain && volumeBlend === "additive" && <label className="slider">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event => onVolumeGain(Number(event.target.value))} /><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}
-      <small className="muted">Brightness affects intensity channels only.</small>
-    </div>}
     {channels.length === 0 && <p className="muted">Loading channels…</p>}
     {channels.map((channel) => {
       const analysis = analysisByIndex.get(channel.index);
       const showHistogram = histograms.has(channel.index);
       return <div className="layer-card" key={channel.index}>
         <div className="layer-heading"><input type="checkbox" aria-label={`${channel.label} visibility`} checked={channel.visible} onChange={(event) => update(channel.index, { visible: event.target.checked })}/><strong>{channel.label}</strong><ChannelColorPicker name={channel.label} color={channel.color} onChange={color => update(channel.index, { color })}/></div>
-        <div className="contrast-heading"><span>Contrast</span><div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis}>HIST</button></div></div>
+
         {showHistogram && analysis && <Histogram values={analysis.histogram} color={channel.color} />}
-        <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} />
+        <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} actions={<div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis}>HIST</button></div>} />
       </div>;
     })}
   </section>;
@@ -884,7 +884,7 @@ function Histogram({ values, color }: { values: number[]; color: string }) {
   return <div className="histogram" aria-label="Sampled intensity histogram">{values.map((value, index) => <i key={index} style={{ height: `${Math.max(2, Math.log1p(value) / Math.log1p(maximum) * 100)}%`, backgroundColor: color }}/>)}</div>;
 }
 
-function DualRange({ channel, analysis, onChange }: { channel: ChannelState; analysis?: ChannelAnalysis; onChange: (patch: Partial<ChannelState>) => void }) {
+function DualRange({ channel, analysis, onChange, actions }: { channel: ChannelState; analysis?: ChannelAnalysis; onChange: (patch: Partial<ChannelState>) => void; actions?: ReactNode }) {
   const rangeMin = analysis?.fitLow ?? channel.domainMin;
   const rangeMax = analysis?.fitHigh ?? channel.domainMax;
   const span = Math.max(Number.EPSILON, rangeMax - rangeMin);
@@ -899,7 +899,7 @@ function DualRange({ channel, analysis, onChange }: { channel: ChannelState; ana
       <input aria-label={`${channel.label} display minimum`} type="range" min={rangeMin} max={rangeMax} step={step} value={low} onChange={(event) => onChange({ low: Math.min(Number(event.target.value), high) })}/>
       <input aria-label={`${channel.label} display maximum`} type="range" min={rangeMin} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.max(Number(event.target.value), low) })}/>
     </div>
-    <div className="range-values"><input aria-label={`${channel.label} minimum value`} type="number" min={rangeMin} max={high} step={step} value={low} onChange={(event) => onChange({ low: Math.max(rangeMin, Math.min(Number(event.target.value), high)) })}/><input aria-label={`${channel.label} maximum value`} type="number" min={low} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.min(rangeMax, Math.max(Number(event.target.value), low)) })}/></div>
+    <div className="range-values"><input aria-label={`${channel.label} minimum value`} type="number" min={rangeMin} max={high} step={step} value={low} onChange={(event) => onChange({ low: Math.max(rangeMin, Math.min(Number(event.target.value), high)) })}/>{actions}<input aria-label={`${channel.label} maximum value`} type="number" min={low} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.min(rangeMax, Math.max(Number(event.target.value), low)) })}/></div>
   </div>;
 }
 
@@ -920,9 +920,9 @@ function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection 
     { value: "mean", label: "Mean" },
     { value: "min", label: "Min" },
   ];
-  return <section className="panel-section position-section"><h2>Position</h2>
+  return <section className="panel-section position-section" aria-label="Position controls">
     {sizeZ > 1 && <>
-      <div className="projection-control"><span>Projection</span><div className="mode-toggle projection-toggle" role="group" aria-label="Z projection mode">
+      <div className="projection-control"><div className="mode-toggle projection-toggle" role="group" aria-label="Z projection mode">
         {projections.map((item) => <button key={item.value} className={projection === item.value ? "active" : ""} aria-pressed={projection === item.value} onClick={() => onProjection(item.value)}>{item.label}</button>)}
       </div></div>
       {projection === "slice"
@@ -945,7 +945,7 @@ export function VolumeControls({
   renderer = "neuroglancer",
   onRenderer,
   neuroglancerAvailable = true,
-  view = "3d", onView,
+  view = "3d", onView, blend = "additive", onBlend,
 }: {
   sizeT: number;
   t: number;
@@ -958,12 +958,16 @@ export function VolumeControls({
   onRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
   view?: VolumeView; onView?: (view: VolumeView) => void;
+  blend?: VolumeBlendMode; onBlend?: (blend:VolumeBlendMode) => void;
 }) {
-  return <section className="panel-section position-section volume-controls">
-    <h2>3D Volume</h2>
+  return <section className="panel-section position-section volume-controls" aria-label="Volume options">
     {onView && <div className="quality-control"><span>View</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="Volume view">
       {([["3d","Volume"],["slice","Slice"],["orthogonal","Orthogonal"]] as const).map(([value,label]) =>
         <button key={value} className={view === value ? "active" : ""} aria-pressed={view === value} onClick={()=>onView(value)}>{label}</button>)}
+    </div></div>}
+    {onBlend && <div className="quality-control"><span>Display</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="3D display mode">
+      {([["additive","Additive","Additive blend"],["maximum","Maximum","Maximum intensity"],["minimum","Minimum","Minimum intensity"]] as const).map(([value,label,name])=>
+        <button key={value} aria-label={name} title={name} className={blend===value?"active":""} aria-pressed={blend===value} onClick={()=>onBlend(value)}>{label}</button>)}
     </div></div>}
     {onRenderer && <div className="quality-control">
       <span>Viewer</span>
@@ -973,7 +977,6 @@ export function VolumeControls({
         <button className={renderer === "classic" ? "active" : ""} aria-pressed={renderer === "classic"}
           title="Viv: intensity channels" onClick={() => onRenderer("classic")}>Viv</button>
       </div>
-      {renderer === "classic" && <small className="muted">Viv displays intensity channels only.</small>}
     </div>}
     <label className="quality-control">
       <span>Quality</span>
@@ -983,9 +986,7 @@ export function VolumeControls({
         </option>)}
       </select>
     </label>
-    <p className="projection-note">{renderer === "neuroglancer"
-      ? "Visible channels and labels are loaded for the selected timepoint."
-      : "Visible intensity channels are loaded for the selected timepoint."} Changes to quality, visibility or timepoint reload the view.</p>
+
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
     {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
     {sizeT > 1 && <label className="slider">Timepoint <input aria-label="Timepoint" type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}

@@ -7,22 +7,24 @@ import { registerActionListener } from "neuroglancer/unstable/util/event_action_
 import { PerspectivePanel } from "neuroglancer/unstable/perspective_view/panel.js";
 import { SliceViewPanel } from "neuroglancer/unstable/sliceview/panel.js";
 import { vec3 } from "neuroglancer/unstable/util/geom.js";
-import { configureVolumeWheel, depthWheelStep, wheelZoomFactor, sliceWheelStep } from "../src/neuroglancer-controls";
+import { configureVolumeWheel, depthWheelStep, wheelZoomFactor, sliceWheelStep, configureSliceWheel, linkOrthogonalZoom, orthogonalFitScale } from "../src/neuroglancer-controls";
 
 const origin = window.parent.location.origin;
 const send = (message: object) => window.parent.postMessage(message, origin);
 try {
   const viewer = makeDefaultViewer({ showUIControls: false, showLayerDialog: false, resetStateWhenEmpty: false });
   setDefaultInputEventBindings(viewer.inputEventBindings);
-  // Perspective panels zoom on wheel; slice panels keep native slice navigation.
+  // Ordinary wheel movement zooms in every panel; modified wheel moves slices.
   configureVolumeWheel(viewer.inputEventBindings.perspectiveView);
   viewer.registerDisposer(registerActionListener<WheelEvent>(viewer.element, "biomero-zoom-via-wheel", event => {
     viewer.perspectiveNavigationState.zoomBy(wheelZoomFactor(event.detail.deltaY, event.detail.deltaMode));
   }));
   let voxelDepthNm = 1;
   let voxelSizeNm = [1, 1, 1];
-  viewer.inputEventBindings.sliceView.set("at:wheel", { action: "biomero-slice-via-wheel", preventDefault: true });
-  viewer.inputEventBindings.sliceView.set("at:shift+wheel", { action: "biomero-slice-via-wheel", preventDefault: true });
+  configureSliceWheel(viewer.inputEventBindings.sliceView);
+  viewer.registerDisposer(registerActionListener<WheelEvent>(viewer.element, "biomero-section-zoom-via-wheel", event => {
+    viewer.navigationState.zoomBy(wheelZoomFactor(event.detail.deltaY, event.detail.deltaMode));
+  }));
   viewer.registerDisposer(registerActionListener<WheelEvent>(viewer.element, "biomero-slice-via-wheel", event => {
     const panel = [...viewer.display.panels].find(panel => panel instanceof SliceViewPanel && panel.element.contains(event.target as Node)) as SliceViewPanel | undefined;
     if (!panel) return;
@@ -44,6 +46,13 @@ try {
   let wasReady = false;
   let lastError = "";
   let lastPanels = "";
+  let fitPending = false;
+  let physicalExtent = [1, 1, 1];
+  const perspectiveHeight = () => [...viewer.display.panels].find(panel => panel instanceof PerspectivePanel)?.element.getBoundingClientRect().height || 0;
+  const linkedZoom = linkOrthogonalZoom(viewer.crossSectionScale, viewer.projectionScale, perspectiveHeight,
+    () => initialized && !updating && layout === "4panel");
+  viewer.crossSectionScale.changed.add(linkedZoom.fromSections);
+  viewer.projectionScale.changed.add(linkedZoom.fromVolume);
   let layerSources = new Map<string, string>();
   let segmentSelections = new Map<string, string>();
   let timer: ReturnType<typeof setTimeout>;
@@ -62,18 +71,21 @@ try {
     try {
       updating = true;
       const { state, resetKey, sceneKey } = event.data;
+      physicalExtent = event.data.physicalExtentNm || physicalExtent;
+      if ((!initialized || layout !== state.layout || resetKey !== reset || sceneKey !== scene) && state.layout === "4panel")
+        fitPending = !event.data.camera?.crossSectionScale;
       voxelDepthNm = event.data.voxelDepthNm || 1;
       voxelSizeNm = event.data.voxelSizeNm || [1, 1, voxelDepthNm];
       const previous = initialized && resetKey === reset && sceneKey === scene ? camera() : event.data.camera;
       if (!initialized) {
-        viewer.state.restoreState({ ...state, ...(previous ? { position: previous.position, projectionOrientation: previous.orientation, projectionScale: previous.scale, crossSectionScale: previous.crossSectionScale || state.crossSectionScale } : {}) });
+        viewer.state.restoreState({ ...state, layout:{type:state.layout,orthographicProjection:state.layout === "4panel"}, ...(previous ? { position: previous.position, projectionOrientation: previous.orientation, projectionScale: previous.scale, crossSectionScale: previous.crossSectionScale || state.crossSectionScale } : {}) });
         layerSources = new Map(state.layers.map((spec: any) => [spec.name, JSON.stringify(spec.source)]));
         segmentSelections = new Map(state.layers.filter((spec: any) => spec.type === "segmentation").map((spec: any) => [spec.name, JSON.stringify(spec.segments)]));
       } else {
         // Update appearance in place. Recreating the layout during async chunk
         // loading invalidates Neuroglancer's render-layer attachment state.
         // Only rebuild panels when the requested mode/plane actually changes.
-        if (layout !== state.layout) viewer.layout.restoreState(state.layout);
+        if (layout !== state.layout) viewer.layout.restoreState({type:state.layout,orthographicProjection:state.layout === "4panel"});
         viewer.showPerspectiveSliceViews.value = state.showSlices;
         viewer.showAxisLines.value = state.showAxisLines;
         viewer.showScaleBar.value = state.showScaleBar;
@@ -133,6 +145,17 @@ try {
   });
   window.setInterval(() => {
     if (!initialized) { send({ type: "biomero-ng-initialized" }); return; }
+    if (layout === "4panel") {
+      const section = [...viewer.display.panels].find(panel => panel instanceof SliceViewPanel);
+      if (fitPending && section && perspectiveHeight() > 0) {
+        const bounds = section.element.getBoundingClientRect();
+        if (bounds.width > 0 && bounds.height > 0) {
+          viewer.crossSectionScale.value = orthogonalFitScale(physicalExtent, bounds.width, bounds.height);
+          fitPending = false;
+        }
+      }
+      linkedZoom.fromSections();
+    }
     const origin = viewer.element.getBoundingClientRect();
     const panels = [...viewer.display.panels].flatMap(panel => {
       if (!(panel instanceof SliceViewPanel || panel instanceof PerspectivePanel)) return [];
@@ -140,7 +163,7 @@ try {
       if (!bounds.width || !bounds.height) return [];
       const perspective = panel instanceof PerspectivePanel;
       return [{ left:bounds.left-origin.left, top:bounds.top-origin.top, width:bounds.width, height:bounds.height,
-        unitsPerPixel:perspective ? viewer.projectionScale.value / bounds.height : panel.navigationState.zoomFactor.value, perspective }];
+        unitsPerPixel:perspective ? viewer.projectionScale.value / bounds.height : panel.navigationState.zoomFactor.value, perspective:panel instanceof PerspectivePanel && !panel.viewer.orthographicProjection.value }];
     });
     const panelKey = JSON.stringify(panels);
     if (panelKey !== lastPanels) { lastPanels = panelKey; send({ type:"biomero-ng-panels", panels }); }

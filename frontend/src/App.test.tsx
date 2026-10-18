@@ -118,7 +118,7 @@ test("3D time and quality remain available while inspecting labels", () => {
   const time = screen.getByRole("slider", {name:"Timepoint"});
   expect(time).toHaveValue("17");
   expect(screen.getByRole("combobox", {name:"3D volume quality"})).toBeInTheDocument();
-  expect(screen.getByText(/Visible channels and labels are loaded for the selected timepoint/)).toBeInTheDocument();
+  expect(screen.queryByRole("heading",{name:"3D Volume"})).not.toBeInTheDocument();
   fireEvent.change(time, {target:{value:"39"}});
   expect(onT).toHaveBeenCalledWith(39);
 });
@@ -179,9 +179,9 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
   />);
   expect(screen.getByRole("tab", { name: "Labels (1)" })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: "3D volume quality" })).toBeInTheDocument();
-  const display = screen.getByRole("combobox", { name: "3D display mode" });
-  expect(display).toHaveValue("additive");
-  fireEvent.change(display, { target: { value: "maximum" } });
+  const display = screen.getByRole("button", { name: "Additive blend" });
+  expect(display).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", {name:"Maximum intensity"}));
   expect(onVolumeBlend).toHaveBeenCalledWith("maximum");
 });
 
@@ -268,4 +268,32 @@ test("fullscreen control becomes an exit control while fullscreen is active", ()
     document.documentElement.requestFullscreen = originalRequest;
     document.exitFullscreen = originalExit;
   }
+});
+
+test("navigation comes before compact channel ranges in 2D and 3D", () => {
+  const props = {capability:null,channels,channelAnalyses:[],onChannels:vi.fn(),labels:[],onLabels:vi.fn(),onField:vi.fn(),
+    sizeZ:31,sizeT:1,z:0,t:0,onZ:vi.fn(),onT:vi.fn(),projection:"slice" as const,onProjection:vi.fn(),
+    volumeLevels:levels,onVolumeLevel:vi.fn(),viewMode:"field" as const,onViewMode:vi.fn(),plateFieldIndex:0,onPlateFieldIndex:vi.fn()};
+  const {container,rerender} = render(<ViewerPanel {...props} renderMode="3d" />);
+  const controls = screen.getByRole("region",{name:"Volume options"});
+  const minimum = screen.getByRole("slider",{name:"DNA display minimum"});
+  expect(controls.compareDocumentPosition(minimum) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const tabs=screen.getByRole("tablist",{name:"Image layers"});
+  expect(controls.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(tabs.compareDocumentPosition(minimum) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByText("Contrast")).not.toBeInTheDocument();
+  const row=container.querySelector(".range-values")!;
+  expect([...row.children].map(item=>item.tagName)).toEqual(["INPUT","DIV","INPUT"]);
+  expect(row.querySelector(".micro-actions")).toHaveTextContent("AUTOFITHIST");
+  rerender(<ViewerPanel {...props} renderMode="2d" />);
+  expect(screen.queryByRole("heading",{name:"Position"})).not.toBeInTheDocument();
+  expect(screen.queryByText("Projection")).not.toBeInTheDocument();
+  expect(screen.getByRole("region",{name:"Position controls"}).compareDocumentPosition(screen.getByRole("slider",{name:"DNA display minimum"})) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test("display choice buttons sit directly below the volume layout choices",()=>{
+  render(<VolumeControls sizeT={1} t={0} onT={vi.fn()} levels={levels} onLevel={vi.fn()} onView={vi.fn()} blend="maximum" onBlend={vi.fn()} onRenderer={vi.fn()}/>);
+  const view=screen.getByRole("group",{name:"Volume view"}), display=screen.getByRole("group",{name:"3D display mode"});
+  expect(view.parentElement?.nextElementSibling).toBe(display.parentElement);
+  expect(screen.getByRole("button",{name:"Maximum intensity"})).toHaveAttribute("aria-pressed","true");
 });

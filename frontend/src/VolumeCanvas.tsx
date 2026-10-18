@@ -3,13 +3,13 @@ import {
   ColorPalette3DExtensions,
   getDefaultInitialViewState,
   VivViewer,
-  VolumeView,
 } from "@hms-dbmi/viv";
 import type { ChannelState, VolumeBlendMode, VolumeCameraState } from "./types";
 import { activeVolumeChannels, volumeModelMatrix, volumePhysicalScale, volumeSelection } from "./volume-utils";
 import type { VolumeView as ViewMode, SlicePlane } from "./VolumeViewControls";
 import { VivSectionsCanvas } from "./VivSectionsCanvas";
 import { ScaleBar } from "./ScaleBar";
+import { GentleVolumeView } from "./viv-navigation";
 
 const VolumeVivViewer = VivViewer as any;
 
@@ -26,6 +26,7 @@ export interface VolumeCanvasProps {
   background?: string;
   view?: ViewMode; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
   camera?: VolumeCameraState;
+  orthographic?: boolean;
   onCameraChange: (camera: VolumeCameraState) => void;
   onCancel: () => void;
   onError: (message: string) => void;
@@ -107,6 +108,7 @@ function VolumeRenderer({
   brightness = 1,
   background = "#030406",
   camera,
+  orthographic = false,
   onCameraChange,
   onCancel,
   onError,
@@ -169,8 +171,11 @@ function VolumeRenderer({
   const physicalScale = volumePhysicalScale(loader);
   // OrbitView maps 2^zoom pixels per world unit at the camera target. Because
   // it uses perspective, this bar describes the plane through the volume center.
-  const view = useMemo(() => new VolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: true }),
-    [width, height, defaultView.target]);
+  const view = useMemo(() => {
+    const view = new GentleVolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: true });
+    view.orthographic = orthographic;
+    return view;
+  }, [width, height, defaultView.target, orthographic]);
 
   useEffect(() => {
     setProgress(0);
@@ -209,7 +214,7 @@ function VolumeRenderer({
   }];
 
   return <div className="volume-stage" style={{ backgroundColor: background }}>
-    {!loadError && showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** viewState.zoom} unit={physicalScale.unit} perspective />}
+    {!loadError && showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** viewState.zoom} unit={physicalScale.unit} perspective={!orthographic} />}
     {preparedKey === prepareKey && <VolumeVivViewer
       views={[view]}
       viewStates={[viewState]}
@@ -240,8 +245,7 @@ function VolumeRenderer({
 
 export function VolumeCanvas(props: VolumeCanvasProps) {
   return <VolumeErrorBoundary onError={props.onError} onCancel={props.onCancel}>
-    {props.view && props.view !== "3d" ? <VivSectionsCanvas props={props} renderVolume={(width,height) => <VolumeRenderer {...props}
-      width={width} height={height} view="3d" camera={props.camera ? {...props.camera,zoom:props.camera.zoom-1} : undefined}
-      onCameraChange={camera=>props.onCameraChange({...camera,zoom:camera.zoom+1})} />} /> : <VolumeRenderer {...props} />}
+    {props.view && props.view !== "3d" ? <VivSectionsCanvas props={props} renderVolume={(width,height,camera,onCameraChange) => <VolumeRenderer {...props}
+      width={width} height={height} view="3d" orthographic camera={camera} onCameraChange={onCameraChange} />} /> : <VolumeRenderer {...props} />}
   </VolumeErrorBoundary>;
 }

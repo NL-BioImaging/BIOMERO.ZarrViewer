@@ -143,6 +143,20 @@ def capabilities(request, image_id, conn=None, **kwargs):
 @require_GET
 @login_required(setGroupContext=True)
 @api_errors
+def metadata_details(request, image_id, conn=None, **kwargs):
+    from .metadata_details import zarr_details, omero_details
+    store = resolve_image_store(conn, image_id)
+    model = _inspect_resolved_store(store)
+    response = JsonResponse({"zarr": {**zarr_details(store, _safe_data_path),
+                             "format": model["zarr_format"], "ngff_version": model["ngff_version"],
+                             "kind": model["kind"]}, "omero": omero_details(store.image)})
+    response["Cache-Control"] = "private, no-store"
+    return response
+
+
+@require_GET
+@login_required(setGroupContext=True)
+@api_errors
 def plate_capabilities(request, plate_id, conn=None, **kwargs):
     store = resolve_plate_store(conn, plate_id)
     return _capability_response(request, conn, store, require_plate=True)

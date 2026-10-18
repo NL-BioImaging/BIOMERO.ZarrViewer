@@ -50,3 +50,33 @@ test("slice wheel steps follow each calibrated section normal", () => {
   expect(sliceWheelStep([1,0,0], [300,400,1500], 100, true)).toBe(-3000);
   expect(sliceWheelStep([0,0,1], [300,400,1500], 0)).toBe(0);
 });
+
+import { configureSliceWheel, linkOrthogonalZoom, orthogonalFitScale } from "./neuroglancer-controls";
+
+test("section wheel zooms normally and reserves Ctrl/Shift for slice navigation", () => {
+  const target=document.createElement("div"); document.body.append(target);
+  const bindings=EventActionMap.fromObject({"at:wheel":"z+1-via-wheel"});
+  configureSliceWheel(bindings);
+  const binder=new MouseEventBinder(target,bindings), zoom=vi.fn(), slice=vi.fn();
+  const removeZoom=registerActionListener(target,"biomero-section-zoom-via-wheel",zoom);
+  const removeSlice=registerActionListener(target,"biomero-slice-via-wheel",slice);
+  target.dispatchEvent(new WheelEvent("wheel",{deltaY:100,bubbles:true,cancelable:true}));
+  expect(zoom).toHaveBeenCalledTimes(1); expect(slice).not.toHaveBeenCalled();
+  target.dispatchEvent(new WheelEvent("wheel",{deltaY:100,ctrlKey:true,bubbles:true,cancelable:true}));
+  target.dispatchEvent(new WheelEvent("wheel",{deltaY:100,shiftKey:true,bubbles:true,cancelable:true}));
+  expect(slice).toHaveBeenCalledTimes(2); expect(zoom).toHaveBeenCalledTimes(1);
+  removeZoom();removeSlice();binder.dispose();target.remove();
+});
+
+test("orthogonal zoom links both directions in physical pixels, including resize", () => {
+  let height=400, active=true;
+  const section={value:200}, volume={value:180000};
+  const link=linkOrthogonalZoom(section,volume,()=>height,()=>active);
+  link.fromSections(); expect(volume.value).toBe(80000);
+  volume.value=100000;link.fromVolume(); expect(section.value).toBe(250);
+  height=600;link.fromSections();expect(volume.value/height).toBe(section.value);
+  active=false;volume.value=42;link.fromSections();expect(volume.value).toBe(42);
+  active=true;height=0;link.fromVolume();expect(section.value).toBe(250);
+  const fit=orthogonalFitScale([100,200,400],300,200);
+  expect(400/fit).toBeCloseTo(170);
+});

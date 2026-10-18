@@ -1,12 +1,13 @@
 import { useMemo, useRef, type ReactNode } from "react";
-import { ColorPaletteExtension, DetailView, VivViewer, getDefaultInitialViewState } from "@hms-dbmi/viv";
+import { ColorPaletteExtension, VivViewer } from "@hms-dbmi/viv";
 import { Matrix4 } from "@math.gl/core";
 import type { VolumeCanvasProps } from "./VolumeCanvas";
 import { SliceControls, sliceAxis, type SlicePlane } from "./VolumeViewControls";
 import { planeAxes, sectionFitZoom, sectionIndex, sectionSource, vivVolumePanels } from "./viv-slices";
 import { volumeModelMatrix, volumePhysicalScale, activeVolumeChannels } from "./volume-utils";
 import { ScaleBar } from "./ScaleBar";
-import type { ChannelState } from "./types";
+import { GentleDetailView } from "./viv-navigation";
+import type { ChannelState, VolumeCameraState } from "./types";
 import type { PhysicalSize } from "./ngff-physical-sizes";
 
 const SectionViewer = VivViewer as any;
@@ -31,7 +32,7 @@ function Section({ panel, source, plane, index, t, extent, shape, fractions, tar
       catch (error) { if (!(error instanceof DOMException && error.name === "AbortError")) errorHandler.current(String(error)); throw error; }
     } };
   }, [source, plane, index, t]);
-  const view = useMemo(() => new DetailView({ id: plane, width: panel.width, height: panel.height }), [plane, panel.width, panel.height]);
+  const view = useMemo(() => new GentleDetailView({ id: plane, width: panel.width, height: panel.height }), [plane, panel.width, panel.height]);
   const matrix = useMemo(() => new Matrix4().scale([extent[a] / shape[a], extent[b] / shape[b], 1]), [extent[a], extent[b], shape[a], shape[b]]);
   const state = { id: plane, target: [target[a] * extent[a], target[b] * extent[b], 0], zoom };
   const cross = [a, b].map((axis, i) => (fractions[axis] - target[axis]) * extent[axis] * 2 ** zoom + [panel.width, panel.height][i] / 2);
@@ -54,14 +55,13 @@ function Section({ panel, source, plane, index, t, extent, shape, fractions, tar
   </div>;
 }
 
-export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvasProps; renderVolume: (width: number, height: number) => ReactNode }) {
+export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvasProps; renderVolume: (width: number, height: number, camera: VolumeCameraState, onChange: (camera: VolumeCameraState) => void) => ReactNode }) {
   const { width, height, loader, resolution, t, channels, camera, onCameraChange, onReady, onError } = props;
   const mode = props.view || "slice", plane = props.plane || "xy";
   const source = loader[resolution];
   const shape = ["x", "y", "z"].map(axis => Number(source.shape[source.labels.indexOf(axis)] || 1));
   const matrix = volumeModelMatrix(loader, resolution);
   const baseScale = matrix.getScale();
-  const defaultZoom = (getDefaultInitialViewState as any)([source], {width,height}, 1, true, matrix).zoom;
   const sizes = ["x", "y", "z"].map(axis => source.meta?.physicalSizes?.[axis]?.size || 1);
   const smallest = Math.min(...sizes);
   const extent = shape.map((size, axis) => size * baseScale[axis] * sizes[axis] / smallest);
@@ -71,7 +71,7 @@ export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvas
   const panels = vivVolumePanels(mode, plane, width, height);
   const fit = sectionFitZoom(panels, extent), zoom = fit + (camera?.sliceZoom || 0);
   const unit = volumePhysicalScale(loader);
-  const change = (values: Partial<NonNullable<typeof camera>>) => onCameraChange({ orbit:0, tilt:0, zoom:defaultZoom, slicePosition:fractions, ...camera, ...values });
+  const change = (values: Partial<NonNullable<typeof camera>>) => onCameraChange({ orbit:0, tilt:0, ...camera, zoom, slicePosition:fractions, ...values });
   const select = (plane: SlicePlane, point: number[]) => {
     const position = fractions.slice();
     planeAxes[plane].forEach((axis, i) => { position[axis] = Math.max(0, Math.min(1, point[i] / extent[axis])); });
@@ -79,7 +79,7 @@ export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvas
   };
   return <div className="volume-stage" style={{ backgroundColor: props.background || "#030406" }}>
     {panels.map(panel => panel.id === "3d" ? <div className="viv-section-panel" key="3d" style={{left:panel.x,top:panel.y,width:panel.width,height:panel.height}}>
-      {renderVolume(panel.width,panel.height)}
+      {renderVolume(panel.width,panel.height, { orbit:0, tilt:0, ...camera, zoom }, next => change({ ...next, sliceZoom:next.zoom-fit }))}
     </div> : <Section key={panel.id} panel={panel} source={source} plane={panel.id as SlicePlane} index={indices[sliceAxis[panel.id as SlicePlane]]} t={t}
       extent={extent} shape={shape} fractions={fractions} target={target} zoom={zoom} channels={activeVolumeChannels(channels)} brightness={props.brightness || 1}
       physicalUnit={unit} showScale={props.showScale !== false} onReady={onReady} onError={onError} onSelect={select}

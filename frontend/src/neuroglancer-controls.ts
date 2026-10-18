@@ -23,3 +23,28 @@ export function sliceWheelStep(normal: ArrayLike<number>, resolution: number[], 
   const axis = [0, 1, 2].reduce((largest, i) => Math.abs(normal[i]) > Math.abs(normal[largest]) ? i : largest, 0);
   return delta === 0 ? 0 : (delta > 0 ? -1 : 1) * resolution[axis] * (fast ? 10 : 1);
 }
+
+export function configureSliceWheel(bindings: { set: (key: string, action: { action: string; preventDefault: boolean }) => void }) {
+  bindings.set("at:wheel", { action: "biomero-section-zoom-via-wheel", preventDefault: true });
+  bindings.set("at:control+wheel", { action: "biomero-slice-via-wheel", preventDefault: true });
+  bindings.set("at:shift+wheel", { action: "biomero-slice-via-wheel", preventDefault: true });
+}
+
+/** Match nanometers per CSS pixel at the perspective target to the flat sections. */
+export function linkOrthogonalZoom(section: { value: number }, volume: { value: number }, height: () => number, active: () => boolean) {
+  let changing = false;
+  const update = (fromSection: boolean) => {
+    const pixels = height();
+    if (changing || !active() || !(pixels > 0)) return;
+    changing = true;
+    try {
+      if (fromSection) volume.value = section.value * pixels;
+      else section.value = volume.value / pixels;
+    } finally { changing = false; }
+  };
+  return { fromSections: () => update(true), fromVolume: () => update(false) };
+}
+
+export function orthogonalFitScale(extent: number[], width: number, height: number) {
+  return Math.max(...extent.map(size => Math.max(size / width, size / height))) / .85;
+}
