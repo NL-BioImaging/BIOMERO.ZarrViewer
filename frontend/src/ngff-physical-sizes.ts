@@ -2,6 +2,7 @@ interface NgffAxis {
   name?: unknown;
   unit?: unknown;
 }
+import { calibratedAxes } from "./calibration";
 
 interface NgffTransform {
   type?: unknown;
@@ -125,8 +126,14 @@ export function attachNgffPhysicalSizes(loader: any[], metadata: unknown): any[]
   if (!physicalSizes) return loader;
   for (const [level, source] of loader.entries()) {
     const levelSizes = ngffPhysicalSizes(metadata, level);
+    const root=rootMetadata(metadata), multiscale=(root?.multiscales as any[])?.[0];
+    const axes=(multiscale?.axes || []).map((a:any)=>typeof a==="string"?{name:a}:a);
+    const calibration=calibratedAxes(axes,[...(multiscale?.datasets?.[0]?.coordinateTransformations||[]),...(multiscale?.coordinateTransformations||[])]);
+    const levelCalibration=calibratedAxes(axes,[...(multiscale?.datasets?.[level]?.coordinateTransformations||[]),...(multiscale?.coordinateTransformations||[])]);
     source.meta = {
       ...(source.meta || {}),
+      physicalOrigin:Object.fromEntries(Object.entries(calibration).map(([axis,value])=>[axis,value.origin])),
+      volumeTranslation:Object.fromEntries(["x","y","z"].map(axis=>[axis,((levelCalibration[axis]?.origin||0)-(calibration[axis]?.origin||0))/(physicalSizes[axis]?.size||1)])),
       // Keep Viv's base-pixel coordinate system for 2D and camera state. The
       // standalone 3D level uses these axis-specific ratios as its model matrix.
       volumeScale: Object.fromEntries(["x", "y", "z"].flatMap((axis) => {

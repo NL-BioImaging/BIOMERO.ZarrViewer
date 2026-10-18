@@ -20,7 +20,7 @@ test("section loaders select one channel/time and reuse cached planes", async ()
   expect(section.shape).toEqual([3,4,2]);
   const first = await section.getRaster({selection:{c:2}});
   expect(await section.getRaster({selection:{c:2}})).toBe(first);
-  expect(getVolume).toHaveBeenCalledExactlyOnceWith({c:2,t:7});
+  expect(getVolume).toHaveBeenCalledExactlyOnceWith({c:2,t:7},{signal:expect.any(AbortSignal)});
   expect([...first.data]).toEqual([1,11,101,111,201,211,301,311]);
 });
 

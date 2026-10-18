@@ -1,4 +1,5 @@
 import * as zarr from "zarrita";
+import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 
 /** Open only the array needed for a preview, rather than every pyramid level. */
 export async function loadPreviewPyramid(store: any): Promise<any[]> {
@@ -16,7 +17,7 @@ export async function loadPreviewPyramid(store: any): Promise<any[]> {
     if (!transforms.length) return fallback;
     return transforms.reduce((product: number, item: any) => product * Number(item.scale?.[axis] ?? 1), 1);
   };
-  return datasets.map((dataset, level) => {
+  return attachNgffPhysicalSizes(datasets.map((dataset, level) => {
     let array = level === 0 ? Promise.resolve(first) : undefined;
     const source = {
       labels,
@@ -34,7 +35,8 @@ export async function loadPreviewPyramid(store: any): Promise<any[]> {
             throw new Error("No bounded pyramid level is available for this preview; open the field to inspect it");
           }
           const selection = labels.map((axis) => axis === "x" || axis === "y" ? null : Number(options.selection?.[axis] || 0));
-          const raster: any = await zarr.get(opened, selection);
+          options.signal?.throwIfAborted();
+          const raster: any = await zarr.get(opened, selection,{opts:{signal:options.signal}} as any);
           return { data: raster.data, width: opened.shape[labels.indexOf("x")], height: opened.shape[labels.indexOf("y")] };
         } catch (reason) {
           array = undefined;
@@ -43,5 +45,5 @@ export async function loadPreviewPyramid(store: any): Promise<any[]> {
       },
     };
     return source;
-  });
+  }),metadata);
 }

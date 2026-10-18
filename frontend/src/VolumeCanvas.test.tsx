@@ -67,6 +67,14 @@ test("viewport changes report a compact camera state", () => {
   expect(onCameraChange).toHaveBeenCalledWith({ orbit: 45, tilt: -20, zoom: -1 });
 });
 
+test("a calibrated shared target reaches the Viv 3D panel instead of resetting to the volume center",()=>{
+  const input=loader();
+  render(<VolumeCanvas width={800} height={600} loader={input} channels={channels} t={0} resolution={0}
+    camera={{orbit:0,tilt:0,zoom:1,slicePosition:[.25,.75,.5],sliceTarget:[.25,.75,.5]}}
+    onCameraChange={()=>{}} onCancel={()=>{}} onError={()=>{}} onReady={()=>{}} />);
+  expect(viv.props.viewStates[0].target).toEqual([2,6,2]);
+});
+
 test("Viv sections share calibrated zoom and linked navigation, with scale bars before rendering completes", () => {
   const source = loader().map(item=>({...item,meta:{physicalSizes:{x:{size:.5,unit:"micrometer"},y:{size:.5,unit:"micrometer"},z:{size:2,unit:"micrometer"}}}}));
   const change = vi.fn();
@@ -166,4 +174,17 @@ test("the calibrated 3D scale bar follows zoom and can be hidden", async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+test("orthogonal playback readiness waits for the volume and all three slice panels",async()=>{
+  vi.useFakeTimers();
+  try {
+    viv.panels.clear();const ready=vi.fn();
+    render(<VolumeCanvas width={800} height={600} loader={loader()} channels={channels} t={0} resolution={0} view="orthogonal"
+      onCameraChange={()=>{}} onCancel={()=>{}} onError={()=>{}} onReady={ready}/>);
+    await act(async()=>{for(const panel of ["xy","xz","yz"])viv.panels.get(panel).layerProps[0].onViewportLoad();vi.runAllTimers();});
+    expect(ready).not.toHaveBeenCalled();
+    await act(async()=>{viv.panels.get("3d").layerProps[0].onViewportLoad();vi.runAllTimers();});
+    expect(ready).toHaveBeenCalledOnce();
+  } finally {vi.useRealTimers();}
 });

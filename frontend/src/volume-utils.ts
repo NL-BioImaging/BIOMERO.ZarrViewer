@@ -30,7 +30,7 @@ export function volumeModelMatrix(loader: any[], resolution: number): Matrix4 {
       ? declared
       : axisSize(loader[0], axis) / axisSize(source, axis);
   });
-  return new Matrix4().scale(scale);
+  return new Matrix4().translate(["x","y","z"].map(axis=>Number(source?.meta?.volumeTranslation?.[axis])||0)).scale(scale);
 }
 
 /** Viv normalizes XYZ by the smallest base voxel size, in all pyramid levels. */

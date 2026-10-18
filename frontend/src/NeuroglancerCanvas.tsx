@@ -56,10 +56,12 @@ export function NeuroglancerCanvas(props: Props) {
       return;
     }
     const query = new URLSearchParams({ field: props.field, level: String(props.resolution), t: String(props.t), channels: channelsKey, labels: labelsKey });
+    if(retry) query.set("retryFailed","1");
     const prepare = async () => {
       try {
         const response = await props.auth.fetch(`${props.auth.neuroglancerUrl}?${query}`, { signal: abort.signal });
         const result = await response.json();
+        query.delete("retryFailed");
         if (!response.ok) throw new Error(result.error?.message || `3D preparation failed (${response.status})`);
         if (cancelled) return;
         if (result.status === "ready") {
@@ -123,7 +125,7 @@ export function NeuroglancerCanvas(props: Props) {
     {depthStep != null && <div className="volume-depth-feedback" role="status">Depth step: {depthStep > 0 ? "+" : ""}{Number(depthStep.toPrecision(3))} µm</div>}
     {channelsKey === "[]" && labelsKey === "[]" && <div className="volume-empty" role="status">All channels and labels are hidden.</div>}
     {prepared && Object.values(prepared.sources).some(source => Object.keys(source.mesh_errors || {}).length) &&
-      <div className="volume-depth-feedback" role="status">Some label surfaces exceed the rendering limits. Choose a lower 3D quality.</div>}
+      <div className="volume-depth-feedback" role="status">Some label surfaces could not be prepared. Try a lower quality or <button onClick={()=>setRetry(n=>n+1)}>Retry failed surfaces</button>.</div>}
     {prepared && viewerHtml && <iframe key={`${prepared.url}:${retry}`} ref={iframe} title="Volume image and segmentation" className="neuroglancer-frame" srcDoc={viewerHtml} />}
     {view === "orthogonal" && <div className="orthogonal-panel-labels" aria-label="Orthogonal panels">
       <span>XY</span><span>XZ</span><span>3D</span><span>YZ</span>

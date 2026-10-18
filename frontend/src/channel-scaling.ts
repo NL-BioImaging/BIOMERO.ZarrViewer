@@ -17,6 +17,8 @@ const MAX_TILES_PER_AXIS = 4;
 const HISTOGRAM_BINS = 48;
 
 export interface ChannelAnalysis {
+  status?: Exclude<StatisticsStatus,"loading">;
+  message?: string;
   index: number;
   autoLow: number;
   autoHigh: number;
@@ -51,28 +53,41 @@ function appendSample(target: number[], data: ArrayLike<number>, budget: number)
   }
 }
 
-async function sampledPixels(source: any, channel: number, z: number, t: number): Promise<Float64Array> {
+export interface AnalysisOptions { signal?: AbortSignal; volume?: boolean }
+export interface StatisticsContext {field:string;renderMode:string;projection:string;z:number;t:number;level?:number;channels:number[]}
+export type StatisticsStatus = "loading" | "ready" | "empty" | "error";
+
+async function sampledPixels(source: any, channel: number, z: number, t: number, options: AnalysisOptions): Promise<Float64Array> {
   const labels: string[] = source.labels || [];
   const xIndex = labels.indexOf("x");
   const yIndex = labels.indexOf("y");
   const width = xIndex >= 0 ? Number(source.shape[xIndex]) : 1;
   const height = yIndex >= 0 ? Number(source.shape[yIndex]) : 1;
-  const selected = selection(labels, channel, z, t);
   const values: number[] = [];
+  const depth = labels.includes("z") ? source.shape[labels.indexOf("z")] : 1;
+  const planes = options.volume ? [...new Set(Array.from({length: Math.min(5, depth)}, (_, i) => Math.round(i * (depth - 1) / Math.max(1, Math.min(5, depth) - 1))))] : [Math.max(0, Math.min(depth - 1, z))];
 
   if (width * height <= SAMPLE_BUDGET) {
-    const raster = await source.getRaster({ selection: selected });
-    appendSample(values, raster.data, SAMPLE_BUDGET);
+    for (const plane of planes) {
+      options.signal?.throwIfAborted();
+      const raster = await source.getRaster({ selection: selection(labels, channel, plane, t), signal: options.signal });
+      options.signal?.throwIfAborted();
+      appendSample(values, raster.data, Math.min(SAMPLE_BUDGET, values.length + Math.floor(SAMPLE_BUDGET / planes.length)));
+    }
     return new Float64Array(values);
   }
 
   const tileSize = Math.max(1, Number(source.tileSize) || 256);
   const tilesX = Math.max(1, Math.ceil(width / tileSize));
   const tilesY = Math.max(1, Math.ceil(height / tileSize));
-  const coordinates = sampleIndexes(tilesY).flatMap((y) => sampleIndexes(tilesX).map((x) => ({ x, y })));
+  const spatial = sampleIndexes(tilesY).flatMap((y) => sampleIndexes(tilesX).map((x) => ({ x, y })));
+  const all = planes.flatMap(plane => spatial.map(coordinate => ({...coordinate, plane})));
+  const coordinates = Array.from({length: Math.min(16, all.length)}, (_, i) => all[Math.round(i * (all.length - 1) / Math.max(1, Math.min(16, all.length) - 1))]);
   const perTileBudget = Math.max(1, Math.floor(SAMPLE_BUDGET / coordinates.length));
   for (const coordinate of coordinates) {
-    const tile = await source.getTile({ ...coordinate, selection: selected });
+    options.signal?.throwIfAborted();
+    const tile = await source.getTile({ ...coordinate, selection: selection(labels, channel, coordinate.plane, t), signal: options.signal });
+    options.signal?.throwIfAborted();
     appendSample(values, tile.data, Math.min(SAMPLE_BUDGET, values.length + perTileBudget));
   }
   return new Float64Array(values);
@@ -80,7 +95,7 @@ async function sampledPixels(source: any, channel: number, z: number, t: number)
 
 function histogram(values: Float64Array, low: number, high: number): number[] {
   const bins = Array.from({ length: HISTOGRAM_BINS }, () => 0);
-  const span = Math.max(1, high - low);
+  const span = Math.max(Number.EPSILON, high - low);
   for (const value of values) {
     if (!Number.isFinite(value) || value < low || value > high) continue;
     const index = Math.min(HISTOGRAM_BINS - 1, Math.floor((value - low) / span * HISTOGRAM_BINS));
@@ -94,6 +109,7 @@ export async function analyzeChannels(
   channels: ChannelState[],
   z = 0,
   t = 0,
+  options: AnalysisOptions = {},
 ): Promise<ChannelAnalysis[]> {
   // Pyramid averaging suppresses bright nuclei. Estimate contrast from bounded,
   // spatially distributed native-resolution tiles, never a blurred overview.
@@ -101,7 +117,7 @@ export async function analyzeChannels(
   if (!source) return [];
   return Promise.all(channels.map(async (channel) => {
     try {
-      const pixels = await sampledPixels(source, channel.index, z, t);
+      const pixels = await sampledPixels(source, channel.index, z, t, options);
       if (!pixels.length) throw new Error("No sampled pixels");
       const { contrastLimits, domain } = getChannelStats(pixels as any);
       let autoLow = Number(contrastLimits[0]);
@@ -109,18 +125,18 @@ export async function analyzeChannels(
       let fitLow = Number(domain[0]);
       let fitHigh = Number(domain[1]);
       if (!Number.isFinite(fitLow) || !Number.isFinite(fitHigh) || fitHigh <= fitLow) {
-        fitLow = channel.domainMin;
-        fitHigh = channel.domainMax;
+        const value = pixels[0];
+        fitLow = value === 0 ? channel.domainMin : Math.min(0, value);
+        fitHigh = value === 0 ? channel.domainMax : Math.max(value, fitLow + Math.max(1, Math.abs(value) * .01));
       }
       if (!Number.isFinite(autoLow) || !Number.isFinite(autoHigh) || autoHigh <= autoLow) {
         autoLow = fitLow;
         autoHigh = fitHigh;
       }
-      fitLow = Math.max(channel.domainMin, Math.min(channel.domainMax, fitLow));
-      fitHigh = Math.max(channel.domainMin, Math.min(channel.domainMax, fitHigh));
       autoLow = Math.max(fitLow, Math.min(fitHigh, autoLow));
       autoHigh = Math.max(fitLow, Math.min(fitHigh, autoHigh));
       return {
+        status: "ready",
         index: channel.index,
         autoLow,
         autoHigh,
@@ -128,8 +144,10 @@ export async function analyzeChannels(
         fitHigh,
         histogram: histogram(pixels, fitLow, fitHigh),
       };
-    } catch {
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
       return {
+        status: "error", message: error instanceof Error ? error.message : "Channel statistics are unavailable",
         index: channel.index,
         autoLow: channel.low,
         autoHigh: channel.high,

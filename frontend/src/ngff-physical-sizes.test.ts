@@ -47,10 +47,12 @@ describe("NGFF physical voxel sizes", () => {
     expect(attachNgffPhysicalSizes(loader, anisotropicMetadata)).toBe(loader);
     expect(loader[0].meta).toEqual({
       photometricInterpretation: 1,
+      physicalOrigin: {c:0,z:0,y:0,x:0},
+      volumeTranslation: {x:0,y:0,z:0},
       volumeScale: { x: 1, y: 1, z: 1 },
       physicalSizes: ngffPhysicalSizes(anisotropicMetadata),
     });
-    expect(loader[1].meta).toEqual({ volumeScale: {}, physicalSizes: ngffPhysicalSizes(anisotropicMetadata) });
+    expect(loader[1].meta).toEqual({ physicalOrigin:{c:0,z:0,y:0,x:0}, volumeTranslation:{x:0,y:0,z:0}, volumeScale: {}, physicalSizes: ngffPhysicalSizes(anisotropicMetadata) });
   });
 
   it("uses each dataset's declared scale, composing global transforms and mixed units", () => {

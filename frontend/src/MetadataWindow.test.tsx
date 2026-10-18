@@ -26,7 +26,7 @@ test("metadata is fetched on opening, grouped, searchable and closable",async()=
   expect(request).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button",{name:"Image metadata"}));
   await screen.findByRole("heading",{name:"Image & calibration"});
-  expect(request).toHaveBeenCalledWith("/api/images/42/metadata/",expect.objectContaining({credentials:"same-origin"}));
+  expect(request).toHaveBeenCalledWith("/api/images/42/metadata/?field=.&section=summary",expect.objectContaining({credentials:"same-origin"}));
   expect(screen.getByRole("dialog",{name:"Image metadata"})).toBeInTheDocument();
   expect(screen.getByText("DNA")).toBeInTheDocument();
   expect(screen.getByRole("heading",{name:"OMERO annotations & key-values"})).toBeInTheDocument();
@@ -53,4 +53,24 @@ test("plate metadata stays available while dimensions describe the selected fiel
   const sections=metadataSections(plate,"A/1/0");
   expect(sections.some(section=>section.title==="Plate & wells")).toBe(true);
   expect((sections.find(section=>section.id==="dimensions")!.value as any).Dimensions[3].length).toBe(10);
+});
+
+test("remaining hierarchy loads only on demand and closing cancels an active page",async()=>{
+  let pageSignal:AbortSignal|undefined;
+  const request=vi.fn().mockResolvedValueOnce({ok:true,json:async()=>({...data,zarr:{...data.zarr,next_cursor:"signed-page"}})}).mockImplementationOnce((_:string,options:any)=>{pageSignal=options.signal;return new Promise(()=>{});});
+  vi.stubGlobal("fetch",request);
+  const {unmount}=render(<MetadataWindow imageId={42} field="A/1/0" onClose={()=>{}}/>);
+  const browse=await screen.findByRole("button",{name:"Browse more store metadata"});
+  expect(request).toHaveBeenCalledTimes(1);
+  fireEvent.click(browse);
+  expect(request.mock.calls[1][0]).toBe("/api/images/42/metadata/?field=A%2F1%2F0&section=nodes&cursor=signed-page");
+  expect(screen.getByRole("button",{name:"Loading metadata page…"})).toBeDisabled();
+  unmount();expect(pageSignal?.aborted).toBe(true);
+});
+
+test("HTML worker failures produce a readable error and retry",async()=>{
+  vi.stubGlobal("fetch",vi.fn(async()=>({ok:false,json:async()=>{throw new SyntaxError("Unexpected token <");}})));
+  render(<MetadataWindow imageId={42} field="." onClose={()=>{}}/>);
+  expect(await screen.findByRole("alert")).toHaveTextContent("metadata service could not respond");
+  expect(screen.getByRole("button",{name:"Retry"})).toBeEnabled();
 });

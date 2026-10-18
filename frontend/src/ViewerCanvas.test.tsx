@@ -1,0 +1,28 @@
+import { act, render } from "@testing-library/react";
+import { ViewerCanvas } from "./ViewerCanvas";
+const state=vi.hoisted(()=>({props:undefined as any}));
+vi.mock("@hms-dbmi/viv",()=>({
+  DETAIL_VIEW_ID:"detail",OVERVIEW_VIEW_ID:"overview",
+  DetailView:class{},OverviewView:class{},ColorPaletteExtension:class{},
+  getDefaultInitialViewState:()=>({target:[2,2,0],zoom:0}),
+  VivViewer:(props:any)=>{state.props=props;return null;},
+}));
+vi.mock("./categorical-image-layer",()=>({CategoricalMultiscaleImageLayer:class{props:any;constructor(props:any){this.props=props;}}}));
+vi.mock("./instance-color-extension",()=>({InstanceColorExtension:class{}}));
+
+test("2D playback ignores minimap readiness and waits for all visible label layers",()=>{
+  const ready=vi.fn(),source={labels:["z","y","x"],shape:[2,4,4],dtype:"Uint16"};
+  const props={width:800,height:600,loader:[source],labels:[{id:"cells",loader:[source]}],
+    channels:[{index:0,label:"DNA",visible:true,color:"#00FF00",low:0,high:100,domainMin:0,domainMax:65535}],
+    labelStates:[{id:"cells",name:"Cells",path:"labels/cells",visible:true,opacity:.7,mode:"fill" as const}],
+    z:0,t:0,showMinimap:true,showScale:false,onViewportChange:()=>{},onTileError:()=>{},onTilesLoaded:ready};
+  const {rerender}=render(<ViewerCanvas {...props}/>);
+  act(()=>state.props.layerProps[1].onViewportLoad());expect(ready).not.toHaveBeenCalled();
+  act(()=>state.props.layerProps[0].onViewportLoad());expect(ready).not.toHaveBeenCalled();
+  // Categorical layers are supplied directly to Deck in the viewer props.
+  const label=state.props.deckProps.layers[0];
+  act(()=>label.props.onViewportLoad());expect(ready).toHaveBeenCalledOnce();
+  ready.mockClear();const old=state.props.layerProps[0].onViewportLoad;
+  rerender(<ViewerCanvas {...props} t={1}/>);
+  act(()=>old());expect(ready).not.toHaveBeenCalled();
+});

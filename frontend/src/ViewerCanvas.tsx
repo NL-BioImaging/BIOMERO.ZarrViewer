@@ -14,6 +14,7 @@ import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
 import { previewLevel } from "./preview-resolution";
 import { ScaleBar } from "./ScaleBar";
+import { Matrix4 } from "@math.gl/core";
 
 interface LabelTooltip {
   screenX: number;
@@ -73,27 +74,36 @@ export function ViewerCanvas({
   onTileError,
   onTilesLoaded,
 }: Props) {
-  const failedLayers = useRef(new Set<string>());
+  const loadingFrame=useMemo(()=>({ready:new Set<string>(),failed:new Set<string>(),expected:new Set([
+    ...(channels.some(c=>c.visible)?["image"]:[]),
+    ...labelStates.filter(state=>state.visible&&labels.some(label=>label.id===state.id)).map(state=>`label:${state.id}`),
+  ])}),[loader,labels,z,t,JSON.stringify(channels.map(c=>c.visible)),JSON.stringify(labelStates.map(l=>[l.id,l.visible]))]);
+  const liveFrame=useRef(loadingFrame);liveFrame.current=loadingFrame;
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hoverRequest = useRef(0);
+  const hoverAbort=useRef<AbortController|undefined>(undefined);
   const [labelTooltip, setLabelTooltip] = useState<LabelTooltip | undefined>(undefined);
   const reportTileError = useCallback((layerId: string, error: unknown) => {
+    if(liveFrame.current!==loadingFrame)return;
     if (error instanceof DOMException && error.name === "AbortError") return;
-    failedLayers.current.add(layerId);
+    loadingFrame.failed.add(layerId);
     onTileError(error instanceof Error ? error.message : "A tile failed to load");
-  }, [onTileError]);
+  }, [onTileError,loadingFrame]);
   const reportViewportLoad = useCallback((layerId: string) => {
-    failedLayers.current.delete(layerId);
-    if (!failedLayers.current.size) onTilesLoaded();
-  }, [onTilesLoaded]);
+    if(liveFrame.current!==loadingFrame)return;
+    loadingFrame.failed.delete(layerId);loadingFrame.ready.add(layerId);
+    if (!loadingFrame.failed.size&&[...loadingFrame.expected].every(id=>loadingFrame.ready.has(id))) onTilesLoaded();
+  }, [onTilesLoaded,loadingFrame]);
   useEffect(() => {
-    failedLayers.current.clear();
-  }, [loader, labels, z, t]);
+    if(!loadingFrame.expected.size)onTilesLoaded();
+  }, [loadingFrame]);
   useEffect(() => () => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverRequest.current += 1;
   }, []);
   useEffect(() => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverRequest.current += 1;
     setLabelTooltip(undefined);
@@ -101,11 +111,14 @@ export function ViewerCanvas({
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
   const baseLabels = loader[0]?.labels || [];
   const baseSelections = channels.map((channel) => selection(baseLabels, channel.index, z, t));
-  const baseView = useMemo(() => getDefaultInitialViewState(loader, { width, height }, 0.35) as any, [loader, width, height]);
+  const spacingX=loader[0]?.meta?.physicalSizes?.x?.size||1;
+  const aspect=(loader[0]?.meta?.physicalSizes?.y?.size||spacingX)/spacingX;
+  const imageMatrix=useMemo(()=>new Matrix4().scale([1,aspect,1]),[aspect]);
+  const baseView = useMemo(() => (getDefaultInitialViewState as any)(loader, { width, height }, 0.35,false,imageMatrix), [loader, width, height,imageMatrix]);
   const views: any[] = [view];
   const viewStates: any[] = [{
     ...baseView,
-    ...(viewport ? { target: [viewport.x, viewport.y, 0], zoom: viewport.zoom } : {}),
+    ...(viewport ? { target: [viewport.x, viewport.y*aspect, 0], zoom: viewport.zoom } : {}),
     id: DETAIL_VIEW_ID,
   }];
 
@@ -120,6 +133,7 @@ export function ViewerCanvas({
         id: `label-${state.id}-#${DETAIL_VIEW_ID}#`,
         viewportId: DETAIL_VIEW_ID,
         loader: loaded.loader,
+        modelMatrix:new Matrix4().translate(["x","y","z"].map(axis=>((loaded.loader[0]?.meta?.physicalOrigin?.[axis]||0)-(loader[0]?.meta?.physicalOrigin?.[axis]||0))/spacingX)).scale(["x","y","z"].map(axis=>(loaded.loader[0]?.meta?.physicalSizes?.[axis]?.size||spacingX)/spacingX)),
         selections: [selection(sourceLabels, loaded.channelIndex || 0, z, t)],
         channelsVisible: [true],
         contrastLimits: [[0, 1]],
@@ -140,6 +154,7 @@ export function ViewerCanvas({
 
   const layerProps: any[] = [{
     loader,
+    modelMatrix:imageMatrix,
     selections: baseSelections,
     channelsVisible: channels.map((channel) => channel.visible),
     colors: channels.map((channel) => hexToRgb(channel.color)),
@@ -152,12 +167,13 @@ export function ViewerCanvas({
   if (showMinimap) {
     const overviewLoader = loader.slice(0, previewLevel(loader, 160 * (window.devicePixelRatio || 1)) + 1);
     views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader: overviewLoader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
-    layerProps.push({ ...layerProps[0], loader: overviewLoader });
+    layerProps.push({ ...layerProps[0], loader: overviewLoader, onViewportLoad:()=>{},onTileError:()=>{} });
     viewStates.push({ id: OVERVIEW_VIEW_ID });
   }
 
   const zoom = Number(viewStates[0].zoom || 0);
   const inspectHover = useCallback((info: any) => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     const coordinate = info.viewport?.id === DETAIL_VIEW_ID ? info.coordinate : undefined;
     if (!coordinate || coordinate.length < 2) {
@@ -166,10 +182,11 @@ export function ViewerCanvas({
       return;
     }
     const imageX = Math.floor(Number(coordinate[0]));
-    const imageY = Math.floor(Number(coordinate[1]));
+    const imageY = Math.floor(Number(coordinate[1])/aspect);
     const request = ++hoverRequest.current;
     hoverTimer.current = setTimeout(() => {
-      void inspectLabelPixel(labels, labelStates, imageX, imageY, z, t).then((hits) => {
+      const controller=new AbortController();hoverAbort.current=controller;
+      void inspectLabelPixel(labels, labelStates, imageX, imageY, z, t, loader[0],controller.signal).then((hits) => {
         if (request !== hoverRequest.current) return;
         setLabelTooltip(hits.length ? {
           screenX: Number(info.x),
@@ -180,7 +197,7 @@ export function ViewerCanvas({
         } : undefined);
       });
     }, 80);
-  }, [labels, labelStates, z, t]);
+  }, [labels, labelStates, z, t,aspect,loader]);
 
   return <>
     <VivViewer
@@ -190,7 +207,7 @@ export function ViewerCanvas({
       onViewStateChange={({ viewId, viewState }: any) => {
         if (viewId !== DETAIL_VIEW_ID) return;
         const target = viewState.target || baseView.target;
-        onViewportChange({ x: Number(target[0]), y: Number(target[1]), zoom: Number(viewState.zoom) });
+        onViewportChange({ x: Number(target[0]), y: Number(target[1])/aspect, zoom: Number(viewState.zoom) });
       }}
       deckProps={{
         layers: labelLayers,

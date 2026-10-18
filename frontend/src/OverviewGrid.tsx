@@ -4,6 +4,8 @@ import { PrefixStore } from "./authenticated-store";
 import type { Capability, ChannelState, PlateWell } from "./types";
 import { previewLevel, queuePreview } from "./preview-resolution";
 import { loadPreviewPyramid } from "./preview-source";
+import { calibratedAxes } from "./calibration";
+import { scaleBarSize as sharedScaleBarSize, unitLabel } from "./physical-scale";
 
 interface OverviewGridProps {
   capability: Capability;
@@ -87,7 +89,7 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [previews, setPreviews] = useState<Record<string, string>>({});
-  const [fullWidth, setFullWidth] = useState<number>();
+  const [measurements,setMeasurements]=useState<Record<string,{units:number;unit:string}>>({});
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | undefined>(undefined);
   const suppressClick = useRef(false);
   const layoutKey = layout.tiles.map((tile) => tile.path).join("|");
@@ -145,9 +147,9 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
     const tile = layout.tiles.find((item) => sceneX >= item.left && sceneX <= item.left + TILE_SIZE && sceneY >= item.top && sceneY <= item.top + TILE_SIZE);
     if (tile) onOpen(tile.path);
   };
-  const handleRendered = useCallback((path: string, preview: string, width: number) => {
+  const handleRendered = useCallback((path: string, preview: string, width: number,displayWidth?:number,calibration?:{size:number;unit:string}) => {
     setPreviews((current) => current[path] === preview ? current : { ...current, [path]: preview });
-    setFullWidth((current) => current || width);
+    if(displayWidth&&calibration)setMeasurements(current=>({...current,[path]:{units:calibration.size*width/displayWidth,unit:calibration.unit}}));
   }, []);
 
   const miniScale = Math.min(150 / layout.width, 120 / layout.height, 1);
@@ -157,8 +159,10 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
     right: Math.min(layout.width, (viewportSize.width - pan.x) / zoom),
     bottom: Math.min(layout.height, (viewportSize.height - pan.y) / zoom),
   };
-  const pixelSize = physicalPixelSize(capability);
-  const scaleBar = pixelSize && fullWidth ? scaleBarSize(pixelSize.size * fullWidth / ((TILE_SIZE - 16) * zoom)) : undefined;
+  const calibrated=layout.tiles.map(tile=>measurements[tile.path]);
+  const pixelSize=calibrated[0];
+  const compatible=pixelSize&&calibrated.every(value=>value&&value.unit===pixelSize.unit&&Math.abs(value.units-pixelSize.units)<=Math.abs(pixelSize.units)*1e-6);
+  const scaleBar = compatible ? sharedScaleBarSize(pixelSize.units/zoom,0) : undefined;
 
   return <div className="overview-stage">
     <div
@@ -200,29 +204,8 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
     <div className="overview-camera-status">
       <button onClick={fit}>Fit</button><output>{Math.round(zoom * 100)}%</output><span>Wheel to zoom · drag to pan</span>
     </div>
-    {showScale && scaleBar && <div className="physical-scale overview-scale" aria-label={`Scale ${scaleBar.value} ${pixelSize!.unit}`}><span style={{ width: `${scaleBar.pixels}px` }}/><strong>{scaleBar.value} {unitLabel(pixelSize!.unit)}</strong></div>}
+    {showScale && scaleBar && <div className="physical-scale overview-scale" title="Scale inside thumbnails" aria-label={`Scale ${scaleBar.value} ${pixelSize!.unit}`}><span style={{ width: `${scaleBar.pixels}px` }}/><strong>{scaleBar.value} {unitLabel(pixelSize!.unit)}</strong></div>}
   </div>;
-}
-
-function physicalPixelSize(capability: Capability): { size: number; unit: string } | undefined {
-  const xIndex = capability.axes.findIndex((axis) => axis.name === "x");
-  const transformations = capability.datasets?.[0]?.coordinate_transformations;
-  if (xIndex < 0 || !Array.isArray(transformations)) return undefined;
-  const scale = transformations.find((item: any) => item?.type === "scale" && Array.isArray(item.scale)) as any;
-  const size = Number(scale?.scale?.[xIndex]);
-  return Number.isFinite(size) && size > 0 ? { size, unit: capability.axes[xIndex].unit || "px" } : undefined;
-}
-
-function scaleBarSize(unitsPerScreenPixel: number): { value: number; pixels: number } {
-  const target = unitsPerScreenPixel * 110;
-  const power = Math.pow(10, Math.floor(Math.log10(target)));
-  const normalized = target / power;
-  const nice = (normalized < 1.5 ? 1 : normalized < 3.5 ? 2 : normalized < 7.5 ? 5 : 10) * power;
-  return { value: nice, pixels: Math.max(45, Math.min(180, nice / unitsPerScreenPixel)) };
-}
-
-function unitLabel(unit: string): string {
-  return unit === "micrometer" || unit === "micrometre" || unit === "µm" ? "µm" : unit;
 }
 
 function selection(source: any, channel: number, z: number, t: number): Record<string, number> {
@@ -255,7 +238,7 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
   fullResolution: boolean;
   inView: boolean;
   style?: CSSProperties;
-  onRendered: (path: string, preview: string, fullWidth: number) => void;
+  onRendered: (path: string, preview: string, fullWidth: number, displayWidth?:number,calibration?:{size:number;unit:string}) => void;
   onSelect: () => void;
   onOpen: () => void;
 }) {
@@ -277,27 +260,33 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
       canvas.current.width = preview.width; canvas.current.height = preview.height;
       canvas.current.getContext("2d")?.drawImage(image, 0, 0);
       setRenderedLevel(preview.level); setError(undefined);
-      onRendered(path, minimapPreview(canvas.current), preview.full_width);
+      const bounds=canvas.current.getBoundingClientRect();
+      const tileWidth=canvas.current.closest(".overview-tile")!.getBoundingClientRect().width;
+      const displayWidth=Math.min(bounds.width,bounds.height*preview.width/preview.height)/(tileWidth/TILE_SIZE);
+      const calibration=preview.physical_size_x?calibratedAxes([{name:"x",unit:preview.physical_unit}],[{type:"scale",scale:[preview.physical_size_x]}]).x:undefined;
+      onRendered(path, minimapPreview(canvas.current), preview.full_width,displayWidth,calibration);
     }).catch((reason: unknown) => { if (!cancelled) setError(String(reason)); });
     return () => { cancelled = true; controller.abort(); };
   }, [store, path, inView, channels, z, t, targetPixels, fullResolution, onRendered]);
 
   useEffect(() => {
     let cancelled = false;
+    const abort=new AbortController();
     if ((store as any).getPreview) return;
     if (!inView || loader) return;
     setError(undefined);
     void queuePreview(async () => {
       if (cancelled) return;
-      const result = await loadPreviewPyramid(new PrefixStore(store, path));
+      const result = await loadPreviewPyramid(new PrefixStore(store, path,abort.signal));
       if (!cancelled) setLoader(result);
     }).catch((reason) => { if (!cancelled) setError(String(reason)); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; abort.abort(); };
   }, [path, store, inView, loader]);
 
   useEffect(() => {
     if (!loader || !canvas.current || !inView) return;
     let cancelled = false;
+    const abort=new AbortController();
     const draw = async () => {
       if (cancelled) return;
       const source = loader[previewLevel(loader, targetPixels, fullResolution)];
@@ -307,7 +296,7 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
         canvas.current?.getContext("2d")?.clearRect(0, 0, canvas.current.width, canvas.current.height);
         return;
       }
-      const rasters = await Promise.all(visible.map(async (channel) => ({ channel, raster: await source.getRaster({ selection: selection(source, channel.index, z, t) }) })));
+      const rasters = await Promise.all(visible.map(async (channel) => ({ channel, raster: await source.getRaster({ selection: selection(source, channel.index, z, t),signal:abort.signal }) })));
       if (cancelled || !canvas.current || !rasters.length) return;
       const labels: string[] = source.labels || [];
       const width = Number(rasters[0].raster.width || source.shape[labels.indexOf("x")] || 1);
@@ -332,10 +321,13 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPix
       const finest = loader[0];
       const finestLabels: string[] = finest?.labels || [];
       const xIndex = finestLabels.indexOf("x");
-      onRendered(path, minimapPreview(canvas.current), Number(xIndex >= 0 ? finest.shape[xIndex] : width));
+      const bounds=canvas.current.getBoundingClientRect(), tileWidth=canvas.current.closest(".overview-tile")!.getBoundingClientRect().width;
+      const displayWidth=Math.min(bounds.width,bounds.height*width/height)/(tileWidth/TILE_SIZE);
+      const physical=finest.meta?.physicalSizes?.x;
+      onRendered(path, minimapPreview(canvas.current), Number(xIndex >= 0 ? finest.shape[xIndex] : width), displayWidth, physical);
     };
     void queuePreview(draw, true).catch((reason) => { if (!cancelled) setError(String(reason)); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; abort.abort(); };
   }, [channels, loader, onRendered, path, t, z, targetPixels, fullResolution, inView]);
 
   useEffect(() => () => window.clearTimeout(clickTimer.current), []);

@@ -29,3 +29,16 @@ test("slice mode keeps the original loader", () => {
   const input = [source()];
   expect(projectLoader(input, "slice")).toBe(input);
 });
+
+test("projection cache has a shared 64 MiB LRU budget across sources and separates C/T/modes",async()=>{
+  // Each result is 24 MiB; three sources exceed the single shared budget.
+  const getVolume=vi.fn(async()=>({data:new Uint8Array(24*1024*1024),width:24*1024,height:1024,depth:1}));
+  const make=()=>projectSource({labels:["c","z","y","x"],shape:[2,1,1024,24*1024],dtype:"Uint8",getVolume},"mip");
+  const a=make(),b=make(),c=make();
+  await a.getRaster({selection:{c:0,t:0}});await b.getRaster({selection:{c:0,t:0}});
+  await a.getRaster({selection:{c:0,t:0}});expect(getVolume).toHaveBeenCalledTimes(2);
+  await c.getRaster({selection:{c:0,t:0}}); // B is least recently used.
+  await a.getRaster({selection:{c:0,t:0}});expect(getVolume).toHaveBeenCalledTimes(3);
+  await b.getRaster({selection:{c:0,t:0}});expect(getVolume).toHaveBeenCalledTimes(4);
+  await b.getRaster({selection:{c:1,t:0}});await b.getRaster({selection:{c:1,t:1}});expect(getVolume).toHaveBeenCalledTimes(6);
+},15000);

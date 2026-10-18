@@ -84,7 +84,9 @@ export interface ApiFailure {
   error: { code: string; message: string };
 }
 
+export type ContrastProvenance = "auto" | "restored" | "manual";
 export interface ChannelState {
+  contrastSource?: ContrastProvenance;
   index: number;
   label: string;
   visible: boolean;

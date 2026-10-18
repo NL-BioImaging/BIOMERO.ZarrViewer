@@ -2,7 +2,7 @@ import { unitLabel } from "./physical-scale";
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 
 export interface MetadataPayload {
-  zarr: {format:number;ngff_version:string;kind:string;nodes:Array<{path:string;attributes:Record<string,any>;array?:Record<string,any>|null;documents:Record<string,any>}>;notices:string[]};
+  zarr: {format:number;ngff_version:string;kind:string;nodes:Array<{path:string;attributes:Record<string,any>;array?:Record<string,any>|null;documents:Record<string,any>}>;notices:string[];next_cursor?:string|null};
   omero: Record<string,any>;
 }
 type Section = { id:string; title:string; value:unknown };
@@ -60,22 +60,46 @@ function RecordTable({value}:{value:unknown}) {
 export function MetadataWindow({imageId,field,onClose}:{imageId:number;field:string;onClose:()=>void}) {
   const [data,setData]=useState<MetadataPayload>(); const [error,setError]=useState(""); const [retry,setRetry]=useState(0);
   const [query,setQuery]=useState(""); const [limit,setLimit]=useState(100);
+  const [paging,setPaging]=useState(false);
+  const pageController=useRef<AbortController|null>(null);
   const [position,setPosition]=useState({x:Math.max(8,(window.innerWidth-1000)/2),y:70});
   const panel=useRef<HTMLElement>(null), search=useRef<HTMLInputElement>(null), drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
   useEffect(()=>{
     const previous=document.activeElement as HTMLElement|null; search.current?.focus();
-    return ()=>previous?.focus();
+    const clamp=()=>setPosition(p=>({x:Math.max(8,Math.min(p.x,window.innerWidth-(panel.current?.offsetWidth || 0)-8)),y:Math.max(8,Math.min(p.y,window.innerHeight-(panel.current?.offsetHeight || 0)-8))}));
+    const observer=typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(clamp); if(panel.current) observer?.observe(panel.current);
+    window.addEventListener("resize",clamp);
+    return ()=>{observer?.disconnect();window.removeEventListener("resize",clamp);pageController.current?.abort();previous?.focus();};
   },[]);
+  const request=async(section:string,signal:AbortSignal,cursor?:string)=>{
+    const base=window.BIOMERO_ZARR_VIEWER.capabilitiesTemplate.replace(/\/0\/capabilities\/$/,`/${imageId}/metadata/`);
+    const url=`${base}?${new URLSearchParams({field,section,...(cursor?{cursor}:{})})}`;
+    const response=await fetch(url,{credentials:"same-origin",headers:{Accept:"application/json"},signal});
+    if(response.redirected && new URL(response.url).pathname.includes("login")) throw new Error("Please sign in to OMERO and try again.");
+    let payload:MetadataPayload;
+    try {payload=await response.json();} catch {throw new Error("The metadata service could not respond. Please try again.");}
+    if(!response.ok) throw new Error((payload as any).error?.message || "Metadata could not be loaded.");
+    return payload;
+  };
   useEffect(()=>{
     const controller=new AbortController(); setError("");setData(undefined);
-    const url=window.BIOMERO_ZARR_VIEWER.capabilitiesTemplate.replace(/\/0\/capabilities\/$/,`/${imageId}/metadata/`);
-    fetch(url,{credentials:"same-origin",headers:{Accept:"application/json"},signal:controller.signal}).then(async response=>{
-      if (response.redirected && new URL(response.url).pathname.includes("login")) throw new Error("Please sign in to OMERO and try again.");
-      const payload=await response.json(); if(!response.ok) throw new Error(payload.error?.message || "Metadata could not be loaded.");
+    pageController.current?.abort();setPaging(false);setLimit(100);
+    request("summary",controller.signal).then(payload=>{
       if(!controller.signal.aborted) setData(payload);
     }).catch(error=>{if(!controller.signal.aborted)setError(String(error.message || error));});
     return ()=>controller.abort();
-  },[imageId,retry]);
+  },[imageId,field,retry]);
+  const more=async()=>{
+    if(!data?.zarr.next_cursor || paging) return;
+    const controller=new AbortController();pageController.current=controller;setPaging(true);setError("");
+    try {
+      const next=await request("nodes",controller.signal,data.zarr.next_cursor);
+      if(controller.signal.aborted) return;
+      setData(old=>old?{...old,zarr:{...old.zarr,...next.zarr,nodes:[...new Map([...old.zarr.nodes,...next.zarr.nodes].map(node=>[node.path,node])).values()],notices:[...old.zarr.notices,...next.zarr.notices]}}:next);
+      setLimit(n=>n+100);
+    } catch(error) {if(!controller.signal.aborted)setError(error instanceof Error?error.message:"Metadata could not be loaded.");}
+    finally {if(!controller.signal.aborted)setPaging(false);}
+  };
   const sections=useMemo(()=>data?metadataSections(data,field):[],[data,field]);
   const filter=query.trim().toLowerCase();
   const matching=useMemo(()=>sections.flatMap(section=>{
@@ -93,15 +117,16 @@ export function MetadataWindow({imageId,field,onClose}:{imageId:number;field:str
       <div><strong>Image metadata</strong><small>OME-Zarr · OMERO #{imageId}</small></div>
       <button className="icon-button" aria-label="Close metadata" title="Close metadata" onClick={onClose}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button>
     </header>
-    <div className="help-window-search"><input ref={search} aria-label="Search metadata" placeholder="Search names, keys or values…" value={query} onChange={event=>{setQuery(event.target.value);setLimit(100);}}/><small>{data?`${data.zarr.nodes.length} Zarr nodes`:"Loading metadata…"}</small></div>
+    <div className="help-window-search"><input ref={search} aria-label="Search metadata" placeholder="Search loaded metadata…" value={query} onChange={event=>{setQuery(event.target.value);setLimit(100);}}/><small>{data?`${data.zarr.nodes.length} Zarr nodes loaded`:error?"Metadata unavailable":"Loading metadata…"}</small></div>
     {!data&&!error&&<div className="metadata-status" role="status">Reading OME-Zarr and OMERO metadata…</div>}
-    {error&&<div className="metadata-status" role="alert"><p>{error}</p><button onClick={()=>setRetry(n=>n+1)}>Retry</button></div>}
+    {error&&<div className="metadata-status" role="alert"><p>{error}</p><button onClick={()=>data?void more():setRetry(n=>n+1)}>Retry</button></div>}
     {data&&<div className="help-window-layout">
       <nav aria-label="Metadata categories"><strong>Categories</strong>{matching.map(section=><button key={section.id} onClick={()=>document.getElementById(`metadata-${section.id}`)?.scrollIntoView({behavior:"smooth",block:"start"})}>{section.title}</button>)}</nav>
       <div className="help-window-content metadata-content" tabIndex={0} aria-label="Metadata details">
         {matching.map(section=><section id={`metadata-${section.id}`} key={section.id}><h2>{section.title}</h2>{section.id==="raw"?<>
           {(section.value as any[]).slice(0,limit).map(node=><details className="metadata-node" key={node.path}><summary>{node.path==="."?"Store root":node.path}</summary><RecordTable value={node.documents}/></details>)}
           {(section.value as any[]).length>limit&&<button onClick={()=>setLimit(n=>n+100)}>Show more metadata nodes</button>}
+          {data.zarr.next_cursor&&<button disabled={paging} onClick={()=>void more()}>{paging?"Loading metadata page…":"Browse more store metadata"}</button>}
         </>:section.id==="dimensions"?<><RecordTable value={Object.fromEntries(Object.entries(section.value as any).filter(([key])=>key!=="Dimensions"))}/><DimensionTable rows={(section.value as any).Dimensions}/></>:<RecordTable value={section.value}/>}</section>)}
         {!matching.length&&<p>No metadata matches “{query}”.</p>}
         {notices.length>0&&<section><h2>Availability</h2>{notices.map((notice,i)=><p className="muted" key={i}>{notice}</p>)}</section>}

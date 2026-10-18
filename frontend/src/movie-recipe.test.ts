@@ -1,5 +1,6 @@
 import { mappedTrackVectors, movieSequence, type MovieRecipe } from './movie-recipe';
-import { composeLabels, cropPlane } from './movie-renderer';
+import { calibratedLabelCrop, composeLabels, cropPlane } from './movie-renderer';
+import { labelIdColor } from './label-color';
 
 const recipe = (): MovieRecipe => ({ storeUuid: 'a2aa135b-9c87-4455-bb12-34a86e3fe237', sequence: { version: 1, start: 0, end: 18 },
   panels: [{ field: '.', roi: [0, 0, 4, 4], sourceChannels: [1], t: 18, z: 0, overlays: [] }] });
@@ -27,6 +28,21 @@ test('overlapping label layers composite in declaration order', () => {
   composeLabels(pixels, new Float64Array([1]), 1, 1, { ...style, color: '#FF0000' });
   composeLabels(pixels, new Float64Array([7]), 1, 1, { ...style, color: '#00FF00' });
   expect(Array.from(pixels)).toEqual([64, 128, 0, 255]);
+});
+
+test("viewer-generated movie labels use the live instance hash while explicit and legacy colors remain stable",()=>{
+  const pixels=new Uint8ClampedArray(12),style={mode:"fill" as const,opacity:.7,outlineWidth:1,colorMode:"instance" as const};
+  composeLabels(pixels,new Float64Array([1,7,4000000001]),3,1,style);
+  [1,7,4000000001].forEach((id,i)=>labelIdColor(id).forEach((value,c)=>expect(pixels[i*4+c]).toBeCloseTo(Math.round(value*.7),0)));
+  const explicit=new Uint8ClampedArray(4);composeLabels(explicit,new Float64Array([7]),1,1,{...style,color:"#FF0000"});
+  expect([...explicit.slice(0,3)]).toEqual([178,0,0]);
+});
+
+test("movie label crops align translated and downsampled label grids at voxel centers",async()=>{
+  const meta=(size:number,origin:number)=>({physicalSizes:{x:{size,unit:"micrometer"},y:{size,unit:"micrometer"}},physicalOrigin:{x:origin,y:origin}});
+  const source={labels:["y","x"],shape:[2,2],tileSize:2,meta:meta(2,2),getTile:async()=>({data:new Uint32Array([1,2,3,4]),width:2,height:2})};
+  const result=await calibratedLabelCrop(source,{meta:meta(1,0)},[0,0,6,4],0,0,0,new AbortController().signal);
+  expect([...result]).toEqual([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,2,2,0,0,1,1,2,2]);
 });
 test('native-pixel crop aligns across tile boundaries and loading is bounded', async () => {
   let active = 0, peak = 0;

@@ -144,13 +144,14 @@ function VolumeRenderer({
   const prepareKey = `${resolution}:${t}:${selectedChannelKey}`;
   useEffect(() => {
     let cancelled = false;
+    const abort = new AbortController();
     setPreparedKey("");
     const source = loader[resolution];
     if (!source?.getVolume) { setPreparedKey(prepareKey); return; }
-    Promise.all(selectedChannels.map(channel => source.getVolume(volumeSelection(source.labels, channel.index, t))))
+    Promise.all(selectedChannels.map(channel => source.getVolume(volumeSelection(source.labels, channel.index, t),{signal:abort.signal})))
       .then(() => { if (!cancelled) setPreparedKey(prepareKey); })
       .catch((error) => { if (!cancelled) reportError(String(error)); });
-    return () => { cancelled = true; };
+    return () => { cancelled = true; abort.abort(); };
   }, [loader, resolution, t, selectedChannelKey, prepareKey, reportError]);
   const selections = useMemo(
     () => selectedChannels.map((channel) => volumeSelection(sourceLabels, channel.index, t)),
@@ -161,12 +162,17 @@ function VolumeRenderer({
     () => (getDefaultInitialViewState as any)(guardedLoader, { width, height }, 1, true, modelMatrix),
     [guardedLoader, width, height, modelMatrix],
   );
+  const source=loader[resolution],sizes=["x","y","z"].map(axis=>source.meta?.physicalSizes?.[axis]?.size||1),smallest=Math.min(...sizes);
+  const extent=["x","y","z"].map((axis,i)=>(source.shape[source.labels.indexOf(axis)]||1)*modelMatrix.getScale()[i]*sizes[i]/smallest);
+  const translation=modelMatrix.getTranslation().map((n,i)=>n*sizes[i]/smallest);
+  const target=(camera?.sliceTarget||camera?.slicePosition)?.map((n,i)=>translation[i]+n*extent[i]);
   const viewState = {
     ...defaultView,
     id: "3d",
     rotationOrbit: camera?.orbit ?? 0,
     rotationX: camera?.tilt ?? 0,
     zoom: camera?.zoom ?? finite(defaultView.zoom, 0),
+    ...(target?{target}:{}),
   };
   const physicalScale = volumePhysicalScale(loader);
   // OrbitView maps 2^zoom pixels per world unit at the camera target. Because
@@ -224,6 +230,7 @@ function VolumeRenderer({
       onViewStateChange={({ viewId, viewState: next }: any) => {
         if (viewId !== "3d") return;
         onCameraChange({ ...camera,
+          ...(Array.isArray(next.target)?{sliceTarget:next.target.map((n:number,i:number)=>(n-translation[i])/extent[i]),slicePosition:next.target.map((n:number,i:number)=>(n-translation[i])/extent[i])}:{}),
           orbit: finite(next.rotationOrbit, viewState.rotationOrbit),
           tilt: finite(next.rotationX, viewState.rotationX),
           zoom: finite(next.zoom, viewState.zoom),
@@ -244,8 +251,19 @@ function VolumeRenderer({
 }
 
 export function VolumeCanvas(props: VolumeCanvasProps) {
-  return <VolumeErrorBoundary onError={props.onError} onCancel={props.onCancel}>
-    {props.view && props.view !== "3d" ? <VivSectionsCanvas props={props} renderVolume={(width,height,camera,onCameraChange) => <VolumeRenderer {...props}
-      width={width} height={height} view="3d" orthographic camera={camera} onCameraChange={onCameraChange} />} /> : <VolumeRenderer {...props} />}
+  const [failure,setFailure]=useState<string>();
+  const [retry,setRetry]=useState<{loader:any[];t:number;resolution:number;count:number}>();
+  const report=useCallback((message:string)=>{setFailure(message);props.onError(message);},[props.onError]);
+  const shouldRetry=retry?.loader===props.loader&&retry.t===props.t&&retry.resolution===props.resolution;
+  const loader=useMemo(()=>!shouldRetry?props.loader:props.loader.map(source=>new Proxy(source,{get(target,key,receiver){
+    if(key==="getVolume"&&target.getVolume)return (selection:any,options:any)=>target.getVolume(selection,{...options,retryFailed:true});
+    const value=Reflect.get(target,key,receiver);return typeof value==="function"?value.bind(target):value;
+  }})),[props.loader,shouldRetry,retry]);
+  const active={...props,loader,onError:report};
+  useEffect(()=>setFailure(undefined),[props.loader,props.t,props.resolution]);
+  return <VolumeErrorBoundary key={retry?.count||0} onError={report} onCancel={props.onCancel}>
+    {props.view && props.view !== "3d" ? <VivSectionsCanvas props={active} renderVolume={(width,height,camera,onCameraChange,onReady) => <VolumeRenderer {...active}
+      width={width} height={height} view="3d" orthographic camera={camera} onCameraChange={onCameraChange} onReady={onReady}/>} /> : <VolumeRenderer {...active} />}
+    {failure&&<button className="volume-depth-feedback" onClick={()=>{setFailure(undefined);setRetry({loader:props.loader,t:props.t,resolution:props.resolution,count:(retry?.count||0)+1});}}>Retry failed volume</button>}
   </VolumeErrorBoundary>;
 }

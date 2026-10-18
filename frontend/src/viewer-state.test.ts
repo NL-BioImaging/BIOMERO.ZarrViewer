@@ -110,9 +110,9 @@ test("invalid optional state is ignored and numeric state is clamped", () => {
   expect(parsed.volumeCamera).toEqual({ orbit: 360, tilt: -90, zoom: 30 });
 });
 
-test("saved channels are constrained to their domain", () => {
+test("saved contrast remains exact even outside metadata display windows", () => {
   const result = applyChannelDeepLink(channels, [{ index: 0, visible: false, color: "bad", low: -50, high: 999 }]);
-  expect(result[0]).toMatchObject({ visible: false, color: "#00FF00", low: 0, high: 255 });
+  expect(result[0]).toMatchObject({ visible: false, color: "#00FF00", low: -50, high: 999, contrastSource:"restored" });
 });
 
 test("one-based source channels select viewer channels", () => {

@@ -42,3 +42,19 @@ test("changed source binding does not reuse the old in-memory volume", async () 
   await source.getVolume({});auth.volumeIdentity='two';await source.getVolume({});
   expect(auth.fetch).toHaveBeenCalledTimes(4);
 });
+
+test("an aborted download cannot remove its immediate replacement; failed jobs retry only explicitly",async()=>{
+  let first=true;
+  const fetch=vi.fn((url:string,{signal}:any)=>{
+    if(first){first=false;return new Promise<Response>((_,reject)=>signal.addEventListener("abort",()=>reject(signal.reason)));}
+    return Promise.resolve(url.includes("download=1")?new Response(new Uint16Array(8).buffer):new Response(JSON.stringify({status:"ready",key:"replacement",shape:[2,2,2],dtype:"<u2",bytes:16})));
+  });
+  const [source]=withVolumeCache([{labels:["z","y","x"],shape:[2,2,2],dtype:"Uint16"}],{volumeUrl:"/volume/",volumeIdentity:"cancel",fetch} as any,".",()=>{});
+  const controller=new AbortController(),firstLoad=source.getVolume({},{signal:controller.signal});
+  await Promise.resolve();controller.abort();
+  const replacement=source.getVolume({},{retryFailed:true});
+  await expect(firstLoad).rejects.toMatchObject({name:"AbortError"});
+  expect((await replacement).data).toHaveLength(8);
+  await source.getVolume({});expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch.mock.calls[1][0]).toContain("retryFailed=1");
+});

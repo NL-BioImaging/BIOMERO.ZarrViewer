@@ -37,6 +37,7 @@ export interface DeepLinkState {
 }
 
 export interface OverlayDeepLink {
+  colorMode?: "instance" | "solid";
   labelPath?: string;
   labelChannel?: number;
   values?: number[];
@@ -160,6 +161,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
               ...(labelPath ? { labelPath } : { labelChannel }),
               ...(values.length ? { values } : {}),
               mode,
+              colorMode: record.colorMode === "instance" ? "instance" : undefined,
               color,
               opacity: finite(record.opacity, mode === "fill" ? 0.3 : 1, 0, 1),
               outlineWidth: Math.floor(finite(record.outlineWidth, 2, 1, 20)),
@@ -180,7 +182,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
     if (!raw || raw.length > 20_000) continue;
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) (state as Record<string, unknown>)[target] = parsed;
+      if (Array.isArray(parsed)) (state as Record<string, unknown>)[target] = parsed.filter(item => item && typeof item === "object" && !Array.isArray(item)).slice(0, 256);
     } catch {
       // Invalid optional state is deliberately ignored.
     }
@@ -189,14 +191,15 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
 }
 
 export function applyChannelDeepLink(channels: ChannelState[], saved?: DeepLinkState["channels"]): ChannelState[] {
-  const byIndex = new Map((saved || []).map((item) => [Number(item.index), item]));
+  const byIndex = new Map((saved || []).filter(item => item && typeof item === "object" && Number.isInteger(item.index) && item.index>=0).map((item) => [item.index, item]));
   return channels.map((channel) => {
     const value = byIndex.get(channel.index);
     if (!value) return channel;
-    const low = finite(value.low, channel.low, channel.domainMin, channel.domainMax);
-    const high = finite(value.high, channel.high, channel.domainMin, channel.domainMax);
+    const low = typeof value.low==="number" && Number.isFinite(value.low) ? value.low : channel.low;
+    const high = typeof value.high==="number" && Number.isFinite(value.high) ? value.high : channel.high;
     return {
       ...channel,
+      contrastSource: (value as ChannelState).contrastSource || "restored",
       visible: typeof value.visible === "boolean" ? value.visible : channel.visible,
       color: /^#[0-9a-f]{6}$/i.test(value.color || "") ? value.color! : channel.color,
       low: Math.min(low, high),
@@ -215,6 +218,7 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
   const defaults = new Map(labels.map((item) => [item.id, item]));
   const ordered: LabelState[] = [];
   for (const value of saved || []) {
+    if (!value || typeof value !== "object") continue;
     const item = defaults.get(String(value.id));
     if (!item) continue;
     ordered.push({

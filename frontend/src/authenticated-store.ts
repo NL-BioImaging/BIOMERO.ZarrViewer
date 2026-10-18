@@ -1,6 +1,7 @@
 import * as zarr from "zarrita";
 import type { Capability, ChannelState } from "./types";
 import { requestPreview } from "./preview-client";
+import { abortableDelay } from "./shared-request";
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -19,11 +20,11 @@ async function discard(response: Response): Promise<void> {
   }
 }
 
-function waitBeforeRetry(baseDelayMs: number): Promise<void> {
+function waitBeforeRetry(baseDelayMs: number,signal:AbortSignal): Promise<void> {
   // Jitter prevents a viewport full of failed chunks from retrying in lockstep
   // against Docker Desktop, NFS, or another busy shared filesystem.
   const delayMs = baseDelayMs + Math.floor(Math.random() * baseDelayMs);
-  return new Promise((resolve) => window.setTimeout(resolve, delayMs));
+  return abortableDelay(delayMs,signal);
 }
 
 export class AuthenticatedZarrStore {
@@ -79,6 +80,7 @@ export class AuthenticatedZarrStore {
     let serverRetries = 0;
 
     while (true) {
+      request.signal.throwIfAborted();
       // A browser may reuse an error response for an identical request. Force
       // attempts after the first 5xx back to Nginx so each retry can recover
       // from a transient shared-filesystem read error.
@@ -91,7 +93,7 @@ export class AuthenticatedZarrStore {
       }
       if (isRetryableServerError(response) && serverRetries < SERVER_RETRY_DELAYS_MS.length) {
         await discard(response);
-        await waitBeforeRetry(SERVER_RETRY_DELAYS_MS[serverRetries]);
+        await waitBeforeRetry(SERVER_RETRY_DELAYS_MS[serverRetries],request.signal);
         serverRetries += 1;
         continue;
       }
@@ -110,10 +112,12 @@ export class AuthenticatedZarrStore {
 export class PrefixStore {
   private inner: zarr.FetchStore;
   private prefix: string;
+  private signal?: AbortSignal;
 
-  constructor(inner: zarr.FetchStore, prefix: string) {
+  constructor(inner: zarr.FetchStore, prefix: string, signal?: AbortSignal) {
     this.inner = inner;
     this.prefix = prefix === "." ? "" : prefix.replace(/^\/+|\/+$/g, "");
+    this.signal = signal;
   }
 
   private key(key: string): `/${string}` {
@@ -122,10 +126,10 @@ export class PrefixStore {
   }
 
   get(key: string, options?: Parameters<zarr.FetchStore["get"]>[1]) {
-    return this.inner.get(this.key(key), options);
+    return this.inner.get(this.key(key), {...options, signal: options?.signal || this.signal});
   }
 
   getRange(key: string, range: Parameters<zarr.FetchStore["getRange"]>[1], options?: Parameters<zarr.FetchStore["getRange"]>[2]) {
-    return this.inner.getRange(this.key(key), range, options);
+    return this.inner.getRange(this.key(key), range, {...options, signal: options?.signal || this.signal});
   }
 }

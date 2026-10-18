@@ -2,21 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MOVIE_FPS, movieSequence, type MovieRecipe } from './movie-recipe';
 import { exportMovie } from './movie-renderer';
 
-export function TimePlayback({ sizeT, t, onT }: { sizeT: number; t: number; onT: (value: number) => void }) {
+export function TimePlayback({ sizeT, t, onT, ready=true }: { sizeT: number; t: number; onT: (value: number) => void; ready?:boolean }) {
   const [playing, setPlaying] = useState(false), [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [loop, setLoop] = useState(true);
   const current = useRef(t); current.current = t;
   useEffect(() => {
     setPlaying(false);
   }, [sizeT]);
   useEffect(() => {
-    if (!playing) return;
-    const timer = setInterval(() => {
+    if (!playing || !ready) return;
+    const timer = setTimeout(() => {
       const next = current.current + 1;
       if (next >= sizeT && !loop) { setPlaying(false); return; }
       current.current = next % sizeT; onT(current.current);
     }, 1000 / fps);
-    return () => clearInterval(timer);
-  }, [playing, fps, sizeT, loop, onT]);
+    return () => clearTimeout(timer);
+  }, [playing, fps, sizeT, loop, onT, t, ready]);
   if (sizeT <= 1) return null;
   return <div className="time-playback" role="group" aria-label="Time playback">
     <button aria-label="Previous frame" disabled={t === 0} onClick={() => { setPlaying(false); onT(t - 1); }}>◀</button>

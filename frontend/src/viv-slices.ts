@@ -1,6 +1,7 @@
 import type { SlicePlane, VolumeView } from "./VolumeViewControls";
 import { sliceAxis } from "./VolumeViewControls";
 import { volumeSelection } from "./volume-utils";
+import { SharedRequest } from "./shared-request";
 
 export const planeAxes = { xy: [0, 1], xz: [0, 2], yz: [1, 2] } as const;
 
@@ -45,34 +46,37 @@ export function sectionSource(source: any, plane: SlicePlane, index: number, t: 
   const shape = ["x", "y", "z"].map(axis => source.shape[source.labels.indexOf(axis)] || 1);
   const [a, b] = planeAxes[plane];
   const count = source.shape[source.labels.indexOf("c")] || 1;
-  const cache = new Map<number, Promise<any>>();
+  const cache = new Map<number, SharedRequest<any>>();
   return {
     labels: ["c", "y", "x"], shape: [count, shape[b], shape[a]], dtype: source.dtype,
     async getRaster({ selection, signal }: any) {
       signal?.throwIfAborted();
       const c = selection?.c || 0;
       let pending = cache.get(c);
-      if (!pending) {
-        pending = (async () => {
+      if (!pending || pending.controller.signal.aborted) {
+        pending = new SharedRequest(async taskSignal => {
           if (source.getVolume) {
-            const volume = await source.getVolume(volumeSelection(source.labels, c, t));
+            const volume = await source.getVolume(volumeSelection(source.labels, c, t),{signal:taskSignal});
+            taskSignal.throwIfAborted();
             return extractSection(volume.data, shape, plane, index);
           }
           const selected = { ...volumeSelection(source.labels, c, t), z: plane === "xy" ? index : 0 };
-          if (plane === "xy") return source.getRaster({ selection: selected });
+          if (plane === "xy") return source.getRaster({ selection: selected, signal:taskSignal });
           let output: any;
           for (let z = 0; z < shape[2]; z++) {
-            const row = await source.getRaster({ selection: { ...selected, z } });
+            taskSignal.throwIfAborted();
+            const row = await source.getRaster({ selection: { ...selected, z }, signal:taskSignal });
             output ??= new row.data.constructor(shape[a] * shape[b]);
             for (let x = 0; x < shape[a]; x++) output[z * shape[a] + x] = plane === "xz"
               ? row.data[index * shape[0] + x] : row.data[x * shape[0] + index];
           }
           return { data: output, width: shape[a], height: shape[b] };
-        })();
+        });
         cache.set(c, pending);
-        pending.catch(() => cache.delete(c));
+        const active=pending;
+        void pending.promise.catch(() => {if(cache.get(c)===active)cache.delete(c);});
       }
-      const result = await pending;
+      const result = await pending.consume(signal);
       signal?.throwIfAborted();
       return result;
     },

@@ -55,7 +55,7 @@ function Section({ panel, source, plane, index, t, extent, shape, fractions, tar
   </div>;
 }
 
-export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvasProps; renderVolume: (width: number, height: number, camera: VolumeCameraState, onChange: (camera: VolumeCameraState) => void) => ReactNode }) {
+export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvasProps; renderVolume: (width: number, height: number, camera: VolumeCameraState, onChange: (camera: VolumeCameraState) => void, onReady:()=>void) => ReactNode }) {
   const { width, height, loader, resolution, t, channels, camera, onCameraChange, onReady, onError } = props;
   const mode = props.view || "slice", plane = props.plane || "xy";
   const source = loader[resolution];
@@ -69,6 +69,9 @@ export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvas
   const fractions = indices.map((index, axis) => (index + .5) / shape[axis]);
   const target = camera?.sliceTarget || [.5,.5,.5];
   const panels = vivVolumePanels(mode, plane, width, height);
+  const frame=useMemo(()=>new Set<string>(),[source,t,mode,plane,channels.filter(c=>c.visible).map(c=>c.index).join(",")]);
+  const liveFrame=useRef(frame);liveFrame.current=frame;
+  const panelReady=(id:string)=>{if(liveFrame.current!==frame)return;frame.add(id);if(panels.every(panel=>frame.has(panel.id)))onReady();};
   const fit = sectionFitZoom(panels, extent), zoom = fit + (camera?.sliceZoom || 0);
   const unit = volumePhysicalScale(loader);
   const change = (values: Partial<NonNullable<typeof camera>>) => onCameraChange({ orbit:0, tilt:0, ...camera, zoom, slicePosition:fractions, ...values });
@@ -79,14 +82,14 @@ export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvas
   };
   return <div className="volume-stage" style={{ backgroundColor: props.background || "#030406" }}>
     {panels.map(panel => panel.id === "3d" ? <div className="viv-section-panel" key="3d" style={{left:panel.x,top:panel.y,width:panel.width,height:panel.height}}>
-      {renderVolume(panel.width,panel.height, { orbit:0, tilt:0, ...camera, zoom }, next => change({ ...next, sliceZoom:next.zoom-fit }))}
+      {renderVolume(panel.width,panel.height, { orbit:0, tilt:0, ...camera, zoom }, next => change({ ...next, sliceZoom:next.zoom-fit }),()=>panelReady("3d"))}
     </div> : <Section key={panel.id} panel={panel} source={source} plane={panel.id as SlicePlane} index={indices[sliceAxis[panel.id as SlicePlane]]} t={t}
       extent={extent} shape={shape} fractions={fractions} target={target} zoom={zoom} channels={activeVolumeChannels(channels)} brightness={props.brightness || 1}
-      physicalUnit={unit} showScale={props.showScale !== false} onReady={onReady} onError={onError} onSelect={select}
+      physicalUnit={unit} showScale={props.showScale !== false} onReady={()=>panelReady(panel.id)} onError={onError} onSelect={select}
       onNavigate={(plane: SlicePlane, next: any) => {
         const center = target.slice();
         planeAxes[plane].forEach((axis, i) => { center[axis] = next.target[i] / extent[axis]; });
-        change({ sliceTarget: center, sliceZoom: next.zoom - fit });
+        change({ sliceTarget: center, slicePosition: center, sliceZoom: next.zoom - fit });
       }} />)}
     <SliceControls view={mode} plane={plane} onPlane={value => props.onPlane?.(value)}
       source={{ shape:shape.slice().reverse(), resolution:extent.map((n,i)=>n/shape[i]),translation:[0,0,0],segmentation:false }}

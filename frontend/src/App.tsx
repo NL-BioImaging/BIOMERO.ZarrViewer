@@ -3,10 +3,12 @@ import { MovieExport, TimePlayback } from "./MovieControls";
 import { ViewerHelp } from "./HelpWindow";
 import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
+import { loadOmeZarrFromStore, getDefaultInitialViewState } from "@hms-dbmi/viv";
+import { capabilityCalibration } from "./calibration";
+import { navigationGeometry, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ, type SharedNavigation } from "./navigation";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
-import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis } from "./channel-scaling";
+import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis, type StatisticsContext } from "./channel-scaling";
 import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { projectLoader } from "./projection-loader";
 import { projectLabelLoader } from "./label-projection";
@@ -53,6 +55,7 @@ import {
 } from "./volume-utils";
 
 interface LoadedData {
+  capability: Capability;
   path: string;
   image: any[];
   labels: Array<{ id: string; loader: any[]; channelIndex?: number }>;
@@ -177,13 +180,8 @@ export function LayerVisibilityCheckbox({ items, name, disabled = false, onChang
 }
 
 function physicalScale(capability: Capability | null): { size: number; unit: string } | undefined {
-  if (!capability?.datasets?.length) return undefined;
-  const xIndex = capability.axes.findIndex((axis) => axis.name === "x");
-  const transformations = capability.datasets[0].coordinate_transformations;
-  if (xIndex < 0 || !Array.isArray(transformations)) return undefined;
-  const scale = transformations.find((item: any) => item?.type === "scale" && Array.isArray(item.scale)) as any;
-  const size = Number(scale?.scale?.[xIndex]);
-  return Number.isFinite(size) && size > 0 ? { size, unit: capability.axes[xIndex].unit || "px" } : undefined;
+  const value=capabilityCalibration(capability).x;
+  return value && value.size>0 ? {size:value.size,unit:value.unit} : undefined;
 }
 
 export function fieldLabelPath(labelPath: string, initialPath: string, fieldPath: string): string {
@@ -261,6 +259,7 @@ function labelOverlays(
           ? { values: [label.highlightValue] }
           : {}),
       mode: label.mode,
+      colorMode: label.color ? "solid" : "instance",
       color: label.color,
       opacity: label.opacity,
       outlineWidth: label.outlineWidth || 2,
@@ -281,6 +280,8 @@ export function roiPngUrl(
   url.searchParams.set("t", String(state.t));
   const selected = visibleChannels.filter((channel) => channel.visible).map((channel) => channel.index + 1);
   if (selected.length) url.searchParams.set("sourceChannels", selected.join(","));
+  url.searchParams.set("channelSettings",JSON.stringify(visibleChannels.filter(c=>c.visible).map(({index,color,low,high})=>({index,color,low,high}))));
+  if(state.overlays)url.searchParams.set("overlays",JSON.stringify(state.overlays));
   if (state.labelPath) url.searchParams.set("labelPath", state.labelPath);
   if (state.labelChannel != null) url.searchParams.set("labelChannel", String(state.labelChannel));
   if (state.labelValue != null) url.searchParams.set("labelValue", String(state.labelValue));
@@ -305,6 +306,8 @@ export default function App() {
   const [tIndex, setTIndex] = useState(deepLink.t || 0);
   const [projection, setProjection] = useState<ProjectionMode>(deepLink.projection || "slice");
   const [viewport, setViewport] = useState<ViewportState | undefined>(deepLink.viewport);
+  const [navigation,setNavigation]=useState<SharedNavigation>();
+  const [readyFrameKey,setReadyFrameKey]=useState("");
   const [renderMode, setRenderMode] = useState<RenderMode>(deepLink.renderMode || "2d");
   const [volumeLevel, setVolumeLevel] = useState<number | undefined>(deepLink.volumeLevel);
   const [volumeRenderer, setVolumeRenderer] = useState<VolumeRenderer>(deepLink.volumeRenderer || "neuroglancer");
@@ -341,6 +344,7 @@ export default function App() {
     return { ...label, loader: projectLabelLoader(label.loader, projection, values) };
   }) || [], [loaded, projection, labelProjectionKey]);
   const currentLoaded = loaded?.path === field ? loaded : null;
+  const displayCapability = currentLoaded?.capability || capability;
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const allVolumeLevels = useMemo(
     () => currentLoaded && maxTextureSize != null
@@ -358,6 +362,30 @@ export default function App() {
   const volumeBlend = selectedVolumeBlend ?? defaultVolumeBlend(useNeuroglancer ? "neuroglancer" : "classic");
   const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && selectedVolumeLevel);
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
+  const statisticsContext:StatisticsContext={field:field||"",renderMode:effectiveRenderMode,projection,z:zIndex,t:tIndex,level:selectedVolumeLevel?.index,channels:channels.filter(c=>c.visible).map(c=>c.index)};
+  const statisticsKey=JSON.stringify(statisticsContext);
+  const geometry=useMemo(()=>currentLoaded&&displayCapability?navigationGeometry(displayCapability,currentLoaded.image):undefined,[currentLoaded,displayCapability]);
+  const volumeGeometry=useMemo(()=>currentLoaded&&displayCapability?navigationGeometry(displayCapability,currentLoaded.image,selectedVolumeLevel?.index||0):undefined,[currentLoaded,displayCapability,selectedVolumeLevel?.index]);
+  const panelHeight=volumeView==="orthogonal"?viewerSize.height/2:viewerSize.height;
+  const sharedViewport=navigation&&geometry?to2D(navigation,geometry):viewport;
+  const sharedNgCamera=navigation?toNeuroglancer(navigation,ngCamera,panelHeight):ngCamera;
+  const sharedVivCamera=navigation&&volumeGeometry?toViv(navigation,volumeGeometry,volumeCamera,volumeView,slicePlane,viewerSize.width,viewerSize.height):volumeCamera;
+  const frameKey=JSON.stringify([field,zIndex,tIndex,projection,renderMode,volumeRenderer,volumeLevel,volumeView,slicePlane,viewMode]);
+  const latestFrameKey=useRef(frameKey);latestFrameKey.current=frameKey;
+  const frameReady=readyFrameKey===frameKey;
+  const setFrameReady=(value:boolean)=>setReadyFrameKey(value?frameKey:"");
+  const readyFrame=()=>{if(latestFrameKey.current===frameKey)setFrameReady(true);};
+  const acceptNavigation=(next:SharedNavigation)=>{
+    if(!Number.isFinite(next.unitsPerPixel)||next.unitsPerPixel<=0||next.position.some(n=>!Number.isFinite(n)))return;
+    setNavigation(old=>old&&Math.abs(old.unitsPerPixel-next.unitsPerPixel)<1e-8&&old.position.every((n,i)=>Math.abs(n-next.position[i])<1e-6)?old:next);
+    if(geometry)setZIndex(navigationZ(next,geometry));
+  };
+  const captureNavigation=()=>{
+    if(navigation||!geometry)return;
+    if(effectiveRenderMode==="3d"&&useNeuroglancer&&ngCamera)acceptNavigation(fromNeuroglancer(ngCamera,geometry.unit,panelHeight,volumeView));
+    else if(effectiveRenderMode==="3d"&&volumeCamera&&volumeGeometry)acceptNavigation(fromViv(volumeCamera,volumeGeometry));
+    else if(sharedViewport)acceptNavigation(from2D(sharedViewport,zIndex,geometry));
+  };
   const visibleChannelCount = channels.filter((channel) => channel.visible).length;
   const volumeChannelWarning = visibleChannelCount > volumeChannels.length
     ? `3D loads the first ${volumeChannels.length} visible channels; hide another channel to change the set.`
@@ -406,18 +434,21 @@ export default function App() {
   useEffect(() => {
     if (!capability || !authStore || !field) return;
     let cancelled = false;
+    const abort = new AbortController();
     setStatus("Opening multiscale image…");
     setError(null);
     const load = async () => {
-      const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field) as any);
+      const fieldCapability = field === capability.initial_path ? capability : await fetchCapabilities(imageId!, field, abort.signal);
+      const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field, abort.signal) as any);
       const imageLoader = withVolumeCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata), authStore, field, reportLoadProgress);
-      const labelResults = await Promise.allSettled(capability.labels.map(async (label) => {
-        const path = fieldLabelPath(label.path, capability!.initial_path, field!);
-        const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path) as any);
+      const labelResults = await Promise.allSettled(fieldCapability.labels.map(async (label) => {
+        const path = label.path;
+        const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path, abort.signal) as any);
         return { id: label.id, loader: attachNgffPhysicalSizes(result.data, result.metadata) };
       }));
       if (cancelled) return;
       const next: LoadedData = {
+        capability: fieldCapability,
         path: field,
         image: imageLoader,
         labels: [
@@ -441,18 +472,18 @@ export default function App() {
       const nextT = Math.min(tIndex, next.sizeT - 1);
       initializedZ.current = true;
       setStatus("Calculating automatic channel ranges…");
-      const defaults = channelStates(capability, next.image);
-      const analysisLoader = projectLoader(next.image, projection);
-      const analyses = await analyzeChannels(analysisLoader, defaults, projection === "slice" ? nextZ : 0, nextT);
+      const defaults = channelStates(fieldCapability, next.image);
+      const analyses = await analyzeChannels(next.image, defaults, nextZ, nextT, {signal: abort.signal, volume: renderMode === "3d" || projection !== "slice"});
       if (cancelled) return;
       const automatic = applyChannelAnalysis(defaults, analyses);
-      const scaled = defaults.map((channel, index) => {
-        const window = capability.channels[index]?.window;
-        return window && Number.isFinite(window.start) && Number.isFinite(window.end) && window.end > window.start
-          ? channel : automatic[index];
-      });
+      const scaled = automatic.map(channel => ({...channel, contrastSource: "auto" as const}));
       analyzedProjection.current = projection;
       setLoaded(next);
+      const g=navigationGeometry(fieldCapability,next.image);
+      const initialView=getDefaultInitialViewState(next.image,{width:viewerSize.width,height:viewerSize.height/(g.spacing[1]/g.spacing[0])},.35) as any;
+      const requested=loaded ? undefined : deepLink.viewport;
+      if(!loaded && deepLink.renderMode==="3d" && (deepLink.ngCamera || deepLink.volumeCamera)) setNavigation(undefined);
+      else setNavigation(from2D(requested||{x:initialView.target?.[0]??g.shape[0]/2,y:initialView.target?.[1]??g.shape[1]/2,zoom:Number(initialView.zoom)||0},nextZ,g));
       setChannelAnalyses(analyses);
       setChannels((current) => {
         const restored = applyChannelDeepLink(scaled, current.length ? current : deepLink.channels);
@@ -461,24 +492,29 @@ export default function App() {
           : restored;
       });
       setLabels((current) => {
-        const defaults = focusedLabelStates(capability, field, deepLink);
-        return applyLabelDeepLink(defaults, current.length ? current : deepLink.labels);
+        const defaults = focusedLabelStates(fieldCapability, field, deepLink);
+          const matching=defaults.flatMap(label=>{
+            const previous=current.find(item=>item.name===label.name&&item.path.split("/labels/").at(-1)===label.path.split("/labels/").at(-1));
+            return previous?[{...previous,id:label.id}]:[];
+          });
+          return applyLabelDeepLink(defaults, current.length ? matching : loaded ? undefined : deepLink.labels);
       });
       setZIndex(nextZ);
       setTIndex(nextT);
       setStatus(labelResults.some((item) => item.status === "rejected") ? "Image ready; one or more label layers are unavailable for this field." : "Ready");
     };
-    load().catch((reason) => setError(reason instanceof Error ? reason.message : "The OME-Zarr image could not be opened"));
-    return () => { cancelled = true; };
+    load().catch((reason) => { if (!cancelled) setError(reason instanceof Error ? reason.message : "The OME-Zarr image could not be opened"); });
+    return () => { cancelled = true; abort.abort(); };
   }, [capability, authStore, field]);
 
   useEffect(() => {
-    if (!deepLink.roi || !field || viewerSize.width <= 0 || viewerSize.height <= 0) return;
+    if (!deepLink.roi || !field || !geometry || viewerSize.width <= 0 || viewerSize.height <= 0) return;
     const key = `${field}:${viewerSize.width}:${viewerSize.height}`;
     if (fittedRoi.current === key) return;
     fittedRoi.current = key;
-    setViewport(fitRoiViewport(deepLink.roi, viewerSize.width, viewerSize.height));
-  }, [deepLink.roi, field, viewerSize.width, viewerSize.height]);
+    const next=fitRoiViewport(deepLink.roi, viewerSize.width, viewerSize.height);
+    setViewport(next);if(geometry)acceptNavigation(from2D(next,zIndex,geometry));
+  }, [deepLink.roi, field, viewerSize.width, viewerSize.height, geometry]);
 
   useEffect(() => {
     if (renderMode !== "3d" || !currentLoaded || maxTextureSize == null) return;
@@ -504,23 +540,20 @@ export default function App() {
   }, [renderMode, currentLoaded, maxTextureSize, selectedVolumeLevel, volumeLevel]);
 
   useEffect(() => {
-    const analysisKey = effectiveRenderMode === "3d" ? "volume" : projection;
-    if (!loaded || !displayLoader || !channels.length || analyzedProjection.current === analysisKey) return;
+    const analysisKey = statisticsKey;
+    if (!loaded || loaded.path !== field || !displayLoader || !channels.length || analyzedProjection.current === analysisKey) return;
     let cancelled = false;
-    const analysisLoader = effectiveRenderMode === "3d" && selectedVolumeLevel
-      ? projectLoader([loaded.image[selectedVolumeLevel.index]], "mip") : displayLoader;
-    setStatus(effectiveRenderMode === "3d" ? "Calculating volume ranges..." : "Calculating projection ranges...");
-    analyzeChannels(analysisLoader, channels, effectiveRenderMode === "2d" && projection === "slice" ? zIndex : 0, tIndex).then((analyses) => {
+    const abort = new AbortController();
+    setChannelAnalyses([]);
+    analyzeChannels(loaded.image, channels, zIndex, tIndex, {signal: abort.signal, volume: effectiveRenderMode === "3d" || projection !== "slice"}).then((analyses) => {
       if (cancelled) return;
       analyzedProjection.current = analysisKey;
       setChannelAnalyses(analyses);
-      setChannels((current) => applyChannelAnalysis(current, analyses));
-      setStatus("Ready");
     }).catch((reason) => {
       if (!cancelled) setStatus(`Projection warning: ${reason instanceof Error ? reason.message : "range calculation failed"}`);
     });
-    return () => { cancelled = true; };
-  }, [projection, displayLoader, effectiveRenderMode, selectedVolumeLevel]);
+    return () => { cancelled = true; abort.abort(); };
+  }, [loaded, statisticsKey]);
 
   useEffect(() => {
     if (!imageId || !loaded) return;
@@ -528,7 +561,7 @@ export default function App() {
       const relative = writeDeepLink(imageId, {
         view: viewMode,
         plateField: plateFieldIndex,
-        viewport,
+        viewport:sharedViewport,
         z: zIndex,
         t: tIndex,
         projection,
@@ -539,8 +572,8 @@ export default function App() {
         volumeBrightness,
         volumeBackground,
         volumeGain,
-        volumeCamera,
-        ngCamera, volumeView, slicePlane,
+        volumeCamera:sharedVivCamera,
+        ngCamera:sharedNgCamera, volumeView, slicePlane,
         field,
         roi: deepLink.roi,
         sourceChannels: deepLink.sourceChannels,
@@ -555,7 +588,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, plateFieldIndex, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, navigation, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -567,28 +600,28 @@ export default function App() {
           <span className="status" aria-live="polite">{error || status}</span>
           {currentLoaded && (viewMode !== "field" || effectiveRenderMode === "2d") && <>
             {deepLink.roi && capability && <a className="toolbar-button" href={roiPngUrl(capability, {
-                  ...deepLink, field, z: zIndex, t: tIndex,
-                }, channels)} download>Download ROI PNG</a>}
+                  ...deepLink, field, z: zIndex, t: tIndex, overlays:labelOverlays(labels,displayCapability,field),
+                }, channels)} download>{projection==="slice"?"Download ROI PNG":"Download ROI slice PNG"}</a>}
           </>}
           {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && effectiveRenderMode === "2d" && viewMode === "field" && <MovieExport
             imageId={imageId} sizeT={currentLoaded.sizeT} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
               filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
-              panels: [{ field, roi: visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), viewport, viewerSize),
+              panels: [{ field, roi: visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
                 sourceChannels: channels.filter(channel => channel.visible).map(channel => channel.index + 1),
                 channelSettings: channels, t: tIndex, z: zIndex, projection, scaleBar: showScale,
                 overlays: labels.filter(label => label.visible).map(label => ({
                   ...(label.id.startsWith("focused-channel-") ? { labelChannel: Number(label.id.split("-").at(-1)) } :
                     { labelPath: fieldLabelPath(label.path, capability!.initial_path, field!) }),
                   values: label.highlightValues || (label.highlightValue ? [label.highlightValue] : undefined),
-                  mode: label.mode, color: label.color, opacity: label.opacity, outlineWidth: label.outlineWidth || 2
+                  mode: label.mode, colorMode:label.color?"solid":"instance", color: label.color, opacity: label.opacity, outlineWidth: label.outlineWidth || 2
                 })) }]
             } as MovieRecipe} />}
           <div className="view-toolbar" role="group" aria-label="View controls">
             {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 && <RenderModeToggle mode={effectiveRenderMode} disabled3d={!volumeAvailable}
-              onChange={mode => { if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); setRenderMode(mode); }} />}
+              onChange={mode => {captureNavigation(); if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); setRenderMode(mode); }} />}
             {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
               <button className="icon-button" aria-label="Reset 3D View" title="Reset 3D View" onClick={() => {
-                setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
+                setNavigation(undefined);setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
               }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg></button>}
             {currentLoaded && <>
               {(effectiveRenderMode !== "3d" || viewMode !== "field") && <button className={`icon-button ${showMinimap ? "active" : ""}`} aria-label="Navigator"
@@ -636,9 +669,9 @@ export default function App() {
               brightness={volumeBrightness} background={volumeBackground}
               gain={volumeGain} height={viewerSize.height}
               view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
-              resetKey={volumeReset} camera={ngCamera} onCameraChange={setNgCamera}
+              resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
               onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
-              onReady={() => setStatus(volumeView === "3d" ? "3D image and labels ready" : volumeView === "slice" ? "Slice ready" : "Orthogonal views ready")} />
+              onReady={() => {readyFrame();setStatus(volumeView === "3d" ? "3D image and labels ready" : volumeView === "slice" ? "Slice ready" : "Orthogonal views ready");}} />
           ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <VolumeCanvas
               key={`${currentLoaded.path}:${tIndex}:${selectedVolumeLevel.index}:${volumeChannels.map((channel) => channel.index).join(",")}:${volumeReset}`}
@@ -651,11 +684,11 @@ export default function App() {
               blendMode={volumeBlend}
               brightness={volumeBrightness} background={volumeBackground}
               showScale={showScale}
-              camera={volumeCamera} view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
-              onCameraChange={setVolumeCamera}
+              camera={sharedVivCamera} view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
+              onCameraChange={camera=>{setVolumeCamera(camera);if(volumeGeometry)acceptNavigation(fromViv(camera,volumeGeometry));}}
               onCancel={() => setRenderMode("2d")}
               onError={(message) => setStatus(`3D warning: ${message}`)}
-              onReady={() => setStatus(volumeChannelWarning || "3D volume ready")}
+              onReady={() => {readyFrame();setStatus(volumeChannelWarning || "3D volume ready");}}
             />
           ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 ? (
             <ViewerCanvas
@@ -667,19 +700,19 @@ export default function App() {
               labelStates={labels}
               z={zIndex}
               t={tIndex}
-              viewport={viewport}
+              viewport={sharedViewport}
               projection={projection}
               showMinimap={showMinimap}
               showScale={showScale}
-              physicalScale={physicalScale(capability)}
-              onViewportChange={setViewport}
+              physicalScale={physicalScale(displayCapability)}
+              onViewportChange={next=>{setViewport(next);if(geometry)acceptNavigation(from2D(next,zIndex,geometry));}}
               onTileError={(message) => setStatus(`Tile warning: ${message}`)}
-              onTilesLoaded={() => setStatus((current) => current.startsWith("Tile warning:") ? "Ready" : current)}
+              onTilesLoaded={() => {readyFrame();setStatus((current) => current.startsWith("Image ready;") ? current : "Ready");}}
             />
           ) : <div className="loading">{error || status}</div>}
         </main>
         <ViewerPanel
-          capability={capability}
+          capability={displayCapability}
           field={field}
           onField={(path) => {
             setField(path);
@@ -687,7 +720,7 @@ export default function App() {
             setVolumeCamera(undefined);
           }}
           channels={channels}
-          channelAnalyses={channelAnalyses}
+          channelAnalyses={currentLoaded && analyzedProjection.current===statisticsKey ? channelAnalyses : []}
           onChannels={setChannels}
           labels={labels}
           onLabels={setLabels}
@@ -695,14 +728,15 @@ export default function App() {
           sizeT={currentLoaded?.sizeT || 1}
           z={zIndex}
           t={tIndex}
-          onZ={setZIndex}
-          onT={setTIndex}
+          onZ={value=>{setZIndex(value);if(geometry&&sharedViewport)acceptNavigation(from2D(sharedViewport,value,geometry));}}
+          onT={value=>{setFrameReady(false);setTIndex(value);}}
+          frameReady={frameReady}
           projection={projection}
           onProjection={setProjection}
           renderMode={effectiveRenderMode}
-          labels3dAvailable={useNeuroglancer} volumeView={volumeView} onVolumeView={setVolumeView}
+          labels3dAvailable={useNeuroglancer} volumeView={volumeView} onVolumeView={value=>{captureNavigation();setVolumeView(value);}}
           volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
-          onVolumeRenderer={setVolumeRenderer} neuroglancerAvailable={ngAvailable}
+          onVolumeRenderer={value=>{captureNavigation();setVolumeRenderer(value);}} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
           volumeLevel={selectedVolumeLevel?.index}
           volumeBlend={volumeBlend}
@@ -723,6 +757,7 @@ export default function App() {
 }
 
 interface ViewerPanelProps {
+  frameReady?:boolean;
   capability: Capability | null;
   field?: string;
   onField: (path: string) => void;
@@ -770,10 +805,11 @@ export function ViewerPanel(props: ViewerPanelProps) {
   const { capability } = props;
   const showNavigation = Boolean(capability?.plate && plateTab === "navigation");
   const datasetName = capability?.plate?.name || capability?.image.name || "Loading dataset…";
+  const labelsDisabled = props.viewMode !== "field" || (props.renderMode === "3d" && !props.labels3dAvailable);
 
   useEffect(() => {
-    if (props.renderMode === "3d" && !props.labels3dAvailable && viewTab === "labels") setViewTab("channels");
-  }, [props.renderMode, props.labels3dAvailable, viewTab]);
+    if (labelsDisabled && viewTab === "labels") setViewTab("channels");
+  }, [labelsDisabled, viewTab]);
 
   return <aside className="control-panel">
     <div className="dataset-heading"><span aria-hidden="true">▰</span><strong>{datasetName}</strong></div>
@@ -788,6 +824,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 sizeT={props.sizeT}
                 t={props.t}
                 onT={props.onT}
+                frameReady={props.frameReady}
                 levels={props.volumeLevels}
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
@@ -799,7 +836,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
-            : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
+            : <PlaneControls frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
 
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
@@ -807,8 +844,8 @@ export function ViewerPanel(props: ViewerPanelProps) {
           <button role="tab" aria-selected={viewTab === "channels"} className={viewTab === "channels" ? "active" : ""} onClick={() => setViewTab("channels")}>Channels ({props.channels.length})</button>
         </div>
         <div className="layer-tab" role="presentation">
-          <LayerVisibilityCheckbox items={props.labels} name="labels" disabled={props.renderMode === "3d" && !props.labels3dAvailable} onChange={visible => props.onLabels(props.labels.map(item => ({ ...item, visible })))} />
-          <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={props.renderMode === "3d" && !props.labels3dAvailable} title={props.renderMode === "3d" && !props.labels3dAvailable ? "Viv 3D displays intensity channels only" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
+          <LayerVisibilityCheckbox items={props.labels} name="labels" disabled={labelsDisabled} onChange={visible => props.onLabels(props.labels.map(item => ({ ...item, visible })))} />
+          <button role="tab" aria-selected={viewTab === "labels"} className={viewTab === "labels" ? "active" : ""} disabled={labelsDisabled} title={props.viewMode !== "field" ? "Open a field to view labels" : labelsDisabled ? "Viv 3D displays intensity channels only" : undefined} onClick={() => setViewTab("labels")}>Labels ({props.labels.length})</button>
         </div>
       </div>
         {viewTab === "channels" ?
@@ -851,13 +888,13 @@ function ChannelPanel({ channels, analyses, onChange }: {
 }) {
   const [histograms, setHistograms] = useState<Set<number>>(new Set());
   const analysisByIndex = new Map(analyses.map((analysis) => [analysis.index, analysis]));
-  const update = (index: number, patch: Partial<ChannelState>) => onChange(channels.map((item) => item.index === index ? { ...item, ...patch } : item));
+  const update = (index: number, patch: Partial<ChannelState>) => onChange(channels.map((item) => item.index === index ? { ...item, ...((patch.low != null || patch.high != null) ? {contrastSource: "manual" as const} : {}), ...patch } : item));
   const apply = (channel: ChannelState, mode: "auto" | "fit") => {
     const analysis = analysisByIndex.get(channel.index);
     if (!analysis) return;
     update(channel.index, mode === "auto"
-      ? { low: analysis.autoLow, high: analysis.autoHigh }
-      : { low: analysis.fitLow, high: analysis.fitHigh });
+      ? { low: analysis.autoLow, high: analysis.autoHigh, contrastSource: "auto" }
+      : { low: analysis.fitLow, high: analysis.fitHigh, contrastSource: "manual" });
   };
   const toggleHistogram = (index: number) => setHistograms((current) => {
     const next = new Set(current);
@@ -874,7 +911,8 @@ function ChannelPanel({ channels, analyses, onChange }: {
         <div className="layer-heading"><input type="checkbox" aria-label={`${channel.label} visibility`} checked={channel.visible} onChange={(event) => update(channel.index, { visible: event.target.checked })}/><strong>{channel.label}</strong><ChannelColorPicker name={channel.label} color={channel.color} onChange={color => update(channel.index, { color })}/></div>
 
         {showHistogram && analysis && <Histogram values={analysis.histogram} color={channel.color} />}
-        <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} actions={<div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis}>HIST</button></div>} />
+        <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} actions={<div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis || analysis.status==="error"}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis || analysis.status==="error"}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis || analysis.status==="error"}>HIST</button></div>} />
+        {analysis?.status==="error" && <small role="status">Channel statistics are unavailable. The current contrast is preserved.</small>}
       </div>;
     })}
   </section>;
@@ -886,8 +924,8 @@ function Histogram({ values, color }: { values: number[]; color: string }) {
 }
 
 function DualRange({ channel, analysis, onChange, actions }: { channel: ChannelState; analysis?: ChannelAnalysis; onChange: (patch: Partial<ChannelState>) => void; actions?: ReactNode }) {
-  const rangeMin = analysis?.fitLow ?? channel.domainMin;
-  const rangeMax = analysis?.fitHigh ?? channel.domainMax;
+  const rangeMin = Math.min(analysis?.fitLow ?? channel.domainMin, channel.low);
+  const rangeMax = Math.max(analysis?.fitHigh ?? channel.domainMax, channel.high);
   const span = Math.max(Number.EPSILON, rangeMax - rangeMin);
   const low = Math.max(rangeMin, Math.min(rangeMax, channel.low));
   const high = Math.max(low, Math.min(rangeMax, channel.high));
@@ -904,7 +942,8 @@ function DualRange({ channel, analysis, onChange, actions }: { channel: ChannelS
   </div>;
 }
 
-function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection }: {
+function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection, frameReady }: {
+  frameReady?:boolean;
   sizeZ: number;
   sizeT: number;
   z: number;
@@ -930,12 +969,13 @@ function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection 
         ? <label className="slider">Z <input type="range" min="0" max={sizeZ - 1} value={z} onChange={(e) => onZ(Number(e.target.value))}/><output>{z + 1}/{sizeZ}</output></label>
         : <p className="projection-note">Using all {sizeZ} Z slices</p>}
     </>}
-    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
+    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
     {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }
 
 export function VolumeControls({
+  frameReady,
   sizeT,
   t,
   onT,
@@ -948,6 +988,7 @@ export function VolumeControls({
   neuroglancerAvailable = true,
   view = "3d", onView, blend = "additive", onBlend, appearance,
 }: {
+  frameReady?:boolean;
   sizeT: number;
   t: number;
   onT: (value: number) => void;
@@ -991,7 +1032,7 @@ export function VolumeControls({
     </label>
 
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
-    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} />}
+    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
     {sizeT > 1 && <label className="slider">Timepoint <input aria-label="Timepoint" type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }

@@ -20,10 +20,10 @@ export function selectedImageId(search = window.location.search): number | null 
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-export async function fetchCapabilities(imageId: number): Promise<Capability> {
+export async function fetchCapabilities(imageId: number, field?: string, signal?: AbortSignal): Promise<Capability> {
   const template = window.BIOMERO_ZARR_VIEWER.capabilitiesTemplate;
   const url = template.replace(/\/0\/capabilities\/$/, `/${imageId}/capabilities/`);
-  const response = await fetch(url, { credentials: "same-origin", headers: { Accept: "application/json" } });
+  const response = await fetch(field == null ? url : `${url}?${new URLSearchParams({field})}`, { credentials: "same-origin", headers: { Accept: "application/json" }, signal });
   if (response.redirected && new URL(response.url).pathname.includes('login')) {
     throw new ViewerApiError('session_expired', 'Please sign in to OMERO and try again.', 401);
   }

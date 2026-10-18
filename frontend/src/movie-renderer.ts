@@ -1,4 +1,7 @@
 import { dtypeDomain } from "./channel-scaling";
+import { labelIdColor } from "./label-color";
+import { capabilityCalibration, mapVoxel } from "./calibration";
+import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { loadOmeZarrFromStore } from '@hms-dbmi/viv';
 import { AuthenticatedZarrStore, PrefixStore } from './authenticated-store';
 import { fetchCapabilities } from './api';
@@ -43,6 +46,19 @@ export async function cropPlane(source: any, roi: number[], c: number, z: number
   return result;
 }
 
+export async function calibratedLabelCrop(source:any,image:any,bounds:number[],c:number,z:number,t:number,signal:AbortSignal) {
+  const [x0,y0,x1,y1]=bounds,width=x1-x0,height=y1-y0;
+  const xs=Array.from({length:width},(_,i)=>Math.floor(mapVoxel(image,source,"x",x0+i)+.5));
+  const ys=Array.from({length:height},(_,i)=>Math.floor(mapVoxel(image,source,"y",y0+i)+.5));
+  const depth=Math.floor(mapVoxel(image,source,"z",z)+.5),result=new Float64Array(width*height);
+  const crop=[Math.max(0,xs[0]),Math.max(0,ys[0]),Math.min(axisSize(source,"x"),xs.at(-1)!+1),Math.min(axisSize(source,"y"),ys.at(-1)!+1)];
+  if(crop[2]<=crop[0]||crop[3]<=crop[1]||source.labels.includes("z")&&(depth<0||depth>=axisSize(source,"z")))return result;
+  if((crop[2]-crop[0])*(crop[3]-crop[1])>16*1024*1024)throw new Error("The calibrated label crop exceeds the export memory limit.");
+  const pixels=await cropPlane(source,crop,c,depth,t,signal),cropWidth=crop[2]-crop[0];
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(xs[x]>=crop[0]&&xs[x]<crop[2]&&ys[y]>=crop[1]&&ys[y]<crop[3])result[y*width+x]=pixels[(ys[y]-crop[1])*cropWidth+xs[x]-crop[0]];
+  return result;
+}
+
 export function composeLabels(pixels: Uint8ClampedArray, plane: Float64Array, width: number, height: number,
   overlay: MoviePanel['overlays'][number], padded?: { plane: Float64Array; width: number; offsetX: number; offsetY: number }) {
   const color = overlay.color ? rgb(overlay.color) : undefined;
@@ -59,7 +75,7 @@ export function composeLabels(pixels: Uint8ClampedArray, plane: Float64Array, wi
     const edge = at(x - r, y) !== value || at(x + r, y) !== value || at(x, y - r) !== value || at(x, y + r) !== value;
     if (overlay.mode === 'outline' && !edge) continue;
     const opacity = overlay.mode === 'outline-fill' && edge ? 1 : overlay.opacity;
-    const category = color || rgb(['#00FFFF', '#FF00FF', '#FFFF00', '#FF5555', '#55FF55', '#5599FF'][Math.abs(Math.round(value)) % 6]);
+    const category = color || (overlay.colorMode === "instance" ? labelIdColor(value) : rgb(['#00FFFF', '#FF00FF', '#FFFF00', '#FF5555', '#55FF55', '#5599FF'][Math.abs(Math.round(value)) % 6]));
     const offset = (y * width + x) * 4;
     for (let channel = 0; channel < 3; channel++) pixels[offset + channel] = pixels[offset + channel] * (1 - opacity) + category[channel] * opacity;
   }
@@ -85,10 +101,9 @@ export function drawMovieVectors(context: OffscreenCanvasRenderingContext2D, vec
 }
 
 function drawScale(context: OffscreenCanvasRenderingContext2D, capability: Capability, width: number, height: number) {
-  const x = capability.axes.findIndex(axis => axis.name === 'x');
-  const transformation = capability.datasets?.[0]?.coordinate_transformations?.find((item: any) => item.type === 'scale') as any;
-  const scale = Number(transformation?.scale?.[x]);
-  const unit = capability.axes[x]?.unit;
+  const calibration=capabilityCalibration(capability).x;
+  const scale = calibration?.size ?? 0;
+  const unit = calibration?.unit;
   if (!Number.isFinite(scale) || scale <= 0 || !unit || width < 48 || height < 32) return;
   const target = scale * width / 5, power = 10 ** Math.floor(Math.log10(target));
   const length = Math.max(...[1, 2, 5, 10].filter(value => value * power <= target)) * power;
@@ -104,7 +119,7 @@ function drawScale(context: OffscreenCanvasRenderingContext2D, capability: Capab
 export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal: AbortSignal) {
   movieSequence(recipe);
   if (JSON.stringify(recipe).length > 1024 * 1024) throw new Error('Movie recipe exceeds 1 MiB. Use a smaller bounded track table.');
-  const capability = await fetchCapabilities(imageId);
+  const capability = await fetchCapabilities(imageId,recipe.panels[0].field,signal);
   if (recipe.storeUuid ? capability.store.uuid?.toLowerCase() !== recipe.storeUuid.toLowerCase()
       : !recipe.sourceBinding || recipe.sourceBinding !== capability.store.binding_digest)
     throw new Error('The movie references a different image store.');
@@ -115,7 +130,8 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
       throw new Error('The source image changed during export. Create the movie again.');
     return fresh;
   });
-  const image = await loadOmeZarrFromStore(new PrefixStore(store.store, panel.field) as any);
+  const image = await loadOmeZarrFromStore(new PrefixStore(store.store, panel.field,signal) as any);
+  attachNgffPhysicalSizes(image.data,image.metadata);
   const sequence = movieSequence(recipe, axisSize(image.data[0], 't'));
   const imageSource = projectLoader(image.data, panel.projection || 'slice')[0];
   const overlays: Array<{ overlay: MoviePanel["overlays"][number]; source: any; channel: number }> = [];
@@ -129,10 +145,9 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
         return path === label.path || path === mapped;
       });
       if (!known) throw new Error('The requested label layer is not available in this store.');
-      loader = (await loadOmeZarrFromStore(new PrefixStore(store.store, path) as any)).data; channel = 0;
+      const result=await loadOmeZarrFromStore(new PrefixStore(store.store, path,signal) as any);
+      loader = attachNgffPhysicalSizes(result.data,result.metadata); channel = 0;
     } else if (!overlay.labelChannel) throw new Error('Choose an available label layer.');
-    if (axisSize(loader[0], 'x') !== axisSize(image.data[0], 'x') || axisSize(loader[0], 'y') !== axisSize(image.data[0], 'y'))
-      throw new Error('This label layer has a different pixel grid. Align it with the source image before exporting.');
     overlays.push({ overlay, source: projectLabelLoader(loader, panel.projection || 'slice', overlay.values)[0], channel });
   }
   const vectors = mappedTrackVectors(panel);
@@ -161,8 +176,8 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
     for (let i = 0; i < summed.length / 3; i++) for (let c = 0; c < 3; c++) pixels[i * 4 + c] = Math.min(255, summed[i * 3 + c]);
     for (const { overlay, source, channel } of overlays) {
       const [x0, y0, x1, y1] = panel.roi, radius = overlay.outlineWidth;
-      const bounds = [Math.max(0, x0 - radius), Math.max(0, y0 - radius), Math.min(axisSize(source, 'x'), x1 + radius), Math.min(axisSize(source, 'y'), y1 + radius)];
-      const padded = await cropPlane(source, bounds, channel, panel.z, t, signal);
+      const bounds = [Math.max(0, x0 - radius), Math.max(0, y0 - radius), Math.min(axisSize(imageSource, 'x'), x1 + radius), Math.min(axisSize(imageSource, 'y'), y1 + radius)];
+      const padded = await calibratedLabelCrop(source,imageSource,bounds,channel,panel.z,t,signal);
       const plane = new Float64Array(sequence.width * sequence.height), paddedWidth = bounds[2] - bounds[0];
       for (let y = 0; y < sequence.height; y++) for (let x = 0; x < sequence.width; x++) plane[y * sequence.width + x] = padded[(y + y0 - bounds[1]) * paddedWidth + x + x0 - bounds[0]];
       composeLabels(pixels, plane, sequence.width, sequence.height, overlay, { plane: padded, width: paddedWidth, offsetX: x0 - bounds[0], offsetY: y0 - bounds[1] });
