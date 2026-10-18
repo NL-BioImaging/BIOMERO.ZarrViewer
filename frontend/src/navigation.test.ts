@@ -1,4 +1,4 @@
-import { navigationGeometry, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ } from "./navigation";
+import { navigationGeometry, fitNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ } from "./navigation";
 import type { Capability } from "./types";
 
 const capability={axes:[{name:"z",unit:"micrometer"},{name:"y",unit:"micrometer"},{name:"x",unit:"micrometer"}],datasets:[
@@ -26,6 +26,16 @@ test.each(["3d","slice","orthogonal"] as const)("physical position and zoom roun
 test("missing pyramid scales fall back to shape ratios rather than shrinking physical extent",()=>{
   const g=navigationGeometry({...capability,datasets:[capability.datasets![0],{path:"1"}]},loaders,1);
   expect(g.spacing).toEqual([.5,1,4]);
+});
+
+test("reset fits all four panels at one shared physical scale and keeps voxel-center positions",()=>{
+  const g=navigationGeometry(capability,loaders),nav=fitNavigation(g,800,600,"orthogonal");
+  const extent=g.shape.map((n,i)=>n*g.spacing[i]);
+  expect(extent[0]/nav.unitsPerPixel).toBeLessThanOrEqual(400*.85);
+  expect(Math.max(extent[1],extent[2])/nav.unitsPerPixel).toBeLessThanOrEqual(300*.85);
+  expect((nav.position[2]-g.origin[2])/g.spacing[2]%1).toBe(.5);
+  const roundtrip=from2D(to2D(nav,g),navigationZ(nav,g),g);
+  expect(roundtrip).toEqual(nav);
 });
 
 test("global transforms compose after dataset transforms and normalize units",()=>{

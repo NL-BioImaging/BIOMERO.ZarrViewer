@@ -15,6 +15,11 @@ export function navigationGeometry(capability:Capability,loader:any[],level=0) {
   return {spacing,origin,shape,unit:calibrated.x?.unit||"pixel",worldUnitSize:Math.min(...["x","y","z"].map(a=>base[a]?.size||1))};
 }
 type Geometry=ReturnType<typeof navigationGeometry>;
+export function fitNavigation(g:Geometry,width:number,height:number,view:VolumeView):SharedNavigation {
+  const extent=g.shape.map((n,i)=>n*g.spacing[i]),factor=view==="orthogonal"?.5:1;
+  const unitsPerPixel=Math.max(Math.max(extent[0],extent[1])/Math.max(1,width*factor),Math.max(extent[1],extent[2])/Math.max(1,height*factor))/.85;
+  return {position:g.shape.map((n,i)=>g.origin[i]+(Math.floor((n-1)/2)+.5)*g.spacing[i]),unitsPerPixel,unit:g.unit};
+}
 export function from2D(view:ViewportState,z:number,g:Geometry):SharedNavigation {
   return {position:[view.x,view.y,z+.5].map((v,i)=>g.origin[i]+v*g.spacing[i]),unitsPerPixel:g.spacing[0]/2**view.zoom,unit:g.unit};
 }

@@ -1,4 +1,4 @@
-import { B as r } from "./main-DJrcJus2.js";
+import { B as r } from "./main-BF_t_WN_.js";
 class s extends r {
   constructor() {
     if (super(), typeof createImageBitmap > "u")

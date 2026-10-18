@@ -5,7 +5,7 @@ import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { loadOmeZarrFromStore, getDefaultInitialViewState } from "@hms-dbmi/viv";
 import { capabilityCalibration } from "./calibration";
-import { navigationGeometry, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ, type SharedNavigation } from "./navigation";
+import { navigationGeometry, fitNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ, type SharedNavigation } from "./navigation";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis, type StatisticsContext } from "./channel-scaling";
@@ -483,6 +483,7 @@ export default function App() {
       const initialView=getDefaultInitialViewState(next.image,{width:viewerSize.width,height:viewerSize.height/(g.spacing[1]/g.spacing[0])},.35) as any;
       const requested=loaded ? undefined : deepLink.viewport;
       if(!loaded && deepLink.renderMode==="3d" && (deepLink.ngCamera || deepLink.volumeCamera)) setNavigation(undefined);
+      else if(!requested && renderMode==="3d")setNavigation(fitNavigation(g,viewerSize.width,viewerSize.height,volumeView));
       else setNavigation(from2D(requested||{x:initialView.target?.[0]??g.shape[0]/2,y:initialView.target?.[1]??g.shape[1]/2,zoom:Number(initialView.zoom)||0},nextZ,g));
       setChannelAnalyses(analyses);
       setChannels((current) => {
@@ -621,7 +622,7 @@ export default function App() {
               onChange={mode => {captureNavigation(); if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); setRenderMode(mode); }} />}
             {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
               <button className="icon-button" aria-label="Reset 3D View" title="Reset 3D View" onClick={() => {
-                setNavigation(undefined);setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
+                if(geometry)acceptNavigation(fitNavigation(geometry,viewerSize.width,viewerSize.height,volumeView));setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
               }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 1 1 2 8M3 4v6h6"/></svg></button>}
             {currentLoaded && <>
               {(effectiveRenderMode !== "3d" || viewMode !== "field") && <button className={`icon-button ${showMinimap ? "active" : ""}`} aria-label="Navigator"

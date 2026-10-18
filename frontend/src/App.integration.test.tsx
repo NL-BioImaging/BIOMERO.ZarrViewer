@@ -8,7 +8,7 @@ import type { Capability } from "./types";
 vi.mock("./api",async importOriginal=>({...await importOriginal<any>(),fetchCapabilities:vi.fn()}));
 vi.mock("@hms-dbmi/viv",async importOriginal=>({...await importOriginal<any>(),loadOmeZarrFromStore:vi.fn()}));
 vi.mock("./volume-utils",async importOriginal=>({...await importOriginal<any>(),detectMax3dTextureSize:()=>2048}));
-function Canvas(props:any){useEffect(()=>props.onReady?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast">{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
+function Canvas(props:any){useEffect(()=>props.onReady?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
 vi.mock("./ViewerCanvas",()=>({ViewerCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./VolumeCanvas",()=>({VolumeCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./NeuroglancerCanvas",()=>({NeuroglancerCanvas:(props:any)=><Canvas {...props}/>}));
@@ -51,4 +51,14 @@ test("malformed optional channel, overlay and label entries do not blank the app
   render(<App/>);await screen.findByTestId("rendered-contrast");
   expect(screen.getByRole("spinbutton",{name:"DNA maximum value"})).toHaveValue(1000);
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+test("resetting a 3D view updates the shared scale used when returning to 2D",async()=>{
+  render(<App/>);await screen.findByTestId("rendered-contrast");
+  fireEvent.click(screen.getByRole("button",{name:"3D"}));
+  fireEvent.click(screen.getByRole("button",{name:"Reset 3D View"}));
+  const camera=JSON.parse(screen.getByTestId("rendered-contrast").getAttribute("data-navigation")!);
+  fireEvent.click(screen.getByRole("button",{name:"2D"}));
+  const viewport=JSON.parse(screen.getByTestId("rendered-contrast").getAttribute("data-navigation")!);
+  expect(.2/2**viewport.zoom).toBeCloseTo(camera.scale/1000/600);
 });
