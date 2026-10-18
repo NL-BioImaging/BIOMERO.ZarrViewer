@@ -1,5 +1,7 @@
 import json
 from types import SimpleNamespace
+from pathlib import Path
+import pytest
 
 from biomero_zarr_viewer.metadata_details import omero_details, zarr_details
 from biomero_zarr_viewer.views import metadata_details, _safe_data_path
@@ -23,7 +25,11 @@ def test_endpoint_reads_all_metadata_without_reading_pixel_chunks(configure_stor
     assert response.status_code == 200
     assert response["Cache-Control"] == "private, no-store"
     nodes = {node["path"]: node for node in payload["zarr"]["nodes"]}
-    assert nodes["custom"]["attributes"]["experiment"]["treatment"] == "control"
+    assert "custom" not in nodes
+    from urllib.parse import urlencode
+    page = metadata_details(_request("/metadata/?" + urlencode({"section":"nodes","cursor":payload["zarr"]["next_cursor"]})),42,conn=conn)
+    remaining = {node["path"]:node for node in json.loads(page.content)["zarr"]["nodes"]}
+    assert remaining["custom"]["attributes"]["experiment"]["treatment"] == "control"
     assert "0/chunks" not in nodes
     assert nodes["0"]["array"]["shape"]
     assert payload["omero"]["annotations"][0]["value"] == [["compound", "DMSO"]]
@@ -99,3 +105,55 @@ def test_plate_well_and_field_metadata_are_included(configure_storage):
     assert any("plate" in node["attributes"] for node in payload["zarr"]["nodes"])
     assert any("well" in node["attributes"] for node in payload["zarr"]["nodes"])
     assert any("/" in node["path"] and "multiscales" in node["attributes"] for node in payload["zarr"]["nodes"])
+
+
+def test_large_plate_summary_and_signed_pages_never_read_pixels(configure_storage, monkeypatch):
+    from biomero_zarr_viewer.views import _inspect_resolved_store
+    from biomero_zarr_viewer.errors import InvalidMetadata
+    _, mount = configure_storage
+    root = write_v2_image(mount / "sample.zarr", plate=True)
+    for i in range(220):
+        write_json(root / f"other/{i:03}" / ".zattrs", {"field": i})
+    store = SimpleNamespace(path=root, relative="sample.zarr", routes=[], recorded_files=(), identity_path=None)
+    original = Path.read_text
+    reads = []
+    def metadata_only(path, *args, **kwargs):
+        assert path.name in (".zattrs", ".zarray", ".zgroup", "zarr.json", ".zmetadata")
+        reads.append(str(path.relative_to(root)))
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(Path, "read_text", metadata_only)
+    model = _inspect_resolved_store(store)
+    summary = zarr_details(store, _safe_data_path, section="summary", field="A/1/0", model=model)
+    assert any(n["path"] == "A/1/0/0" for n in summary["nodes"])
+    assert not any("other" in p for p in reads)
+    cursor, seen, pages = summary["next_cursor"], set(), 0
+    while cursor:
+        page = zarr_details(store, _safe_data_path, section="nodes", field="A/1/0", model=model, cursor=cursor)
+        assert len(page["nodes"]) <= 100
+        assert len(json.dumps(page).encode()) < 8 * 1024 * 1024
+        seen.update(n["path"] for n in page["nodes"])
+        cursor = page["next_cursor"]
+        pages += 1
+        assert pages < 20
+    assert pages >= 3 and "other/219" in seen
+    with pytest.raises(InvalidMetadata):
+        zarr_details(store, _safe_data_path, section="nodes", field="other", model=model, cursor=summary["next_cursor"])
+    with pytest.raises(InvalidMetadata):
+        zarr_details(store, _safe_data_path, section="nodes", field="A/1/0", model=model, cursor="tampered")
+
+
+def test_selected_heterogeneous_field_has_its_own_channels_labels_and_calibration(configure_storage):
+    from biomero_zarr_viewer.views import _inspect_resolved_store
+    _, mount = configure_storage
+    root = write_v2_image(mount / "sample.zarr", plate=True)
+    write_v2_image(root / "B/2/9")
+    write_json(root / "B/2/.zattrs", {"well":{"images":[{"path":"9"}]}})
+    attrs = json.loads((root / "B/2/9/.zattrs").read_text())
+    attrs["omero"]["channels"][0]["label"] = "Different DNA"
+    attrs["multiscales"][0]["datasets"][0]["coordinateTransformations"] = [{"type":"scale","scale":[1,2,3]}]
+    write_json(root / "B/2/9/.zattrs", attrs)
+    model = _inspect_resolved_store(SimpleNamespace(path=root, relative="sample.zarr", routes=[], recorded_files=(), identity_path=None), "B/2/9")
+    assert model["initial_path"] == "B/2/9"
+    assert model["channels"][0]["label"] == "Different DNA"
+    assert model["labels"][0]["path"].startswith("B/2/9/")
+    assert model["datasets"][0]["coordinate_transformations"][0]["scale"] == [1,2,3]

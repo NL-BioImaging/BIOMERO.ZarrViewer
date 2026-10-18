@@ -287,10 +287,12 @@ def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=Fal
     return shape, dtype, size
 
 
-def request_volume(array_path, axes, channel, timepoint, scope, source_version, *, asynchronous=True, description=None):
+def request_volume(array_path, axes, channel, timepoint, scope, source_version, *, asynchronous=True, description=None, retry=False):
     shape, dtype, size = description or describe_volume(array_path, axes, channel, timepoint)
     metadata = {"shape": shape, "dtype": dtype.str, "bytes": size}
     key = hashlib.sha256(json.dumps([str(array_path), axes, channel, timepoint, source_version, scope, metadata], sort_keys=True).encode()).hexdigest()
+    if retry:
+        retry_failed(key, scope)
     if _reserve(key, scope, size, metadata):
         if asynchronous:
             _pool.submit(_build, key, array_path, axes, channel, timepoint, metadata)
@@ -354,6 +356,12 @@ def request_blob(key, scope, reservation, metadata, build):
     if reserved:
         _pool.submit(_build_blob, key, reservation, build)
     return entry(key, scope)
+
+
+def retry_failed(key, scope):
+    """An explicit authorized retry can release an error, never an active job."""
+    with database() as db:
+        db.execute("DELETE FROM entries WHERE key=? AND scope=? AND status='error'", (key, scope))
 
 
 def _build_blob(key, reservation, build):

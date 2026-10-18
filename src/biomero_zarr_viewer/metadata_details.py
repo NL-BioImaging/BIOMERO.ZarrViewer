@@ -1,5 +1,7 @@
 """Metadata-only inspection of readable Zarr hierarchies and OMERO objects."""
 import json
+import time
+from django.core import signing
 from collections import deque
 from datetime import date, datetime
 from itertools import islice
@@ -11,7 +13,9 @@ from .settings import max_hierarchy_entries, max_metadata_bytes
 METADATA_FILES = ("zarr.json", ".zattrs", ".zarray", ".zgroup", ".zmetadata")
 
 
-def zarr_details(store, resolve):
+def zarr_details(store, resolve, *, section=None, field=".", model=None, cursor=None):
+    if section is not None:
+        return metadata_page(store, resolve, section, field, model or {}, cursor)
     routes = [[str(route.logical), str(route.physical)] for route in store.routes]
     queue = deque(["."])
     for route in store.routes:
@@ -58,6 +62,85 @@ def zarr_details(store, resolve):
                     directories[child_key] = child
                     queue.append(child_key)
     return {"nodes": nodes, "notices": notices}
+
+
+def metadata_page(store, resolve, section, field, model, cursor):
+    """Bound every request; cursors contain signed logical paths, never pixel data."""
+    if section == "omero":
+        return {"nodes": [], "notices": []}
+    routes = [[str(r.logical), str(r.physical)] for r in store.routes]
+    binding = [str(store.relative), routes, field]
+    roots = [".", *[str(r.logical) for r in store.routes]]
+    def encode(pending, count):
+        return signing.dumps({"binding": binding, "pending": pending, "count": count}, salt="zarr-metadata-page", compress=True)
+    pending, count = list(reversed(roots)), 0
+    if cursor:
+        try:
+            if len(cursor) > 64000:
+                raise ValueError()
+            value = signing.loads(cursor, salt="zarr-metadata-page", max_age=900)
+            if value["binding"] != binding or not isinstance(value["pending"], list) or len(value["pending"]) > max_hierarchy_entries():
+                raise ValueError()
+            pending, count = value["pending"], int(value["count"])
+        except (ValueError, KeyError, TypeError, signing.BadSignature) as exc:
+            raise InvalidMetadata("Metadata page expired or is invalid; reopen metadata") from exc
+    if section == "summary":
+        ancestors = [str(p) for p in reversed(PurePosixPath(field).parents)]
+        labels = [path for label in model.get("labels", []) for path in
+                  [label["path"], *[str(PurePosixPath(label["path"]) / d["path"]) for d in label.get("datasets", [])]]]
+        arrays = [str(PurePosixPath(field) / d["path"]) for d in model.get("datasets", [])]
+        pending = list(reversed(list(dict.fromkeys([field, ".", *ancestors, *arrays, *labels]))))
+    nodes, notices, total, seen = [], [], 0, set()
+    started = time.monotonic()
+    while pending and len(nodes) < 100 and total < 8 * 1024 * 1024 and time.monotonic() - started < 2:
+        logical = pending.pop()
+        if logical in seen:
+            continue
+        seen.add(logical)
+        count += 1
+        if count > max_hierarchy_entries():
+            notices.append("Hierarchy entry limit reached; remaining metadata is not loaded.")
+            pending = []
+            break
+        documents = {}
+        try:
+            directory, _ = resolve(store.relative, logical, routes, allow_directory=True)
+        except DataNotFound:
+            continue
+        for name in METADATA_FILES:
+            try:
+                path, _ = resolve(store.relative, str(PurePosixPath(logical) / name), routes)
+            except DataNotFound:
+                continue
+            size = path.stat().st_size
+            if size > max_metadata_bytes():
+                notices.append(f"Metadata document too large: {logical}/{name}")
+                continue
+            try:
+                documents[name] = json.loads(path.read_text(encoding="utf-8"))
+            except (ValueError, UnicodeError) as exc:
+                raise InvalidMetadata(f"Invalid metadata in {logical}/{name}") from exc
+        raw = documents.get("zarr.json", {})
+        array = raw if raw.get("node_type") == "array" else documents.get(".zarray")
+        if documents:
+            node = {"path": logical, "attributes": raw.get("attributes", documents.get(".zattrs", {})), "array": array, "documents": documents}
+            size = len(json.dumps(node).encode("utf-8"))
+            if size > 8 * 1024 * 1024 - 65536:
+                notices.append(f"Metadata node exceeds the page budget: {logical}")
+                continue
+            if total + size > 8 * 1024 * 1024 - 65536:
+                pending.append(logical)
+                return {"nodes": nodes, "notices": notices, "next_cursor": encode(pending, count - 1)}
+            nodes.append(node)
+            total += size
+        traverse = section == "nodes"
+        if array is None and traverse:
+            children = [str(PurePosixPath(logical) / p.name) for p in sorted(directory.iterdir(), key=lambda p: p.name) if p.is_dir() and not p.is_symlink()]
+            pending.extend(reversed(children))
+    if section == "summary":
+        # Full-store browsing starts separately; a summary never scans siblings.
+        pending = list(reversed(roots)) + pending
+    return {"nodes": nodes, "notices": notices, "next_cursor": encode(pending, count) if pending else None}
 
 
 def json_value(value, depth=0):

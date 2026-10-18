@@ -8,7 +8,7 @@ import base64
 from html import escape
 from dataclasses import dataclass
 from io import BytesIO
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import numpy as np
@@ -54,6 +54,16 @@ def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None) -
     if overlay:
         overlay["mode"] = "outline"
         overlay["outlineWidth"] = 2
+    def optional_json(name, fallback):
+        raw = query.get(name)
+        if raw is None:
+            return fallback
+        if len(raw) > 20000:
+            raise InvalidROI("ROI display settings are too large")
+        try:
+            return json.loads(raw)
+        except (ValueError, TypeError) as exc:
+            raise InvalidROI("Invalid ROI display settings") from exc
     recipe = {
         "storeUuid": query.get("storeUuid"),
         "panels": [
@@ -63,8 +73,9 @@ def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None) -
                 "sourceChannels": query.get("sourceChannels"),
                 "t": query.get("t"),
                 "z": query.get("z"),
-                "overlays": [overlay] if overlay else [],
-                "scaleBar": False,
+                "overlays": optional_json("overlays", [overlay] if overlay else []),
+                "channelSettings": optional_json("channelSettings", None),
+                "scaleBar": query.get("scaleBar") == "1",
             }
         ],
     }
@@ -92,7 +103,8 @@ def render_recipe_png(
             f"At most {render_max_panels()} panels may be rendered"
         )
 
-    validated = [_validate_panel(model, panel) for panel in panels]
+    models = [_field_model(store_path, model, panel, label_roots or {}) for panel in panels]
+    validated = [_validate_panel(field_model, panel) for field_model, panel in zip(models, panels)]
     aggregate_pixels = sum(
         (panel["bounds"][2] - panel["bounds"][0])
         * (panel["bounds"][3] - panel["bounds"][1])
@@ -109,8 +121,8 @@ def render_recipe_png(
     arrays: dict[str, Any] = {}
     planes: dict[tuple[Any, ...], np.ndarray] = {}
     rendered = [
-        _render_panel(root, model, panel, arrays, planes, label_roots or {})
-        for panel in validated
+        _render_panel(root, field_model, panel, arrays, planes, label_roots or {})
+        for field_model, panel in zip(models, validated)
     ]
     if len(rendered) == 1 and not decorate:
         output = rendered[0]
@@ -134,6 +146,21 @@ def render_recipe_png(
     return RenderedROI(content, safe_name or "zarr_render.png")
 
 
+def _field_model(store_path, model, panel, label_roots):
+    if not isinstance(panel, dict):
+        raise InvalidROI("Each panel must be a JSON object")
+    field = _field(model, panel.get("field"))
+    if model.get("kind") != "plate" or field == model["initial_path"]:
+        return model
+    from .metadata import _image_model, inspect_label
+    version = model.get("ngff_version", "0.4")
+    selected = {**model, **_image_model(Path(store_path), field, version), "initial_path":field}
+    if label_roots:
+        selected["labels"] = [inspect_label(Path(physical), logical, version, label_id=i)
+                              for i,(logical,physical) in enumerate(label_roots.items()) if logical.startswith(field+"/labels/")]
+    return selected
+
+
 def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any], *, label_roots=None) -> RenderedROI:
     """Export one bounded crop with a raster image and editable vector annotations."""
     if not isinstance(recipe, dict):
@@ -142,6 +169,7 @@ def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any],
     panels = recipe.get("panels")
     if not isinstance(panels, list) or len(panels) != 1:
         raise InvalidROI("SVG export requires exactly one panel")
+    model = _field_model(store_path, model, panels[0], label_roots or {})
     panel = _validate_panel(model, panels[0])
     x0, y0, x1, y1 = panel["bounds"]
     frame_count = (panel["time_projection"]["end"] - panel["time_projection"]["start"] + 1
@@ -239,6 +267,13 @@ def _time_projection(value: Any) -> dict[str, Any] | None:
 
 def _channel_specs(panel: dict[str, Any], model: dict[str, Any]) -> list[dict[str, Any]]:
     raw_specs = panel.get("channels")
+    settings = panel.get("channelSettings")
+    if settings is not None:
+        if not isinstance(settings, list) or any(not isinstance(c, dict) for c in settings):
+            raise InvalidROI("channelSettings must be an array of channels")
+        if not settings:
+            return []
+        raw_specs = [{**c, "index": _index(c.get("index"), "channel index") + 1} for c in settings]
     if raw_specs not in (None, ""):
         if not isinstance(raw_specs, list) or not raw_specs:
             raise InvalidROI("channels must be a non-empty array")
@@ -297,6 +332,7 @@ def _overlay(value: Any) -> dict[str, Any]:
         "values": values,
         "mode": mode,
         "color": _color_text(value.get("color")),
+        "color_mode": "instance" if value.get("colorMode") == "instance" else "solid",
         "opacity": _opacity(value.get("opacity"), default_opacity),
         "outline_width": _outline_width(value.get("outlineWidth")),
         "name": _bounded_text(value.get("name"), 80),
@@ -376,39 +412,39 @@ def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Imag
                 raise InvalidROI("An appended label channel is unavailable")
             label_array = image_array
             label_axes = axes
+            label = model
         padded, crop = _expanded_bounds(
             bounds,
-            label_array.shape,
-            label_axes,
+            image_array.shape,
+            axes,
             overlay["outline_width"],
         )
-        label_plane = _cached_plane(
-            label_array,
-            label_axes,
-            padded,
-            channel,
-            panel["timepoint"],
-            panel["z_index"],
-            planes,
-        )
+        label_plane = _calibrated_label_plane(label_array, label_axes, padded, channel, panel["timepoint"], panel["z_index"], planes, model, label)
         if overlay["values"] is None:
             padded_mask = label_plane != 0
         else:
             padded_mask = np.isin(label_plane, overlay["values"])
         mask = padded_mask[crop]
         color = np.asarray(_color(label_color, "#FFFF00"), dtype=np.float32)
+        if overlay["color_mode"] == "instance" and overlay["color"] is None:
+            ids = label_plane[crop].astype(np.uint64).astype(np.uint32)
+            ids ^= ids >> 16
+            ids *= np.uint32(0x7feb352d)
+            ids ^= ids >> 15
+            ids *= np.uint32(0x846ca68b)
+            ids ^= ids >> 16
+            color = np.stack((ids & 255, (ids >> 8) & 255, (ids >> 16) & 255), axis=-1).astype(np.float32) / 255
         if overlay["mode"] in {"fill", "outline-fill"}:
             composite[mask] = (
                 composite[mask] * (1.0 - overlay["opacity"])
-                + color * overlay["opacity"]
+                + (color[mask] if color.ndim == 3 else color) * overlay["opacity"]
             )
         if overlay["mode"] in {"outline", "outline-fill"}:
-            outline = _inside_outline(
-                padded_mask, overlay["outline_width"]
-            )[crop]
+            outline = (_instance_outline(label_plane, padded_mask, overlay["outline_width"])
+                       if overlay["color_mode"] == "instance" else _inside_outline(padded_mask, overlay["outline_width"]))[crop]
             composite[outline] = (
                 composite[outline] * (1.0 - overlay["opacity"])
-                + color * overlay["opacity"]
+                + (color[outline] if color.ndim == 3 else color) * overlay["opacity"]
             )
 
     pixels = np.rint(np.clip(composite, 0, 1) * 255).astype(np.uint8)
@@ -418,6 +454,31 @@ def _render_panel(root, model, panel, arrays, planes, label_roots) -> Image.Imag
     if panel["scale_bar"]:
         _draw_scale_bar(image, model)
     return image
+
+
+def _calibrated_label_plane(array, axes, bounds, channel, t, z, planes, image_model, label_model):
+    from .calibration import model_calibration
+    image, label = model_calibration(image_model), model_calibration(label_model)
+    def coordinates(axis, indexes):
+        a, b = image.get(axis), label.get(axis)
+        if not a or not b or not b["declared"]:
+            return np.asarray(indexes, dtype=int)
+        if a["unit"] != b["unit"]:
+            raise InvalidROI("Image and label calibration units are incompatible")
+        return np.floor(((np.asarray(indexes)+.5)*a["size"]+a["origin"]-b["origin"])/b["size"]).astype(int)
+    x0,y0,x1,y1 = bounds
+    xs, ys = coordinates("x", np.arange(x0,x1)), coordinates("y", np.arange(y0,y1))
+    label_z = int(coordinates("z", [z])[0])
+    output = np.zeros((y1-y0,x1-x0), dtype=array.dtype)
+    crop = (max(0,int(xs[0])),max(0,int(ys[0])),min(_axis_size(array.shape,axes,"x"),int(xs[-1])+1),min(_axis_size(array.shape,axes,"y"),int(ys[-1])+1))
+    if crop[2]<=crop[0] or crop[3]<=crop[1] or "z" in axes and not 0<=label_z<_axis_size(array.shape,axes,"z"):
+        return output
+    if (crop[2]-crop[0])*(crop[3]-crop[1]) > render_max_aggregate_pixels():
+        raise ROILimitExceeded("Calibrated label crop exceeds the native-pixel budget")
+    pixels = _cached_plane(array, axes, crop, channel, t, label_z, planes)
+    valid_x,valid_y = (xs>=crop[0])&(xs<crop[2]),(ys>=crop[1])&(ys<crop[3])
+    output[np.ix_(valid_y,valid_x)] = pixels[np.ix_(ys[valid_y]-crop[1],xs[valid_x]-crop[0])]
+    return output
 
 
 def _label_mask(root, model, panel, overlay, arrays, planes, label_roots):
@@ -513,20 +574,10 @@ def _draw_scale_bar(image: Image.Image, model: dict[str, Any]) -> None:
 
 
 def _pixel_scale(model: dict[str, Any]) -> tuple[float | None, str]:
-    axes = model.get("axes") or []
-    x_index = next(
-        (index for index, axis in enumerate(axes) if axis.get("name") == "x"),
-        None,
-    )
-    transforms = (model.get("datasets") or [{}])[0].get(
-        "coordinate_transformations", []
-    )
-    for transform in transforms if isinstance(transforms, list) else []:
-        values = transform.get("scale") if transform.get("type") == "scale" else None
-        if x_index is not None and isinstance(values, list) and x_index < len(values):
-            size = _finite(values[x_index], 0.0)
-            if size > 0:
-                return size, str(axes[x_index].get("unit") or "px")
+    from .calibration import model_calibration
+    value = model_calibration(model).get("x")
+    if value and value["declared"]:
+        return value["size"], value["unit"]
     return None, "px"
 
 
@@ -791,7 +842,8 @@ def _plane(
         plane = np.asarray(array[tuple(selections)])
     except (IndexError, ValueError) as exc:
         raise InvalidROI("The requested ROI could not be read") from exc
-    plane = np.squeeze(plane)
+    if axes.index("x") < axes.index("y"):
+        plane = plane.T
     if plane.shape != (y1 - y0, x1 - x0):
         raise InvalidMetadata("The selected OME-Zarr plane is not two-dimensional")
     return plane
@@ -846,6 +898,19 @@ def _inside_outline(mask: np.ndarray, width: int = 1) -> np.ndarray:
     interior = mask.copy()
     for _ in range(width):
         interior = _erode_once(interior)
+    return mask & ~interior
+
+
+def _instance_outline(values, mask, width=1):
+    interior = mask.copy()
+    for distance in range(1, width + 1):
+        for axis in (0, 1):
+            for offset in (-distance, distance):
+                shifted = np.roll(values, offset, axis=axis)
+                interior &= values == shifted
+                edge = [slice(None), slice(None)]
+                edge[axis] = slice(0, distance) if offset > 0 else slice(-distance, None)
+                interior[tuple(edge)] = False
     return mask & ~interior
 
 

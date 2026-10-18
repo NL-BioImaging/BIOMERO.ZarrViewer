@@ -146,10 +146,14 @@ def capabilities(request, image_id, conn=None, **kwargs):
 def metadata_details(request, image_id, conn=None, **kwargs):
     from .metadata_details import zarr_details, omero_details
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
-    response = JsonResponse({"zarr": {**zarr_details(store, _safe_data_path),
+    model = _inspect_resolved_store(store, request.GET.get("field"))
+    section = request.GET.get("section", "summary")
+    if section not in ("summary", "nodes", "omero"):
+        raise InvalidROI("Invalid metadata section")
+    details = zarr_details(store, _safe_data_path, section=section, field=model["initial_path"], model=model, cursor=request.GET.get("cursor"))
+    response = JsonResponse({"zarr": {**details,
                              "format": model["zarr_format"], "ngff_version": model["ngff_version"],
-                             "kind": model["kind"]}, "omero": omero_details(store.image)})
+                             "kind": model["kind"]}, "omero": omero_details(store.image) if section in ("summary", "omero") else {}})
     response["Cache-Control"] = "private, no-store"
     return response
 
@@ -182,7 +186,7 @@ def well_eligibility(request, well_id, conn=None, **kwargs):
 
 def _capability_response(request, conn, store, *, require_plate=False):
     from .volume_cache import cache_limit
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, request.GET.get("field"))
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
     token, expires_at = make_read_context(
@@ -239,8 +243,17 @@ def _capability_response(request, conn, store, *, require_plate=False):
     )
 
 
-def _inspect_resolved_store(store):
+def _inspect_resolved_store(store, selected_field=None):
+    if selected_field is not None and not isinstance(selected_field, str):
+        raise InvalidROI("The selected field must be a path")
     model = inspect_store(store.path, store.recorded_files)
+    if selected_field is not None and selected_field != model["initial_path"]:
+        from .metadata import _image_model
+        valid = {f["path"] for w in model.get("plate", {}).get("wells", []) for f in w["fields"]}
+        if selected_field not in valid:
+            raise DataNotFound("The selected field is not available")
+        model.update(_image_model(store.path, selected_field, model["ngff_version"]))
+        model["initial_path"] = selected_field
     if store.identity_path is not None:
         model["store_uuid"] = read_store_uuid(store.identity_path)
     if not store.routes:
@@ -267,6 +280,11 @@ def _inspect_resolved_store(store):
     return model
 
 
+def _recipe_field(recipe):
+    panels = recipe.get("panels") if isinstance(recipe, dict) else None
+    return panels[0].get("field") if isinstance(panels, list) and panels and isinstance(panels[0], dict) else None
+
+
 def _label_roots(store):
     root = Path(mount_root())
     return {
@@ -280,7 +298,7 @@ def _label_roots(store):
 @api_errors
 def roi_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, request.GET.get("field"))
     rendered = render_roi_png(
         store.path, model, request.GET, label_roots=_label_roots(store)
     )
@@ -303,7 +321,7 @@ def render_png(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, _recipe_field(recipe))
     rendered = render_recipe_png(
         store.path, model, recipe, label_roots=_label_roots(store)
     )
@@ -326,7 +344,7 @@ def render_svg(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, _recipe_field(recipe))
     rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store))
     response = HttpResponse(rendered.content, content_type="image/svg+xml")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
@@ -350,7 +368,7 @@ def _route_index(routes):
     return index
 
 
-def _safe_data_path(store_relative, zarr_key, routes=()):
+def _safe_data_path(store_relative, zarr_key, routes=(), *, allow_directory=False):
     store = PurePosixPath(str(store_relative).replace("\\", "/"))
     key_text = str(zarr_key).replace("\\", "/")
     key = PurePosixPath(key_text)
@@ -382,7 +400,7 @@ def _safe_data_path(store_relative, zarr_key, routes=()):
         candidate.relative_to(root)
     except ValueError as exc:
         raise UnsafePath("The requested Zarr key escapes the configured mount") from exc
-    if not candidate.is_file():
+    if not (candidate.is_dir() if allow_directory else candidate.is_file()):
         raise DataNotFound("The requested Zarr key does not exist")
     return candidate, PurePosixPath(*selected_store.parts, *suffix.parts)
 
@@ -435,7 +453,7 @@ def cached_volume(request, image_id, conn=None, **kwargs):
         description = volume_cache.describe_volume(array_metadata.parent, axes, channel, timepoint)
         version = hashlib.sha256(group_path.read_bytes()).hexdigest() + volume_cache.fingerprint(
             array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
-        result = volume_cache.request_volume(array_metadata.parent, axes, channel, timepoint, scope, version, description=description)
+        result = volume_cache.request_volume(array_metadata.parent, axes, channel, timepoint, scope, version, description=description, retry=request.GET.get("retryFailed") == "1")
     if request.GET.get("download") == "1" and result["status"] == "ready":
         try:
             handle = (volume_cache.cache_root() / (result["key"] + ".bin")).open("rb")

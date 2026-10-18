@@ -51,6 +51,25 @@ def test_volume_status_and_download_are_scoped_to_authorized_context(source):
     with pytest.raises(DataNotFound): cache.entry(result["key"], "another-owner")
 
 
+def test_failed_job_requires_explicit_scoped_retry(source, monkeypatch):
+    monkeypatch.setattr(cache._pool, "submit", lambda fn,*args: fn(*args))
+    calls = []
+    def build():
+        calls.append(1)
+        if len(calls) == 1: raise RuntimeError("temporary failure")
+        return b"mesh"
+    cache.request_blob("test-mesh", "owner", 100, {}, build)
+    assert cache.entry("test-mesh", "owner")["status"] == "error"
+    cache.request_blob("test-mesh", "owner", 100, {}, build)
+    assert len(calls) == 1
+    cache.retry_failed("test-mesh", "another-owner")
+    assert cache.entry("test-mesh", "owner")["status"] == "error"
+    cache.retry_failed("test-mesh", "owner")
+    cache.request_blob("test-mesh", "owner", 100, {}, build)
+    assert cache.entry("test-mesh", "owner")["status"] == "ready"
+    assert len(calls) == 2
+
+
 def test_disk_limit_evicts_old_ready_data_and_rejects_oversized_entries(source,monkeypatch):
     path, _ = source
     monkeypatch.setenv("BIOMERO_ZARR_CACHE_MAX_BYTES", "1000")

@@ -21,6 +21,8 @@ from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
 
 from . import volume_cache as cache
+from . import neuroglancer_contexts as contexts
+from .calibration import compose_transforms, MICROMETERS
 from .errors import ContextRequired, DataNotFound, InvalidROI, ROILimitExceeded, UnsupportedStore, UnsafePath
 from .settings import mount_root
 from .tokens import TOKEN_HEADER, validate_read_context
@@ -32,33 +34,16 @@ MAX_NATIVE_CHUNK_BYTES = 8 * 1024 * 1024
 MAX_INTERACTIVE_VOXELS = 64 ** 3
 MAX_MESH_VOXELS = 32 * 1024 * 1024
 MAX_MESH_BYTES = 32 * 1024 * 1024
-NANOMETERS = {"meter": 1e9, "metre": 1e9, "millimeter": 1e6, "millimetre": 1e6,
-              "micrometer": 1e3, "micrometre": 1e3, "um": 1e3, "µm": 1e3,
-              "nanometer": 1, "nanometre": 1, "nm": 1, "picometer": .001}
+NANOMETERS = {unit:factor*1000 for unit,factor in MICROMETERS.items()}
 
 
 def spatial_transform(multiscale, dataset):
     axes = multiscale.get("axes", [])
     names = [a.get("name") if isinstance(a, dict) else a for a in axes]
-    scale = np.ones(len(axes), dtype=float)
-    offset = np.zeros(len(axes), dtype=float)
-    found_scale = False
-    # NGFF applies dataset transforms first, then shared multiscale transforms.
-    for transform in [*dataset.get("coordinateTransformations", []), *multiscale.get("coordinateTransformations", [])]:
-        kind = transform.get("type")
-        if kind not in ("scale", "translation"):
-            raise UnsupportedStore("Unsupported 3D coordinate transformation")
-        values = np.asarray(transform.get(kind, []), dtype=float)
-        if values.shape != scale.shape or not np.all(np.isfinite(values)):
-            raise UnsupportedStore("Invalid 3D coordinate transformation")
-        if kind == "scale":
-            found_scale = True
-            if np.any(values <= 0):
-                raise UnsupportedStore("3D voxel sizes must be positive")
-            scale *= values
-            offset *= values
-        else:
-            offset += values
+    try:
+        scale, offset, found_scale = compose_transforms(len(axes), [*dataset.get("coordinateTransformations", []), *multiscale.get("coordinateTransformations", [])])
+    except (TypeError, ValueError) as exc:
+        raise UnsupportedStore(str(exc)) from exc
     if not found_scale:
         raise UnsupportedStore("3D labels require physical voxel-size metadata")
     resolution, translation = [], []
@@ -259,8 +244,10 @@ def object_mesh(source, claims, label_id, bounds):
     return content[:4] + vertices.astype("<f4").tobytes() + content[4+count*12:]
 
 
-def prepare_labels(source, claims, scope, selected=None, interactive=False):
+def prepare_labels(source, claims, scope, selected=None, interactive=False, retry_failed=False):
     index_key = derived_key("ng-index-v1", source)
+    if retry_failed:
+        cache.retry_failed(index_key, scope)
     job = cache.request_blob(index_key, scope, 1024*1024, {}, lambda: label_index(source, claims))
     if job["status"] == "error":
         raise InvalidROI(job["error"])
@@ -278,6 +265,8 @@ def prepare_labels(source, claims, scope, selected=None, interactive=False):
             source["segments"].append(label_id)
             continue
         key = derived_key("ng-mesh-v2", source, label_id, source["resolution"])
+        if retry_failed:
+            cache.retry_failed(key, scope)
         job = cache.request_blob(key, scope, MAX_MESH_BYTES, {},
             lambda label_id=label_id: object_mesh(source, claims, label_id, boxes[label_id]))
         if job["status"] == "error":
@@ -350,12 +339,12 @@ def prepare(request, image_id, conn=None, **kwargs):
         if selected is not None and (not isinstance(selected, list) or len(selected) > MAX_OBJECTS or
                 any(not isinstance(v,str) or not re.fullmatch(r"[1-9][0-9]{0,19}",v) for v in selected)):
             raise InvalidROI("Invalid selected segmentation IDs")
-        pending = prepare_labels(sources[f"label-{index}"], claims, scope, selected, label.get("interactive") is True) or pending
+        pending = prepare_labels(sources[f"label-{index}"], claims, scope, selected, label.get("interactive") is True, request.GET.get("retryFailed") == "1") or pending
     identity = hashlib.sha256(json.dumps([scope, [(name, s["key"]) for name,s in sources.items()]], sort_keys=True).encode()).hexdigest()[:32]
-    contexts = request.session.get("biomero_neuroglancer", {})
-    contexts.pop(identity, None)
-    contexts[identity] = {"token": request.META[TOKEN_HEADER], "sources": sources, "scope": scope}
-    request.session["biomero_neuroglancer"] = dict(list(contexts.items())[-4:])
+    import time
+    from .settings import context_ttl_seconds
+    now = time.time()
+    contexts.put(request.session, identity, {"token": request.META[TOKEN_HEADER], "sources": sources, "scope": scope, "expires": now + context_ttl_seconds()})
     base = reverse("biomero_zarr_viewer_neuroglancer_data", kwargs={"image_id": image_id, "context_id": identity, "data_key": "placeholder"}).removesuffix("placeholder")
     # Strip server-only paths/selections from the public response.
     public = {name: {k:v for k,v in item.items() if k not in ("array","axes","channel","timepoint")}
@@ -367,7 +356,7 @@ def prepare(request, image_id, conn=None, **kwargs):
 @login_required(setGroupContext=True)
 @api_errors
 def data(request, image_id, context_id, data_key, conn=None, **kwargs):
-    context = request.session.get("biomero_neuroglancer", {}).get(context_id)
+    context = contexts.get(request.session, context_id)
     if not context:
         raise ContextRequired("Reopen the 3D view to authorize its data")
     request.META[TOKEN_HEADER] = context["token"]

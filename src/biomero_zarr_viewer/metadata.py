@@ -65,7 +65,7 @@ def _datasets(multiscale):
         if not isinstance(dataset, dict) or "path" not in dataset:
             raise InvalidMetadata("A multiscale dataset is missing its path")
         item = {"path": _safe_relative(dataset["path"])}
-        transformations = dataset.get("coordinateTransformations")
+        transformations = [*dataset.get("coordinateTransformations", []), *multiscale.get("coordinateTransformations", [])]
         if isinstance(transformations, list):
             item["coordinate_transformations"] = transformations
         result.append(item)

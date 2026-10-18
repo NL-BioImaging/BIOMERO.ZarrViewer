@@ -56,7 +56,13 @@ def render_preview(claims, scope, field, size, channels, z, t, safe_path):
     if height*width > 4_194_304:
         raise ROILimitExceeded("No bounded pyramid level for this preview")
     metadata={"format":"png","width":width,"height":height,"full_width":int(first.shape[axes.index("x")]),"level":level}
-    signature=volume_cache.fingerprint(path,Path(mount_root()))
+    from .metadata import _axes, _datasets
+    from .roi import _pixel_scale
+    spacing, unit = _pixel_scale({"axes": _axes(multiscale), "datasets": _datasets(multiscale)})
+    metadata.update(physical_size_x=spacing, physical_unit=unit)
+    selected_t = min(first.shape[axes.index("t")]-1, t) if "t" in axes else 0
+    signature = [volume_cache.fingerprint(path,Path(mount_root()),axes=axes,channel=int(channel["index"]),timepoint=selected_t)
+                 for channel in channels if 0 <= int(channel["index"]) < (array.shape[axes.index("c")] if "c" in axes else 1)]
     key=hashlib.sha256(json.dumps(["preview-v1",scope,str(path),signature,hashlib.sha256(raw).hexdigest(),channels,z,t],sort_keys=True).encode()).hexdigest()
     def build():
         output=np.zeros((height,width,3),dtype=np.float32)
