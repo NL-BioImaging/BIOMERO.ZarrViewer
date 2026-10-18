@@ -55,7 +55,7 @@ Viv 3D displays intensity channels only; return to Neuroglancer or 2D to view la
 
 ## Choose a 3D renderer
 
-For a compatible Z stack, select **3D** from the **View** menu in the top toolbar. Under
+For a compatible Z stack, select **3D** using the **2D / 3D** buttons in the top toolbar. Under
 **3D Volume → Viewer**, choose the rendering engine:
 
 - **Neuroglancer** is the default and displays intensity channels with segmentation surfaces.
@@ -68,18 +68,20 @@ The navigator is available in 2D only and is hidden in 3D.
 
 ## Slices and orthogonal views
 
-The **View** menu provides **2D image**, **3D**, **Slice** and **Orthogonal**.
-The existing 2D image view retains projections, labels, the navigator and movie export.
-Both Neuroglancer and Viv provide the other three modes.
+The top **2D / 3D** buttons switch between the image tools and volume tools.
+Within **3D Volume**, the **Volume**, **Slice** and **Orthogonal** buttons choose the layout,
+beside the existing Neuroglancer / Viv engine choices. The 2D view retains projections,
+labels, the navigator and movie export. Both engines provide all three volume layouts.
 
 - **Slice** displays one section. Choose **XY**, **XZ** or **YZ** and move its position slider.
 - **Orthogonal** displays XY, XZ and YZ sections alongside a 3D volume. The X, Y and Z sliders select the common intersection.
 - In Neuroglancer, the sections share a center and show their planes in the 3D panel. Drag to pan; the mouse wheel steps sections and Ctrl+wheel zooms. Positions and slice zoom survive changing modes and shared links.
-- In Viv, sections use calibrated, one-voxel-thick slabs of the cached intensity volume. Scroll to zoom a section; its orientation stays fixed. Position sliders move the slabs, and section zoom is shared. Viv remains intensity-only.
+- In Viv, sections display actual XY, XZ and YZ voxel planes from the cached intensity volume. Crosshairs show the same selected voxel in every section. Click a section or use the sliders to move the common position. Drag to pan and scroll to zoom; section navigation is linked and framing preserves physical XYZ proportions. Viv remains intensity-only.
 
 Slice positions refer to the selected quality level and are displayed starting at 1.
 Changing quality preserves physical position in Neuroglancer and relative position in Viv.
-Viv orthogonal mode uses a smaller per-volume budget to allow for four rendered panels.
+Viv reuses one cached volume and three lightweight section images, so Level 0 is available whenever it fits the shared 200 MiB level limit and GPU texture limits.
+Scale bars use the same style as 2D in every panel, follow zoom and remain visible during slice changes when **Scale bar** is enabled and calibration is available.
 Use **Reset 3D View** to recenter sections and reset the volume camera.
 
 ## Move around in 3D

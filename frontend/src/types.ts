@@ -130,6 +130,7 @@ export interface VolumeCameraState {
   tilt: number;
   zoom: number;
   slicePosition?: number[];
+  sliceTarget?: number[];
   sliceZoom?: number;
 }
 

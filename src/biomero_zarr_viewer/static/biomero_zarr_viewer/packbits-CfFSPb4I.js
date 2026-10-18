@@ -1,4 +1,4 @@
-import { B as c } from "./main-DBIAiDLG.js";
+import { B as c } from "./main-DLgph3Y0.js";
 class l extends c {
   decodeBlock(s) {
     const n = new DataView(s), r = [];

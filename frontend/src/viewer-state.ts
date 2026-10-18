@@ -118,7 +118,9 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
       const value = JSON.parse(vivSlices);
       if (Array.isArray(value.position) && value.position.length === 3 && value.position.every((v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1)) {
         state.volumeCamera = { orbit: 0, tilt: 0, zoom: 0, ...state.volumeCamera, slicePosition: value.position,
-          sliceZoom: finite(value.zoom, 0, -20, 20) };
+          sliceZoom: finite(value.zoom, 0, -20, 20),
+          ...(Array.isArray(value.target) && value.target.length === 3 && value.target.every((v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 100)
+            ? { sliceTarget: value.target } : {}) };
       }
     } catch { /* Ignore invalid optional slice state. */ }
   }
@@ -256,7 +258,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.volumeBlend) params.set("volumeBlend", state.volumeBlend);
   if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
   if (state.renderMode === "3d" && state.volumeCamera) {
-    if (state.volumeCamera.slicePosition) params.set("vivSlices", JSON.stringify({ position: state.volumeCamera.slicePosition, zoom: state.volumeCamera.sliceZoom || 0 }));
+    if (state.volumeCamera.slicePosition) params.set("vivSlices", JSON.stringify({ position: state.volumeCamera.slicePosition, target: state.volumeCamera.sliceTarget, zoom: state.volumeCamera.sliceZoom || 0 }));
     params.set("orbit", state.volumeCamera.orbit.toFixed(2));
     params.set("tilt", state.volumeCamera.tilt.toFixed(2));
     params.set("zoom3d", state.volumeCamera.zoom.toFixed(3));

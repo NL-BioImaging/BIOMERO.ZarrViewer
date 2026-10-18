@@ -140,12 +140,13 @@ test("saved label order is restored without losing new layers", () => {
 test("volume layouts and both renderers' slice cameras round-trip with bounded optional state", () => {
   const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeView: "orthogonal", slicePlane: "yz",
     ngCamera: {position:[10,20,30],orientation:[0,0,0,1],scale:500,crossSectionScale:2},
-    volumeCamera: {orbit:30,tilt:20,zoom:1,slicePosition:[.1,.5,.9],sliceZoom:2} });
+    volumeCamera: {orbit:30,tilt:20,zoom:1,slicePosition:[.1,.5,.9],sliceTarget:[.25,.4,.75],sliceZoom:2} });
   const parsed = parseDeepLink(new URL(url, window.location.origin).search);
   expect(parsed.volumeView).toBe("orthogonal");
   expect(parsed.slicePlane).toBe("yz");
   expect(parsed.ngCamera?.crossSectionScale).toBe(2);
   expect(parsed.volumeCamera?.slicePosition).toEqual([.1,.5,.9]);
+  expect(parsed.volumeCamera?.sliceTarget).toEqual([.25,.4,.75]);
   expect(parsed.volumeCamera?.sliceZoom).toBe(2);
   expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad&vivSlices={"position":[-1,0,1]}').volumeCamera).toBeUndefined();
   expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad').volumeView).toBeUndefined();

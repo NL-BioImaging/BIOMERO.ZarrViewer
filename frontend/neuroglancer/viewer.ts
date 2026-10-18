@@ -4,6 +4,7 @@ import { makeDefaultViewer } from "neuroglancer/unstable/ui/default_viewer.js";
 import { setDefaultInputEventBindings } from "neuroglancer/unstable/ui/default_input_event_bindings.js";
 import "./viewer.css";
 import { registerActionListener } from "neuroglancer/unstable/util/event_action_map.js";
+import { PerspectivePanel } from "neuroglancer/unstable/perspective_view/panel.js";
 import { SliceViewPanel } from "neuroglancer/unstable/sliceview/panel.js";
 import { vec3 } from "neuroglancer/unstable/util/geom.js";
 import { configureVolumeWheel, depthWheelStep, wheelZoomFactor, sliceWheelStep } from "../src/neuroglancer-controls";
@@ -42,6 +43,7 @@ try {
   let updating = false;
   let wasReady = false;
   let lastError = "";
+  let lastPanels = "";
   let layerSources = new Map<string, string>();
   let segmentSelections = new Map<string, string>();
   let timer: ReturnType<typeof setTimeout>;
@@ -131,6 +133,17 @@ try {
   });
   window.setInterval(() => {
     if (!initialized) { send({ type: "biomero-ng-initialized" }); return; }
+    const origin = viewer.element.getBoundingClientRect();
+    const panels = [...viewer.display.panels].flatMap(panel => {
+      if (!(panel instanceof SliceViewPanel || panel instanceof PerspectivePanel)) return [];
+      const bounds = panel.element.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return [];
+      const perspective = panel instanceof PerspectivePanel;
+      return [{ left:bounds.left-origin.left, top:bounds.top-origin.top, width:bounds.width, height:bounds.height,
+        unitsPerPixel:perspective ? viewer.projectionScale.value / bounds.height : panel.navigationState.zoomFactor.value, perspective }];
+    });
+    const panelKey = JSON.stringify(panels);
+    if (panelKey !== lastPanels) { lastPanels = panelKey; send({ type:"biomero-ng-panels", panels }); }
     const errors = viewer.layerManager.managedLayers.flatMap(layer => [...(layer.layer?.messages || [])]
       .filter(message => message.severity === 2).map(message => `${layer.name}: ${message.message}`));
     const error = errors.join("; ");

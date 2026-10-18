@@ -343,9 +343,9 @@ export default function App() {
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const allVolumeLevels = useMemo(
     () => currentLoaded && maxTextureSize != null
-      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize, volumeRenderer === "classic" && volumeView === "orthogonal" ? 64 * 1024 * 1024 : 256 * 1024 * 1024)
+      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize)
       : [],
-    [currentLoaded, volumeChannels.length, maxTextureSize, volumeRenderer, volumeView],
+    [currentLoaded, volumeChannels.length, maxTextureSize],
   );
   const availableVolumeLevels = useMemo(() => safeVolumeLevels(allVolumeLevels), [allVolumeLevels]);
   const selectedVolumeLevel = useMemo(
@@ -493,7 +493,7 @@ export default function App() {
     }
     if (!selectedVolumeLevel) {
       setRenderMode("2d");
-      setStatus("No multiscale level fits the 256 MiB 3D memory and GPU texture limits.");
+      setStatus("No multiscale level fits the 200 MiB 3D memory and GPU texture limits.");
       return;
     }
     if (volumeLevel !== selectedVolumeLevel.index) {
@@ -583,16 +583,8 @@ export default function App() {
                 })) }]
             } as MovieRecipe} />}
           <div className="view-toolbar" role="group" aria-label="View controls">
-            {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 ?
-              <label className="volume-view-menu">View <select aria-label="View mode" value={effectiveRenderMode === "2d" ? "2d" : volumeView}
-                onChange={event => {
-                  const value = event.target.value;
-                  if (value === "2d") setRenderMode("2d");
-                  else { setVolumeView(value as VolumeView); setRenderMode("3d"); if (selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); }
-                }}>
-                <option value="2d">2D image</option><option value="3d" disabled={!volumeAvailable}>3D</option>
-                <option value="slice" disabled={!volumeAvailable}>Slice</option><option value="orthogonal" disabled={!volumeAvailable}>Orthogonal</option>
-              </select></label> : null}
+            {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 && <RenderModeToggle mode={effectiveRenderMode} disabled3d={!volumeAvailable}
+              onChange={mode => { if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); setRenderMode(mode); }} />}
             {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
               <button className="icon-button" aria-label="Reset 3D View" title="Reset 3D View" onClick={() => {
                 setVolumeCamera(undefined); setNgCamera(undefined); setVolumeReset(value => value + 1);
@@ -706,7 +698,7 @@ export default function App() {
           projection={projection}
           onProjection={setProjection}
           renderMode={effectiveRenderMode}
-          labels3dAvailable={useNeuroglancer} volumeView={volumeView}
+          labels3dAvailable={useNeuroglancer} volumeView={volumeView} onVolumeView={setVolumeView}
           volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
           onVolumeRenderer={setVolumeRenderer} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
@@ -748,6 +740,7 @@ interface ViewerPanelProps {
   renderMode: RenderMode;
   labels3dAvailable?: boolean;
   volumeView?: VolumeView;
+  onVolumeView?: (view: VolumeView) => void;
   volumeRenderer?: VolumeRenderer;
   onVolumeRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
@@ -814,6 +807,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
                 channelWarning={props.volumeChannelWarning}
+                view={props.volumeView} onView={props.onVolumeView}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
             : <PlaneControls sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
@@ -951,6 +945,7 @@ export function VolumeControls({
   renderer = "neuroglancer",
   onRenderer,
   neuroglancerAvailable = true,
+  view = "3d", onView,
 }: {
   sizeT: number;
   t: number;
@@ -962,9 +957,14 @@ export function VolumeControls({
   renderer?: VolumeRenderer;
   onRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
+  view?: VolumeView; onView?: (view: VolumeView) => void;
 }) {
   return <section className="panel-section position-section volume-controls">
     <h2>3D Volume</h2>
+    {onView && <div className="quality-control"><span>View</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="Volume view">
+      {([["3d","Volume"],["slice","Slice"],["orthogonal","Orthogonal"]] as const).map(([value,label]) =>
+        <button key={value} className={view === value ? "active" : ""} aria-pressed={view === value} onClick={()=>onView(value)}>{label}</button>)}
+    </div></div>}
     {onRenderer && <div className="quality-control">
       <span>Viewer</span>
       <div className="mode-toggle" role="group" aria-label="3D viewer">

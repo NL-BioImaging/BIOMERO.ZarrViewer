@@ -3,7 +3,7 @@ import type { AuthenticatedZarrStore } from "./authenticated-store";
 import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
 import { neuroglancerState, type NeuroglancerCamera, type NeuroglancerPrepared } from "./neuroglancer-state";
 import { SliceControls, volumeLayout, type VolumeView, type SlicePlane } from "./VolumeViewControls";
-import { scaleBarSize } from "./physical-scale";
+import { PanelScaleBars, type PanelScale } from "./ScaleBar";
 
 interface Props {
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
@@ -20,6 +20,7 @@ export function NeuroglancerCanvas(props: Props) {
   const [positionCommand, setPositionCommand] = useState<{ position: number[]; id: number }>();
   const iframe = useRef<HTMLIFrameElement>(null);
   const latest = useRef(props); latest.current = props;
+  const [panelScales, setPanelScales] = useState<PanelScale[]>([]);
   const [prepared, setPrepared] = useState<NeuroglancerPrepared>();
   const [error, setError] = useState<string>();
   const [progress, setProgress] = useState("Opening 3D data…");
@@ -80,7 +81,7 @@ export function NeuroglancerCanvas(props: Props) {
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
   const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.background, props.gain]);
   const state = useMemo(() => prepared ? {
-    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, view !== "3d" && props.showScale, props.brightness, props.background, props.gain),
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.background, props.gain),
     layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
     crossSectionBackgroundColor: props.background,
   } : undefined, [prepared, displayKey, view, plane, props.showScale]);
@@ -90,6 +91,7 @@ export function NeuroglancerCanvas(props: Props) {
       if (event.data?.type === "biomero-ng-initialized") setInitialized(value => value + 1);
       if (event.data?.type === "biomero-ng-ready") { setProgress(""); latest.current.onReady(); }
       if (event.data?.type === "biomero-ng-loading") setProgress("Loading image and segmentation surfaces…");
+      if (event.data?.type === "biomero-ng-panels") setPanelScales(event.data.panels.map((panel: PanelScale) => ({...panel,unitsPerPixel:panel.unitsPerPixel / 1000})));
       if (event.data?.type === "biomero-ng-camera") latest.current.onCameraChange(event.data.camera);
       if (event.data?.type === "biomero-ng-depth") {
         setDepthStep(event.data.nanometers / 1000);
@@ -108,8 +110,6 @@ export function NeuroglancerCanvas(props: Props) {
       voxelSizeNm: prepared && Object.values(prepared.sources)[0]?.resolution,
       voxelDepthNm: prepared && Object.values(prepared.sources)[0]?.resolution[2] }, window.location.origin);
   }, [initialized, state, props.resetKey, props.field, positionCommand]);
-  const scale = props.camera?.scale || state?.projectionScale;
-  const scaleBar = scale ? scaleBarSize(scale / Math.max(1, props.height) / 1000, 0) : undefined;
   const source = prepared && Object.values(prepared.sources)[0];
   return <div className="volume-stage">
     {source && <SliceControls view={view} plane={plane} onPlane={value => props.onPlane?.(value)} source={source}
@@ -128,9 +128,7 @@ export function NeuroglancerCanvas(props: Props) {
       <span>XY</span><span>XZ</span><span>3D</span><span>YZ</span>
     </div>}
     {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
-    {view === "3d" && props.showScale && scaleBar && !progress && !error && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} micrometer at volume center`}>
-      <span style={{ width: `${scaleBar.pixels}px` }} /><strong>{scaleBar.value} µm</strong><small>at volume center</small>
-    </div>}
+    {props.showScale && !error && <PanelScaleBars panels={panelScales} unit="micrometer" />}
     {error && <div className="volume-error" role="alert"><strong>Unable to load 3D labels</strong><p>{error}</p>
       <button onClick={() => { setError(undefined); setRetry(value => value + 1); }}>Retry</button>
       <button onClick={props.onCancel}>Return to 2D</button></div>}

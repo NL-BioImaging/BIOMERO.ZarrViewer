@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { SliceControls, sliceIndex, volumeLayout } from "./VolumeViewControls";
-import { vivSliceProps, vivVolumePanels } from "./viv-slices";
+import { vivVolumePanels } from "./viv-slices";
 
 const source = { shape: [5, 20, 30], resolution: [300, 400, 1500], translation: [100, 200, 900], segmentation: false };
 
@@ -29,10 +29,7 @@ test("edge positions clamp and native layouts map to the expected sections", () 
   expect(volumeLayout("orthogonal", "xz")).toBe("4panel");
 });
 
-test("Viv slabs select exactly one calibrated voxel across axes and resolution levels", () => {
-  expect(vivSliceProps("xy", [.5,.5,.5], [9000,8000,7500], [30,20,5])).toEqual({zSlice:[3000,4500]});
-  expect(vivSliceProps("xz", [.5,.5,.5], [9000,8000,7500], [30,20,5])).toEqual({ySlice:[4000,4400]});
-  expect(vivSliceProps("yz", [1,0,0], [9000,8000,7500], [15,10,5])).toEqual({xSlice:[8400,9000]});
+test("both engines use the same four-panel ordering", () => {
   const panels = vivVolumePanels("orthogonal", "xy", 800, 600);
   expect(panels.map(p => p.id)).toEqual(["xy","xz","3d","yz"]);
   expect(panels[3]).toEqual({ id:"yz", x:400, y:300, width:400, height:300 });

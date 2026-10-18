@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import type { ChannelState } from "./types";
 
-const viv = vi.hoisted(() => ({ props: undefined as any }));
+const viv = vi.hoisted(() => ({ props: undefined as any, panels: new Map<string, any>() }));
 
 vi.mock("@hms-dbmi/viv", () => ({
   MAX_CHANNELS: 10,
@@ -11,11 +11,11 @@ vi.mock("@hms-dbmi/viv", () => ({
     MinimumIntensityProjectionExtension: class { mode = "minimum"; },
   },
   getDefaultInitialViewState: () => ({ target: [10, 20, 30], zoom: -2 }),
-  VolumeView: class {
-    id = "3d";
-  },
+  VolumeView: class { id = "3d"; },
+  DetailView: class { constructor(args: any) { Object.assign(this,args); } },
+  ColorPaletteExtension: class {},
   VivViewer: (props: any) => {
-    viv.props = props;
+    viv.props = props; viv.panels.set(props.viewStates[0].id, props);
     return null;
   },
 }));
@@ -59,29 +59,34 @@ test("loader failures are surfaced with a return-to-2D action", async () => {
   expect(screen.getByText("Unable to load this volume")).toBeInTheDocument();
 });
 
-test("Viv slice and orthogonal modes keep the selected volume while changing slab coordinates", () => {
-  const source = loader();
-  const props = { width:800, height:600, loader:source, channels, t:0, resolution:0,
-    onCameraChange:vi.fn(), onCancel:vi.fn(), onError:vi.fn(), onReady:vi.fn() };
-  const { rerender } = render(<VolumeCanvas {...props} view="3d" />);
-  const selected = viv.props.layerProps[0].selections;
-  rerender(<VolumeCanvas {...props} view="slice" plane="xz" />);
-  expect(viv.props.layerProps[0].selections).toBe(selected);
-  expect(viv.props.layerProps[0].ySlice).toEqual([20,25]);
-  expect(viv.props.viewStates[0].rotationX).toBe(90);
-  rerender(<VolumeCanvas {...props} view="orthogonal" />);
-  expect(viv.props.viewStates.map((state: any) => state.id)).toEqual(["xy","xz","3d","yz"]);
-  expect(viv.props.layerProps[0].zSlice).toEqual([30,45]);
-  expect(viv.props.layerProps[3].xSlice).toEqual([10,12.5]);
-  expect(viv.props.layerProps[2]).not.toHaveProperty("xSlice");
-});
-
 test("viewport changes report a compact camera state", () => {
   const onCameraChange = vi.fn();
   render(<VolumeCanvas width={800} height={600} loader={loader()} channels={channels} t={0} resolution={0}
     onCameraChange={onCameraChange} onCancel={() => {}} onError={() => {}} onReady={() => {}} />);
   viv.props.onViewStateChange({ viewId: "3d", viewState: { rotationOrbit: 45, rotationX: -20, zoom: -1 } });
   expect(onCameraChange).toHaveBeenCalledWith({ orbit: 45, tilt: -20, zoom: -1 });
+});
+
+test("Viv sections share calibrated zoom and linked navigation, with scale bars before rendering completes", () => {
+  const source = loader().map(item=>({...item,meta:{physicalSizes:{x:{size:.5,unit:"micrometer"},y:{size:.5,unit:"micrometer"},z:{size:2,unit:"micrometer"}}}}));
+  const change = vi.fn();
+  const camera = {orbit:0,tilt:0,zoom:0,slicePosition:[.5,.5,.5],sliceTarget:[.4,.3,.6]};
+  const props = {width:800,height:600,loader:source,channels,t:0,resolution:0,camera,onCameraChange:change,onCancel:vi.fn(),onError:vi.fn(),onReady:vi.fn()};
+  const {container,rerender} = render(<VolumeCanvas {...props} view="orthogonal" />);
+  expect(container.querySelectorAll(".physical-scale")).toHaveLength(4);
+  expect(viv.panels.get("xy").viewStates[0].target).toEqual([3.2,2.4,0]);
+  expect(viv.panels.get("xz").viewStates[0].target).toEqual([3.2,9.6,0]);
+  expect(viv.panels.get("yz").viewStates[0].zoom).toBe(viv.panels.get("xy").viewStates[0].zoom);
+  expect(viv.panels.get("xz").layerProps[0].modelMatrix.getScale()).toEqual([1,4,1]);
+  const xz = viv.panels.get("xz");
+  xz.onViewStateChange({viewState:{target:[2,8,0],zoom:xz.viewStates[0].zoom+1}});
+  expect(change).toHaveBeenLastCalledWith(expect.objectContaining({sliceTarget:[.25,.3,.5],sliceZoom:1}));
+  xz.deckProps.onClick({viewport:{unproject:()=>[3,12]},x:10,y:10});
+  expect(change).toHaveBeenLastCalledWith(expect.objectContaining({slicePosition:[.375,.5625,.75]}));
+  rerender(<VolumeCanvas {...props} view="slice" plane="yz" />);
+  expect(container.querySelectorAll(".physical-scale")).toHaveLength(1);
+  rerender(<VolumeCanvas {...props} view="slice" plane="yz" showScale={false} />);
+  expect(container.querySelectorAll(".physical-scale")).toHaveLength(0);
 });
 
 test("a selected standalone level restores XY scale without resampling Z again", () => {

@@ -106,6 +106,13 @@ test("volume levels enforce memory, texture, and 3D constraints", () => {
   expect(safeVolumeLevels(levels).map((level) => level.index)).toEqual([1]);
 });
 
+test("all volume layouts share a 200 MiB limit across visible channels, including the boundary", () => {
+  const levels = volumeLevels([source([1,1,100,1024,1024]),source([1,1,101,1024,1024])],1,2048);
+  expect(levels[0]).toMatchObject({safe:true,rawBytes:200*1024*1024});
+  expect(levels[1]).toMatchObject({safe:false,reason:"memory"});
+  expect(volumeLevels([source([1,2,100,1024,1024])],2,2048)[0].safe).toBe(false);
+});
+
 test("requested safe level wins and otherwise the finest level within the initial-load budget is chosen", () => {
   const levels = volumeLevels([
     source([1, 1, 16, 256, 256]),

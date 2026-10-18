@@ -7,13 +7,13 @@ import {
 } from "@hms-dbmi/viv";
 import type { ChannelState, VolumeBlendMode, VolumeCameraState } from "./types";
 import { activeVolumeChannels, volumeModelMatrix, volumePhysicalScale, volumeSelection } from "./volume-utils";
-import { SliceControls, type VolumeView as ViewMode, type SlicePlane } from "./VolumeViewControls";
-import { vivSliceProps, vivVolumePanels, VivSliceView } from "./viv-slices";
-import { scaleBarSize, unitLabel } from "./physical-scale";
+import type { VolumeView as ViewMode, SlicePlane } from "./VolumeViewControls";
+import { VivSectionsCanvas } from "./VivSectionsCanvas";
+import { ScaleBar } from "./ScaleBar";
 
 const VolumeVivViewer = VivViewer as any;
 
-interface Props {
+export interface VolumeCanvasProps {
   width: number;
   height: number;
   loader: any[];
@@ -106,12 +106,12 @@ function VolumeRenderer({
   showScale = true,
   brightness = 1,
   background = "#030406",
-  camera, view: mode = "3d", plane = "xy", onPlane,
+  camera,
   onCameraChange,
   onCancel,
   onError,
   onReady,
-}: Props) {
+}: VolumeCanvasProps) {
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string>();
@@ -169,20 +169,8 @@ function VolumeRenderer({
   const physicalScale = volumePhysicalScale(loader);
   // OrbitView maps 2^zoom pixels per world unit at the camera target. Because
   // it uses perspective, this bar describes the plane through the volume center.
-  const scaleBar = physicalScale ? scaleBarSize(physicalScale.size, viewState.zoom) : undefined;
-  const panels = useMemo(() => vivVolumePanels(mode, plane, width, height), [mode, plane, width, height]);
-  const shape = ["x", "y", "z"].map(axis => Number(guardedLoader[0].shape[sourceLabels.indexOf(axis)] || 1));
-  const extent = defaultView.target.map((center: number) => center * 2);
-  const fractions = camera?.slicePosition || [.5, .5, .5];
-  const sliceSource = { shape: shape.slice().reverse(), resolution: extent.map((value: number, axis: number) => value / shape[axis]), translation: [0, 0, 0], segmentation: false };
-  const views = useMemo(() => panels.map(panel => panel.id === "3d"
-    ? new VolumeView({ ...panel, target: defaultView.target, useFixedAxis: true })
-    : new VivSliceView({ ...panel, target: defaultView.target, useFixedAxis: true })), [panels, defaultView.target]);
-  const viewStates = panels.map(panel => panel.id === "3d" ? { ...viewState, zoom: viewState.zoom + (mode === "orthogonal" ? -1 : 0) } : {
-    ...defaultView, id: panel.id, target: defaultView.target,
-    rotationOrbit: panel.id === "yz" ? 90 : 0, rotationX: panel.id === "xz" ? 90 : 0,
-    zoom: Math.log2(Math.min(panel.width, panel.height) / Math.max(...extent)) - .2 + (camera?.sliceZoom || 0),
-  });
+  const view = useMemo(() => new VolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: true }),
+    [width, height, defaultView.target]);
 
   useEffect(() => {
     setProgress(0);
@@ -221,34 +209,19 @@ function VolumeRenderer({
   }];
 
   return <div className="volume-stage" style={{ backgroundColor: background }}>
-    <SliceControls view={mode} plane={plane} onPlane={value => onPlane?.(value)} source={sliceSource}
-      camera={{ position: fractions.map((value, axis) => value * extent[axis]), orientation: [0,0,0,1], scale: 1 }}
-      onPosition={position => onCameraChange({ ...camera, orbit: camera?.orbit || 0, tilt: camera?.tilt || 0, zoom: camera?.zoom ?? finite(defaultView.zoom, 0),
-        slicePosition: position.map((value, axis) => Math.max(0, Math.min(1, value / extent[axis]))) })} />
-    {mode === "orthogonal" && panels.map(panel => <span className="volume-panel-title" key={panel.id} style={{ left: panel.x + 10, top: panel.y + (panel.y === 0 ? 62 : 10) }}>{panel.id.toUpperCase()}</span>)}
-    {mode === "3d" && ready && !loadError && showScale && scaleBar && <div className="physical-scale"
-      aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit} at volume center`}>
-      <span style={{ width: `${scaleBar.pixels}px` }} />
-      <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
-      <small>at volume center</small>
-    </div>}
+    {!loadError && showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** viewState.zoom} unit={physicalScale.unit} perspective />}
     {preparedKey === prepareKey && <VolumeVivViewer
-      views={views}
-      viewStates={viewStates}
-      layerProps={panels.map(panel => ({ ...layerProps[0], ...(panel.id === "3d" ? {} : vivSliceProps(panel.id as SlicePlane, fractions, extent, shape)) }))}
+      views={[view]}
+      viewStates={[viewState]}
+      layerProps={layerProps}
       useDevicePixels={false}
       deckProps={{ style: { backgroundColor: background } }}
       onViewStateChange={({ viewId, viewState: next }: any) => {
-        if (viewId !== "3d") {
-          const current = viewStates.find(state => state.id === viewId);
-          if (current) onCameraChange({ orbit: camera?.orbit || 0, tilt: camera?.tilt || 0, zoom: camera?.zoom ?? finite(defaultView.zoom, 0),
-            ...camera, sliceZoom: (camera?.sliceZoom || 0) + finite(next.zoom, current.zoom) - current.zoom });
-          return;
-        }
+        if (viewId !== "3d") return;
         onCameraChange({ ...camera,
           orbit: finite(next.rotationOrbit, viewState.rotationOrbit),
           tilt: finite(next.rotationX, viewState.rotationX),
-          zoom: finite(next.zoom, viewState.zoom) + (mode === "orthogonal" ? 1 : 0),
+          zoom: finite(next.zoom, viewState.zoom),
         });
       }}
     />}
@@ -265,8 +238,10 @@ function VolumeRenderer({
   </div>;
 }
 
-export function VolumeCanvas(props: Props) {
+export function VolumeCanvas(props: VolumeCanvasProps) {
   return <VolumeErrorBoundary onError={props.onError} onCancel={props.onCancel}>
-    <VolumeRenderer {...props} />
+    {props.view && props.view !== "3d" ? <VivSectionsCanvas props={props} renderVolume={(width,height) => <VolumeRenderer {...props}
+      width={width} height={height} view="3d" camera={props.camera ? {...props.camera,zoom:props.camera.zoom-1} : undefined}
+      onCameraChange={camera=>props.onCameraChange({...camera,zoom:camera.zoom+1})} />} /> : <VolumeRenderer {...props} />}
   </VolumeErrorBoundary>;
 }

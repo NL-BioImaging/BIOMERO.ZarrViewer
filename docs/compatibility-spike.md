@@ -15,7 +15,7 @@ mounted BIOMERO stores, and representative institutional data.
   2D rendering has constant client memory relative to the number of IDs.
   Neuroglancer 3D meshes are separately bounded by voxel, object and surface limits.
 - Viv's volume layer provides field-level intensity ray casting. The viewer
-  limits its raw volume payload to 256 MiB, checks the WebGL 3D-texture limit,
+  limits its raw volume payload to 200 MiB, checks the WebGL 3D-texture limit,
   and defaults to the finest safe level within a 64 MiB initial-load budget.
 - The viewer accepts OME-Zarr 0.4/Zarr v2 and OME-Zarr 0.5/Zarr v3 through
   distinct backend metadata adapters and shared normalized frontend state.
@@ -52,7 +52,7 @@ For each row verify authenticated metadata/chunk requests, default channel
 rendering, zero-background transparency, hover/click IDs, outline mode, 2D/3D
 deep links, anisotropic voxel scaling, camera reset, safe quality choices,
 time/field reload cancellation, and session-context refresh. Also test a
-single-Z field, disabled WebGL 2, and a volume above the 256 MiB limit to
+single-Z field, disabled WebGL 2, and a volume above the 200 MiB limit to
 confirm that each remains safely in 2D. Record fixture identifiers and
 screenshots in the deployment's validation report; do not commit patient or
 unpublished data to this repository.

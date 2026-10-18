@@ -34,6 +34,17 @@ def test_packed_volume_matches_every_source_voxel_and_reuses_cache(source):
     assert file.stat().st_mtime_ns == timestamp
 
 
+def test_volume_limit_accepts_200_mib_and_rejects_larger_levels_without_reading_pixels(tmp_path, zarr_format):
+    for depth in (100, 101):
+        path = tmp_path / str(depth)
+        zarr.open_array(str(path), mode="w", shape=(depth, 1024, 1024), dtype="uint16", chunks=(1, 64, 64), **format_options(zarr_format))
+        if depth == 100:
+            assert cache.describe_volume(path, ["z", "y", "x"], 0, 0)[2] == 200 * 1024 * 1024
+        else:
+            with pytest.raises(ROILimitExceeded, match="200 MiB"):
+                cache.describe_volume(path, ["z", "y", "x"], 0, 0)
+
+
 def test_volume_status_and_download_are_scoped_to_authorized_context(source):
     path, _ = source
     result = request(path)

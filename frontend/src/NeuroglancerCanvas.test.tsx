@@ -25,6 +25,13 @@ test("layout and slice position changes use the existing authorized scene withou
     rendered.rerender(<NeuroglancerCanvas {...props} view="orthogonal" />);
     await waitFor(() => expect(post.mock.calls.at(-1)![0].state.layout).toBe("4panel"));
     expect(post.mock.calls.at(-1)![0].state.showSlices).toBe(true);
+    expect(post.mock.calls.at(-1)![0].state.showScaleBar).toBe(false);
+    fireEvent(window, new MessageEvent("message", {source:frame.contentWindow,origin:window.location.origin,data:{type:"biomero-ng-panels",
+      panels:[0,1,2,3].map(index=>({left:index%2*400,top:Math.floor(index/2)*300,width:400,height:300,unitsPerPixel:100,perspective:index===2}))}}));
+    expect(document.querySelectorAll(".physical-scale")).toHaveLength(4);
+    expect(screen.getAllByText("10 µm")).toHaveLength(4);
+    rendered.rerender(<NeuroglancerCanvas {...props} view="orthogonal" showScale={false} />);
+    expect(document.querySelectorAll(".physical-scale")).toHaveLength(0);
     expect(fetch).toHaveBeenCalledTimes(1);
     rendered.unmount();
   } finally { window.BIOMERO_ZARR_VIEWER = original; vi.unstubAllGlobals(); }

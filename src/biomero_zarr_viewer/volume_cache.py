@@ -15,7 +15,7 @@ import zarr
 
 from .errors import DataNotFound, InvalidROI, ROILimitExceeded, UnsafePath
 
-MAX_VOLUME_BYTES = 256 * 1024 * 1024
+MAX_VOLUME_BYTES = 200 * 1024 * 1024
 _pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="zarr-cache")
 
 
@@ -283,7 +283,7 @@ def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=Fal
         raise InvalidROI("Unsupported volume pixel type")
     size = math.prod(shape) * dtype.itemsize
     if bounded and size > MAX_VOLUME_BYTES:
-        raise ROILimitExceeded("Select a smaller pyramid level: volume exceeds 256 MiB")
+        raise ROILimitExceeded("Select a smaller pyramid level: volume exceeds 200 MiB")
     return shape, dtype, size
 
 

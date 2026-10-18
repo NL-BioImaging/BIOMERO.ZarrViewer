@@ -13,7 +13,7 @@ import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
 import { previewLevel } from "./preview-resolution";
-import { scaleBarSize, unitLabel } from "./physical-scale";
+import { ScaleBar } from "./ScaleBar";
 
 interface LabelTooltip {
   screenX: number;
@@ -157,7 +157,6 @@ export function ViewerCanvas({
   }
 
   const zoom = Number(viewStates[0].zoom || 0);
-  const scaleBar = physicalScale ? scaleBarSize(physicalScale.size, zoom) : undefined;
   const inspectHover = useCallback((info: any) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     const coordinate = info.viewport?.id === DETAIL_VIEW_ID ? info.coordinate : undefined;
@@ -210,9 +209,6 @@ export function ViewerCanvas({
       {labelTooltip.hits.map((hit) => <div key={hit.id} title={hit.path}><strong>{hit.name}</strong><span>mask #{hit.value}</span></div>)}
       <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · {projection === "slice" ? `z ${z}` : "all Z (projected)"} · t {t}</small>
     </div>}
-    {showScale && scaleBar && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit}`}>
-      <span style={{ width: `${scaleBar.pixels}px` }} />
-      <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
-    </div>}
+    {showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** zoom} unit={physicalScale.unit} />}
   </>;
 }

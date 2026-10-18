@@ -59,8 +59,10 @@ times. Reload the viewer after changing a source store in place.
 For MIP/mean/min projections and the Viv 3D renderer, volumes are packed once
 per source, level, channel and time point and reused. Neuroglancer streams source
 chunks instead and does not require a packed volume. The viewer displays preparation/download
-progress and retains up to 256 MiB of decoded volume data in browser memory.
-The server's per-volume safety limit is also 256 MiB; a large disk cache does
+progress and retains up to 200 MiB of decoded volume data in browser memory.
+Volume, Slice and Orthogonal use the same 200 MiB level limit across visible
+intensity channels in both engines; each section reuses the selected volume.
+The server's per-volume safety limit is also 200 MiB; a large disk cache does
 not override GPU or per-volume memory limits. Larger 2D projections continue
 to use the bounded tile-based path. 3D starts at the finest safe level below a
 64 MiB initial-load budget; higher safe levels remain selectable. The selected

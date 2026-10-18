@@ -3,7 +3,7 @@ import { Matrix4 } from "@math.gl/core";
 import type { ChannelState, VolumeLevel } from "./types";
 import type { PhysicalSize } from "./ngff-physical-sizes";
 
-export const VOLUME_RAW_BUDGET_BYTES = 256 * 1024 * 1024;
+export const VOLUME_RAW_BUDGET_BYTES = 200 * 1024 * 1024;
 
 export function dtypeBytes(dtype: string): number {
   const normalized = String(dtype || "").toLowerCase();

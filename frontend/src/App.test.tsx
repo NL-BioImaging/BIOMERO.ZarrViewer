@@ -97,6 +97,16 @@ test("3D viewer selector defaults to Neuroglancer and offers Viv", () => {
   expect(onRenderer).toHaveBeenCalledWith("classic");
 });
 
+test("the volume panel offers Volume, Slice and Orthogonal choice buttons alongside the engine choices", () => {
+  const change = vi.fn();
+  render(<VolumeControls sizeT={1} t={0} onT={()=>{}} levels={levels} onLevel={()=>{}} view="slice" onView={change} />);
+  expect(screen.getByRole("button",{name:"Slice"})).toHaveAttribute("aria-pressed","true");
+  fireEvent.click(screen.getByRole("button",{name:"Orthogonal"}));
+  expect(change).toHaveBeenCalledWith("orthogonal");
+  fireEvent.click(screen.getByRole("button",{name:"Volume"}));
+  expect(change).toHaveBeenCalledWith("3d");
+});
+
 test("3D time and quality remain available while inspecting labels", () => {
   const onT = vi.fn();
   render(<ViewerPanel capability={null} channels={channels} channelAnalyses={[]} onChannels={() => {}}
