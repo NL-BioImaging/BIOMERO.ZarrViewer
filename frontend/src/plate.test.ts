@@ -41,13 +41,40 @@ test("well and plate overviews choose the expected fields", () => {
   expect(overviewLayout(overviewTiles(plateCapability, "well", "A/1/0", 0), "well").tiles.map((tile) => [tile.left, tile.top])).toEqual([[0, 0], [432, 0]]);
 });
 
-test("NGFF labels default to thirty percent opacity", () => {
+test("plate field label defaults use the selected field dimensionality", () => {
   const capability = { ...plateCapability, labels: [{ id: "nuclei", name: "Nuclei", path: "labels/nuclei", axes: [], datasets: [] }] };
-  expect(labelStates(capability)[0].opacity).toBe(0.3);
+  expect(labelStates(capability)[0].opacity).toBe(0.15);
+  expect(labelStates(capability, 12)[0].opacity).toBe(0.55);
 });
 
 test("Z stacks start at the middle unless a deep link requests a slice", () => {
   expect(defaultZIndex(25)).toBe(12);
   expect(defaultZIndex(25, 0)).toBe(0);
   expect(defaultZIndex(25, 99)).toBe(24);
+});
+
+
+test.each([
+  [0, 1, 1],
+  [1, 1, 1],
+  [2, 2, 1],
+  [10, 4, 3],
+  [36, 6, 6],
+  [37, 7, 6],
+  [81, 9, 9],
+])("well overview packs %i fields into a %i by %i grid", (count, columns, rows) => {
+  const tiles = Array.from({ length: count }, (_, index) => ({ path: `C/6/${index}`, title: `Field ${index}` }));
+  const layout = overviewLayout(tiles, "well");
+  expect(layout.tiles.map(tile => tile.path)).toEqual(tiles.map(tile => tile.path));
+  expect(new Set(layout.tiles.map(tile => tile.left)).size).toBe(count ? columns : 0);
+  expect(new Set(layout.tiles.map(tile => tile.top)).size).toBe(count ? rows : 0);
+  expect(layout.width).toBe(columns * 420 + (columns - 1) * 12);
+  expect(layout.height).toBe(rows * 420 + (rows - 1) * 12);
+  expect(new Set(layout.tiles.map(tile => `${tile.left},${tile.top}`)).size).toBe(count);
+  for (const tile of layout.tiles) {
+    expect(tile.left).toBeGreaterThanOrEqual(0);
+    expect(tile.top).toBeGreaterThanOrEqual(0);
+    expect(tile.left + 420).toBeLessThanOrEqual(layout.width);
+    expect(tile.top + 420).toBeLessThanOrEqual(layout.height);
+  }
 });

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
-import { loadOmeZarrFromStore } from "@hms-dbmi/viv";
 import * as zarr from "zarrita";
 import { PrefixStore } from "./authenticated-store";
 import type { Capability, ChannelState, PlateWell } from "./types";
+import { previewLevel, queuePreview } from "./preview-resolution";
+import { loadPreviewPyramid } from "./preview-source";
+import { calibratedAxes } from "./calibration";
+import { scaleBarSize as sharedScaleBarSize, unitLabel } from "./physical-scale";
 
 interface OverviewGridProps {
   capability: Capability;
@@ -13,6 +16,8 @@ interface OverviewGridProps {
   channels: ChannelState[];
   z: number;
   t: number;
+  showMinimap: boolean;
+  showScale: boolean;
   onSelect: (path: string) => void;
   onOpen: (path: string) => void;
 }
@@ -36,7 +41,11 @@ interface LayoutTile extends OverviewTile {
 
 const TILE_SIZE = 420;
 const TILE_GAP = 12;
-const WELL_COLUMNS = 3;
+
+export function defaultPlateFieldIndex(capability: Capability): number {
+  const count = Math.max(1, ...(capability.plate?.wells.map(well => well.fields.length) || []));
+  return Math.floor((count - 1) / 2);
+}
 
 export function overviewTiles(capability: Capability, mode: "well" | "plate", selectedPath: string | undefined, plateFieldIndex: number): OverviewTile[] {
   const plate = capability.plate!;
@@ -53,7 +62,7 @@ export function overviewTiles(capability: Capability, mode: "well" | "plate", se
 
 export function overviewLayout(tiles: OverviewTile[], mode: "well" | "plate"): { tiles: LayoutTile[]; width: number; height: number } {
   if (mode === "well") {
-    const columns = Math.min(WELL_COLUMNS, Math.max(1, tiles.length));
+    const columns = Math.max(1, Math.ceil(Math.sqrt(tiles.length)));
     const rows = Math.max(1, Math.ceil(tiles.length / columns));
     return {
       tiles: tiles.map((tile, index) => ({ ...tile, left: (index % columns) * (TILE_SIZE + TILE_GAP), top: Math.floor(index / columns) * (TILE_SIZE + TILE_GAP) })),
@@ -70,25 +79,28 @@ export function overviewLayout(tiles: OverviewTile[], mode: "well" | "plate"): {
   };
 }
 
-export function OverviewGrid({ capability, store, mode, selectedPath, plateFieldIndex, channels, z, t, onSelect, onOpen }: OverviewGridProps) {
+export function OverviewGrid({ capability, store, mode, selectedPath, plateFieldIndex, channels, z, t, showMinimap, showScale, onSelect, onOpen }: OverviewGridProps) {
   const tiles = useMemo(() => overviewTiles(capability, mode, selectedPath, plateFieldIndex), [capability, mode, plateFieldIndex, selectedPath]);
   const layout = useMemo(() => overviewLayout(tiles, mode), [mode, tiles]);
   const viewport = useRef<HTMLDivElement>(null);
   const [viewportSize, setViewportSize] = useState({ width: 1, height: 1 });
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.1);
+  const [cameraKey, setCameraKey] = useState("");
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [previews, setPreviews] = useState<Record<string, string>>({});
-  const [fullWidth, setFullWidth] = useState<number>();
+  const [measurements,setMeasurements]=useState<Record<string,{units:number;unit:string}>>({});
   const drag = useRef<{ x: number; y: number; panX: number; panY: number; moved: boolean } | undefined>(undefined);
   const suppressClick = useRef(false);
   const layoutKey = layout.tiles.map((tile) => tile.path).join("|");
 
+  const cameraIdentity = `${layoutKey}:${viewportSize.width}:${viewportSize.height}`;
   const fit = useCallback(() => {
     const next = Math.max(0.1, Math.min(4, Math.min((viewportSize.width - 32) / layout.width, (viewportSize.height - 32) / layout.height)));
+    setCameraKey(cameraIdentity);
     setZoom(next);
     setPan({ x: (viewportSize.width - layout.width * next) / 2, y: (viewportSize.height - layout.height * next) / 2 });
-  }, [layout.height, layout.width, viewportSize.height, viewportSize.width]);
+  }, [cameraIdentity, layout.height, layout.width, viewportSize.height, viewportSize.width]);
 
   useEffect(() => {
     if (!viewport.current) return;
@@ -135,9 +147,9 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
     const tile = layout.tiles.find((item) => sceneX >= item.left && sceneX <= item.left + TILE_SIZE && sceneY >= item.top && sceneY <= item.top + TILE_SIZE);
     if (tile) onOpen(tile.path);
   };
-  const handleRendered = useCallback((path: string, preview: string, width: number) => {
+  const handleRendered = useCallback((path: string, preview: string, width: number,displayWidth?:number,calibration?:{size:number;unit:string}) => {
     setPreviews((current) => current[path] === preview ? current : { ...current, [path]: preview });
-    setFullWidth((current) => current || width);
+    if(displayWidth&&calibration)setMeasurements(current=>({...current,[path]:{units:calibration.size*width/displayWidth,unit:calibration.unit}}));
   }, []);
 
   const miniScale = Math.min(150 / layout.width, 120 / layout.height, 1);
@@ -147,8 +159,10 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
     right: Math.min(layout.width, (viewportSize.width - pan.x) / zoom),
     bottom: Math.min(layout.height, (viewportSize.height - pan.y) / zoom),
   };
-  const pixelSize = physicalPixelSize(capability);
-  const scaleBar = pixelSize && fullWidth ? scaleBarSize(pixelSize.size * fullWidth / ((TILE_SIZE - 16) * zoom)) : undefined;
+  const calibrated=layout.tiles.map(tile=>measurements[tile.path]);
+  const pixelSize=calibrated[0];
+  const compatible=pixelSize&&calibrated.every(value=>value&&value.unit===pixelSize.unit&&Math.abs(value.units-pixelSize.units)<=Math.abs(pixelSize.units)*1e-6);
+  const scaleBar = compatible ? sharedScaleBarSize(pixelSize.units/zoom,0) : undefined;
 
   return <div className="overview-stage">
     <div
@@ -171,6 +185,9 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
         channels={channels}
         z={z}
         t={t}
+        targetPixels={Math.max(32, Math.round((TILE_SIZE - 16) * zoom * (window.devicePixelRatio || 1) / 16) * 16)}
+        fullResolution={TILE_SIZE * zoom >= Math.min(viewportSize.width, viewportSize.height) * 0.9}
+        inView={cameraKey === cameraIdentity && viewportSize.width > 1 && tile.left + TILE_SIZE >= visible.left && tile.left <= visible.right && tile.top + TILE_SIZE >= visible.top && tile.top <= visible.bottom}
         style={{ left: tile.left, top: tile.top, width: TILE_SIZE, height: TILE_SIZE }}
         onRendered={handleRendered}
         onSelect={() => onSelect(tile.path)}
@@ -178,38 +195,17 @@ export function OverviewGrid({ capability, store, mode, selectedPath, plateField
       />)}
       </div>
     </div>
-    <div className="overview-minimap" style={{ width: layout.width * miniScale, height: layout.height * miniScale }} aria-label="Overview minimap">
+    {showMinimap && <div className="overview-minimap" style={{ width: layout.width * miniScale, height: layout.height * miniScale }} aria-label="Overview minimap">
       {layout.tiles.map((tile) => previews[tile.path]
         ? <img key={tile.path} src={previews[tile.path]} alt="" style={{ left: tile.left * miniScale, top: tile.top * miniScale, width: TILE_SIZE * miniScale, height: TILE_SIZE * miniScale }} />
         : <i key={tile.path} style={{ left: tile.left * miniScale, top: tile.top * miniScale, width: TILE_SIZE * miniScale, height: TILE_SIZE * miniScale }} />)}
       <span className="minimap-window" style={{ left: visible.left * miniScale, top: visible.top * miniScale, width: Math.max(0, visible.right - visible.left) * miniScale, height: Math.max(0, visible.bottom - visible.top) * miniScale }} />
-    </div>
+    </div>}
     <div className="overview-camera-status">
       <button onClick={fit}>Fit</button><output>{Math.round(zoom * 100)}%</output><span>Wheel to zoom · drag to pan</span>
     </div>
-    {scaleBar && <div className="physical-scale overview-scale" aria-label={`Scale ${scaleBar.value} ${pixelSize!.unit}`}><span style={{ width: `${scaleBar.pixels}px` }}/><strong>{scaleBar.value} {unitLabel(pixelSize!.unit)}</strong></div>}
+    {showScale && scaleBar && <div className="physical-scale overview-scale" title="Scale inside thumbnails" aria-label={`Scale ${scaleBar.value} ${pixelSize!.unit}`}><span style={{ width: `${scaleBar.pixels}px` }}/><strong>{scaleBar.value} {unitLabel(pixelSize!.unit)}</strong></div>}
   </div>;
-}
-
-function physicalPixelSize(capability: Capability): { size: number; unit: string } | undefined {
-  const xIndex = capability.axes.findIndex((axis) => axis.name === "x");
-  const transformations = capability.datasets?.[0]?.coordinate_transformations;
-  if (xIndex < 0 || !Array.isArray(transformations)) return undefined;
-  const scale = transformations.find((item: any) => item?.type === "scale" && Array.isArray(item.scale)) as any;
-  const size = Number(scale?.scale?.[xIndex]);
-  return Number.isFinite(size) && size > 0 ? { size, unit: capability.axes[xIndex].unit || "px" } : undefined;
-}
-
-function scaleBarSize(unitsPerScreenPixel: number): { value: number; pixels: number } {
-  const target = unitsPerScreenPixel * 110;
-  const power = Math.pow(10, Math.floor(Math.log10(target)));
-  const normalized = target / power;
-  const nice = (normalized < 1.5 ? 1 : normalized < 3.5 ? 2 : normalized < 7.5 ? 5 : 10) * power;
-  return { value: nice, pixels: Math.max(45, Math.min(180, nice / unitsPerScreenPixel)) };
-}
-
-function unitLabel(unit: string): string {
-  return unit === "micrometer" || unit === "micrometre" || unit === "µm" ? "µm" : unit;
 }
 
 function selection(source: any, channel: number, z: number, t: number): Record<string, number> {
@@ -230,7 +226,7 @@ function rgb(value: string): [number, number, number] {
   return [0, 2, 4].map((offset) => Number.parseInt(hex.slice(offset, offset + 2), 16)) as [number, number, number];
 }
 
-function ThumbnailTile({ store, path, title, selected, channels, z, t, style, onRendered, onSelect, onOpen }: {
+function ThumbnailTile({ store, path, title, selected, channels, z, t, targetPixels, fullResolution, inView, style, onRendered, onSelect, onOpen }: {
   store: zarr.FetchStore;
   path: string;
   title: string;
@@ -238,34 +234,69 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
   channels: ChannelState[];
   z: number;
   t: number;
+  targetPixels: number;
+  fullResolution: boolean;
+  inView: boolean;
   style?: CSSProperties;
-  onRendered: (path: string, preview: string, fullWidth: number) => void;
+  onRendered: (path: string, preview: string, fullWidth: number, displayWidth?:number,calibration?:{size:number;unit:string}) => void;
   onSelect: () => void;
   onOpen: () => void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const clickTimer = useRef<number | undefined>(undefined);
   const [loader, setLoader] = useState<any[] | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string>();
+  const [renderedLevel, setRenderedLevel] = useState<number>();
+
+  useEffect(() => {
+    if (!(store as any).getPreview || !inView || !channels.length) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    void (store as any).getPreview(path, fullResolution ? 2048 : targetPixels, channels, z, t, controller.signal).then(async (preview: any) => {
+      if (cancelled) return;
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error("Preview decoding failed")); image.src = preview.url; });
+      if (cancelled || !canvas.current) return;
+      canvas.current.width = preview.width; canvas.current.height = preview.height;
+      canvas.current.getContext("2d")?.drawImage(image, 0, 0);
+      setRenderedLevel(preview.level); setError(undefined);
+      const bounds=canvas.current.getBoundingClientRect();
+      const tileWidth=canvas.current.closest(".overview-tile")!.getBoundingClientRect().width;
+      const displayWidth=Math.min(bounds.width,bounds.height*preview.width/preview.height)/(tileWidth/TILE_SIZE);
+      const calibration=preview.physical_size_x?calibratedAxes([{name:"x",unit:preview.physical_unit}],[{type:"scale",scale:[preview.physical_size_x]}]).x:undefined;
+      onRendered(path, minimapPreview(canvas.current), preview.full_width,displayWidth,calibration);
+    }).catch((reason: unknown) => { if (!cancelled) setError(String(reason)); });
+    return () => { cancelled = true; controller.abort(); };
+  }, [store, path, inView, channels, z, t, targetPixels, fullResolution, onRendered]);
 
   useEffect(() => {
     let cancelled = false;
-    setLoader(null);
-    setError(false);
-    loadOmeZarrFromStore(new PrefixStore(store, path) as any)
-      .then((result) => { if (!cancelled) setLoader(result.data); })
-      .catch(() => { if (!cancelled) setError(true); });
-    return () => { cancelled = true; };
-  }, [path, store]);
+    const abort=new AbortController();
+    if ((store as any).getPreview) return;
+    if (!inView || loader) return;
+    setError(undefined);
+    void queuePreview(async () => {
+      if (cancelled) return;
+      const result = await loadPreviewPyramid(new PrefixStore(store, path,abort.signal));
+      if (!cancelled) setLoader(result);
+    }).catch((reason) => { if (!cancelled) setError(String(reason)); });
+    return () => { cancelled = true; abort.abort(); };
+  }, [path, store, inView, loader]);
 
   useEffect(() => {
-    if (!loader || !canvas.current) return;
+    if (!loader || !canvas.current || !inView) return;
     let cancelled = false;
+    const abort=new AbortController();
     const draw = async () => {
-      const source = loader[loader.length - 1] || loader[0];
+      if (cancelled) return;
+      const source = loader[previewLevel(loader, targetPixels, fullResolution)];
       const visible = channels.filter((channel) => channel.visible);
-      if (!source || !visible.length) return;
-      const rasters = await Promise.all(visible.map(async (channel) => ({ channel, raster: await source.getRaster({ selection: selection(source, channel.index, z, t) }) })));
+      if (!source) return;
+      if (!visible.length) {
+        canvas.current?.getContext("2d")?.clearRect(0, 0, canvas.current.width, canvas.current.height);
+        return;
+      }
+      const rasters = await Promise.all(visible.map(async (channel) => ({ channel, raster: await source.getRaster({ selection: selection(source, channel.index, z, t),signal:abort.signal }) })));
       if (cancelled || !canvas.current || !rasters.length) return;
       const labels: string[] = source.labels || [];
       const width = Number(rasters[0].raster.width || source.shape[labels.indexOf("x")] || 1);
@@ -286,14 +317,18 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
       canvas.current.width = width;
       canvas.current.height = height;
       canvas.current.getContext("2d")?.putImageData(new ImageData(output, width, height), 0, 0);
+      setError(undefined);
       const finest = loader[0];
       const finestLabels: string[] = finest?.labels || [];
       const xIndex = finestLabels.indexOf("x");
-      onRendered(path, canvas.current.toDataURL("image/jpeg", 0.72), Number(xIndex >= 0 ? finest.shape[xIndex] : width));
+      const bounds=canvas.current.getBoundingClientRect(), tileWidth=canvas.current.closest(".overview-tile")!.getBoundingClientRect().width;
+      const displayWidth=Math.min(bounds.width,bounds.height*width/height)/(tileWidth/TILE_SIZE);
+      const physical=finest.meta?.physicalSizes?.x;
+      onRendered(path, minimapPreview(canvas.current), Number(xIndex >= 0 ? finest.shape[xIndex] : width), displayWidth, physical);
     };
-    void draw().catch(() => setError(true));
-    return () => { cancelled = true; };
-  }, [channels, loader, onRendered, path, t, z]);
+    void queuePreview(draw, true).catch((reason) => { if (!cancelled) setError(String(reason)); });
+    return () => { cancelled = true; abort.abort(); };
+  }, [channels, loader, onRendered, path, t, z, targetPixels, fullResolution, inView]);
 
   useEffect(() => () => window.clearTimeout(clickTimer.current), []);
 
@@ -316,6 +351,16 @@ function ThumbnailTile({ store, path, title, selected, channels, z, t, style, on
   };
 
   return <button className={`overview-tile ${selected ? "active" : ""}`} style={style} onClick={handleClick} onDoubleClick={handleDoubleClick}>
-    <span className="thumbnail-frame">{error ? <span className="thumbnail-error">Unavailable</span> : <canvas ref={canvas} aria-label={`${title} thumbnail`} />}<strong className="overview-tile-label">{title}</strong></span>
+    <span className="thumbnail-frame"><canvas ref={canvas} data-resolution-level={loader ? previewLevel(loader, targetPixels, fullResolution) : renderedLevel} aria-label={`${title} thumbnail`} />{error && <span className="thumbnail-error" title={error}>Unavailable</span>}<strong className="overview-tile-label">{title}</strong></span>
   </button>;
+}
+
+
+function minimapPreview(source: HTMLCanvasElement): string {
+  const mini = document.createElement("canvas");
+  const ratio = Math.min(1, 160 / Math.max(source.width, source.height));
+  mini.width = Math.max(1, Math.round(source.width * ratio));
+  mini.height = Math.max(1, Math.round(source.height * ratio));
+  mini.getContext("2d")?.drawImage(source, 0, 0, mini.width, mini.height);
+  return mini.toDataURL("image/jpeg", 0.72);
 }

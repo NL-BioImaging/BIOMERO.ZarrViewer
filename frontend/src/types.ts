@@ -64,6 +64,9 @@ export interface Capability {
     name?: string;
     roi_url?: string;
     render_url?: string;
+    volume_url?: string;
+    neuroglancer_url?: string;
+    preview_url?: string;
   };
   kind: "image" | "plate";
   ngff_version: "0.4" | "0.5";
@@ -81,7 +84,9 @@ export interface ApiFailure {
   error: { code: string; message: string };
 }
 
+export type ContrastProvenance = "auto" | "restored" | "manual";
 export interface ChannelState {
+  contrastSource?: ContrastProvenance;
   index: number;
   label: string;
   visible: boolean;
@@ -126,7 +131,13 @@ export interface VolumeCameraState {
   orbit: number;
   tilt: number;
   zoom: number;
+  slicePosition?: number[];
+  sliceTarget?: number[];
+  sliceZoom?: number;
 }
+
+export type VolumeBlendMode = "additive" | "maximum" | "minimum";
+export type VolumeRenderer = "neuroglancer" | "classic";
 
 export interface VolumeLevel {
   index: number;
@@ -140,6 +151,6 @@ export interface VolumeLevel {
 
 declare global {
   interface Window {
-    BIOMERO_ZARR_VIEWER: { capabilitiesTemplate: string };
+    BIOMERO_ZARR_VIEWER: { capabilitiesTemplate: string; neuroglancerUrl?: string };
   }
 }

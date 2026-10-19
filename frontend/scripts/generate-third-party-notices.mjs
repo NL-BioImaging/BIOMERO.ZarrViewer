@@ -22,6 +22,9 @@ for (const [packagePath, lockEntry] of Object.entries(lock.packages || {})) {
   try {
     manifest = JSON.parse(await readFile(path.join(packageDirectory, "package.json"), "utf8"));
   } catch (error) {
+    // Native optional packages for other operating systems are not installed
+    // or bundled into the browser build (e.g. msgpackr's Darwin binaries).
+    if (error.code === "ENOENT" && lockEntry.optional) continue;
     throw new Error(`Cannot read installed manifest for ${packagePath}: ${error.message}`);
   }
 

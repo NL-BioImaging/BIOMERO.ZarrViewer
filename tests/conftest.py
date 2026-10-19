@@ -31,6 +31,14 @@ if not settings.configured:
 django.setup()
 
 
+@pytest.fixture(params=[2, 3])
+def zarr_format(request):
+    import zarr
+    if request.param == 3 and int(zarr.__version__.split(".")[0]) < 3:
+        pytest.skip("Zarr-Python 2 cannot write Zarr 3 fixtures")
+    return request.param
+
+
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value), encoding="utf-8")

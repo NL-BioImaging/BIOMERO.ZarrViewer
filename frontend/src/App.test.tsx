@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { FullscreenButton, focusedLabelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
-import type { Capability, ChannelState, VolumeLevel } from "./types";
+import { useState } from "react";
+import { ImageZoomButtons, FullscreenButton, focusedLabelStates, labelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
+import type { Capability, ChannelState, LabelState, VolumeLevel } from "./types";
 
 const channels: ChannelState[] = [{
   index: 0,
@@ -56,6 +57,30 @@ const capability: Capability = {
   },
 };
 
+test("new single-plane labels default to 15% and volume labels to 55%", () => {
+  expect(labelStates(capability)[0].opacity).toBe(.15);
+  expect(labelStates(capability, 1)[0].opacity).toBe(.15);
+  expect(labelStates(capability, 31)[0].opacity).toBe(.55);
+  expect(focusedLabelStates(capability, "A/1/0", {}, 31)[0].opacity).toBe(.55);
+});
+
+test("explicit overlay opacity survives dimensional defaults", () => {
+  for (const sizeZ of [1, 31]) {
+    expect(focusedLabelStates(capability, "A/1/0", {overlays: [{
+      labelPath: "A/1/0/labels/cells", opacity: .32, mode: "fill", outlineWidth: 2,
+    }]}, sizeZ)[0].opacity).toBe(.32);
+  }
+});
+
+test("3D labels expose visibility, colors and opacity without 2D outline controls", () => {
+  const onChange = vi.fn();
+  render(<LabelPanel volume labels={[{ id: "a", name: "Cells", path: "labels/cells", visible: true, opacity: .3, mode: "outline" }]} onChange={onChange} />);
+  expect(screen.getByText("3D surfaces")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Outline" })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByRole("slider", { name: /^Opacity/ }), { target: { value: ".8" } });
+  expect(onChange.mock.calls[0][0][0].opacity).toBe(.8);
+});
+
 test("the 3D toggle is disabled when no safe level exists", () => {
   const onChange = vi.fn();
   render(<RenderModeToggle mode="2d" disabled3d onChange={onChange} />);
@@ -75,7 +100,67 @@ test("3D controls expose safe quality levels and the shared time point", () => {
   expect(onT).toHaveBeenCalledWith(2);
 });
 
+test("3D viewer selector defaults to Neuroglancer and offers Viv", () => {
+  const onRenderer = vi.fn();
+  render(<VolumeControls sizeT={1} t={0} onT={() => {}} levels={levels} onLevel={() => {}} onRenderer={onRenderer} />);
+  expect(screen.getByRole("button", { name: "Neuroglancer" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", { name: "Viv" }));
+  expect(onRenderer).toHaveBeenCalledWith("classic");
+});
+
+test("the volume panel offers Volume, Slice and Orthogonal choice buttons alongside the engine choices", () => {
+  const change = vi.fn();
+  render(<VolumeControls sizeT={1} t={0} onT={()=>{}} levels={levels} onLevel={()=>{}} view="slice" onView={change} />);
+  expect(screen.getByRole("button",{name:"Slice"})).toHaveAttribute("aria-pressed","true");
+  fireEvent.click(screen.getByRole("button",{name:"Orthogonal"}));
+  expect(change).toHaveBeenCalledWith("orthogonal");
+  fireEvent.click(screen.getByRole("button",{name:"Volume"}));
+  expect(change).toHaveBeenCalledWith("3d");
+});
+
+test("3D time and quality remain available while inspecting labels", () => {
+  const onT = vi.fn();
+  render(<ViewerPanel capability={null} channels={channels} channelAnalyses={[]} onChannels={() => {}}
+    labels={[{id:"cells",name:"Cells",path:"labels/cells",visible:true,opacity:.3,mode:"fill"}]} onLabels={() => {}}
+    onField={() => {}} sizeZ={31} sizeT={40} z={0} t={17} onZ={() => {}} onT={onT} projection="slice" onProjection={() => {}}
+    renderMode="3d" labels3dAvailable volumeRenderer="neuroglancer" volumeLevels={levels} onVolumeLevel={() => {}}
+    viewMode="field" onViewMode={() => {}} plateFieldIndex={0} onPlateFieldIndex={() => {}} />);
+  fireEvent.click(screen.getByRole("tab", {name:"Labels (1)"}));
+  const time = screen.getByRole("slider", {name:"Timepoint"});
+  expect(time).toHaveValue("17");
+  expect(screen.getByRole("combobox", {name:"3D volume quality"})).toBeInTheDocument();
+  expect(screen.queryByRole("heading",{name:"3D Volume"})).not.toBeInTheDocument();
+  fireEvent.change(time, {target:{value:"39"}});
+  expect(onT).toHaveBeenCalledWith(39);
+});
+
+test("bulk visibility checkboxes handle partial selection and toggle both groups independently", () => {
+  function Panel() {
+    const [items, setItems] = useState([...channels, { ...channels[0], index: 1, label: "RNA", visible: false }]);
+    const [labels, setLabels] = useState<LabelState[]>([{ id: "cells", name: "Cells", path: "labels/cells", visible: true, opacity: .3, mode: "fill" }]);
+    return <ViewerPanel capability={null} channels={items} channelAnalyses={[]} onChannels={setItems} labels={labels} onLabels={setLabels}
+      onField={() => {}} sizeZ={16} sizeT={1} z={0} t={0} onZ={() => {}} onT={() => {}} projection="slice" onProjection={() => {}}
+      renderMode="3d" labels3dAvailable volumeLevels={levels} onVolumeLevel={() => {}} viewMode="field" onViewMode={() => {}}
+      plateFieldIndex={0} onPlateFieldIndex={() => {}} />;
+  }
+  render(<Panel />);
+  const allChannels = screen.getByRole("checkbox", { name: "Show all channels" });
+  expect(allChannels).toBePartiallyChecked();
+  fireEvent.click(allChannels);
+  expect(allChannels).toBeChecked();
+  expect(screen.getByRole("checkbox", { name: /^RNA / })).toBeChecked();
+  fireEvent.click(allChannels);
+  expect(screen.getByRole("checkbox", { name: /^DNA / })).not.toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Show all labels" })).toBeChecked();
+  fireEvent.click(screen.getByRole("checkbox", { name: "Show all labels" }));
+  expect(screen.getByRole("tab", { name: "Channels (2)" })).toHaveAttribute("aria-selected", "true");
+  fireEvent.click(screen.getByRole("tab", { name: "Labels (1)" }));
+  expect(screen.getByRole("checkbox", { name: /^Cells / })).not.toBeChecked();
+  expect(screen.getByRole("slider", { name: /^Opacity/ })).toHaveValue("0.3");
+});
+
 test("segmentation labels are disabled while rendering intensity data in 3D", () => {
+  const onVolumeBlend = vi.fn();
   render(<ViewerPanel
     capability={null}
     field="A/1/0"
@@ -94,6 +179,7 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
     projection="slice"
     onProjection={() => {}}
     renderMode="3d"
+    onVolumeBlend={onVolumeBlend}
     volumeLevels={levels}
     volumeLevel={2}
     onVolumeLevel={() => {}}
@@ -104,6 +190,15 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
   />);
   expect(screen.getByRole("tab", { name: "Labels (1)" })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: "3D volume quality" })).toBeInTheDocument();
+
+  expect(screen.queryByLabelText("3D background color")).not.toBeInTheDocument();
+  const brightness=screen.getByRole("slider",{name:"3D intensity brightness"});
+  expect(brightness.closest(".appearance-line")).toContainElement(brightness);
+  expect(screen.getByRole("region",{name:"Volume options"}).firstElementChild).toHaveClass("volume-appearance-controls");
+  const display = screen.getByRole("button", { name: "Additive blend" });
+  expect(display).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", {name:"Maximum intensity"}));
+  expect(onVolumeBlend).toHaveBeenCalledWith("maximum");
 });
 
 test("a stable label path focuses only the selected label value", () => {
@@ -189,4 +284,39 @@ test("fullscreen control becomes an exit control while fullscreen is active", ()
     document.documentElement.requestFullscreen = originalRequest;
     document.exitFullscreen = originalExit;
   }
+});
+
+test("navigation comes before compact channel ranges in 2D and 3D", () => {
+  const props = {capability:null,channels,channelAnalyses:[],onChannels:vi.fn(),labels:[],onLabels:vi.fn(),onField:vi.fn(),
+    sizeZ:31,sizeT:1,z:0,t:0,onZ:vi.fn(),onT:vi.fn(),projection:"slice" as const,onProjection:vi.fn(),
+    volumeLevels:levels,onVolumeLevel:vi.fn(),viewMode:"field" as const,onViewMode:vi.fn(),plateFieldIndex:0,onPlateFieldIndex:vi.fn()};
+  const {container,rerender} = render(<ViewerPanel {...props} renderMode="3d" />);
+  const controls = screen.getByRole("region",{name:"Volume options"});
+  const minimum = screen.getByRole("slider",{name:"DNA display minimum"});
+  expect(controls.compareDocumentPosition(minimum) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const tabs=screen.getByRole("tablist",{name:"Image layers"});
+  expect(controls.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(tabs.compareDocumentPosition(minimum) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByText("Contrast")).not.toBeInTheDocument();
+  const row=container.querySelector(".range-values")!;
+  expect([...row.children].map(item=>item.tagName)).toEqual(["INPUT","DIV","INPUT"]);
+  expect(row.querySelector(".micro-actions")).toHaveTextContent("AUTOFITHIST");
+  rerender(<ViewerPanel {...props} renderMode="2d" />);
+  expect(screen.queryByRole("heading",{name:"Position"})).not.toBeInTheDocument();
+  expect(screen.queryByText("Projection")).not.toBeInTheDocument();
+  expect(screen.getByRole("region",{name:"Position controls"}).compareDocumentPosition(screen.getByRole("slider",{name:"DNA display minimum"})) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+test("display choice buttons sit directly below the volume layout choices",()=>{
+  render(<VolumeControls sizeT={1} t={0} onT={vi.fn()} levels={levels} onLevel={vi.fn()} onView={vi.fn()} blend="maximum" onBlend={vi.fn()} onRenderer={vi.fn()}/>);
+  const view=screen.getByRole("group",{name:"Volume view"}), display=screen.getByRole("group",{name:"3D display mode"});
+  expect(view.parentElement?.nextElementSibling).toBe(display.parentElement);
+  expect(screen.getByRole("button",{name:"Maximum intensity"})).toHaveAttribute("aria-pressed","true");
+});
+
+test("Fit and 1:1 toolbar buttons appear directly before fullscreen and dispatch independently",()=>{
+ const fit=vi.fn(),native=vi.fn();render(<><ImageZoomButtons onFit={fit} onNative={native}/><FullscreenButton/></>);
+ const buttons=screen.getAllByRole("button");expect(buttons.map(b=>b.getAttribute("aria-label"))).toEqual(["Zoom fit","Zoom 1:1","Enter fullscreen"]);
+ fireEvent.click(buttons[0]);expect(fit).toHaveBeenCalledOnce();expect(native).not.toHaveBeenCalled();
+ fireEvent.click(buttons[1]);expect(native).toHaveBeenCalledOnce();
 });

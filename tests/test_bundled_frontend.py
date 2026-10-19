@@ -33,3 +33,9 @@ def assert_wheel_frontend(wheel):
         entry = archive.read(entry_name).decode("utf-8")
         for imported in re.findall(r'import "\./([^"]+)"', entry):
             assert f"biomero_zarr_viewer/static/biomero_zarr_viewer/{imported}" in names
+
+
+def test_interactive_mesh_protocol_is_bundled_in_the_background_worker():
+    workers=list((STATIC/"neuroglancer/assets").glob("chunk_worker.bundle-*.js"))
+    assert len(workers)==1
+    assert "biomeromesh" in workers[0].read_text(encoding="utf-8")

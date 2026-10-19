@@ -1,14 +1,28 @@
-import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeCameraState } from "./types";
+import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeBlendMode, VolumeCameraState, VolumeRenderer } from "./types";
+import type { VolumeView, SlicePlane } from "./VolumeViewControls";
+import type { NeuroglancerCamera } from "./neuroglancer-state";
+
+export function defaultVolumeBlend(renderer: VolumeRenderer = "neuroglancer"): VolumeBlendMode {
+  return renderer === "neuroglancer" ? "maximum" : "additive";
+}
 
 export interface DeepLinkState {
   view?: "field" | "well" | "plate";
+  plateField?: number;
   viewport?: ViewportState;
   z?: number;
   t?: number;
   projection?: ProjectionMode;
   renderMode?: RenderMode;
   volumeLevel?: number;
+  volumeRenderer?: VolumeRenderer;
+  volumeBlend?: VolumeBlendMode;
+  volumeBrightness?: number;
+  volumeGain?: number;
   volumeCamera?: VolumeCameraState;
+  ngCamera?: NeuroglancerCamera;
+  volumeView?: VolumeView;
+  slicePlane?: SlicePlane;
   field?: string;
   roi?: RoiBounds;
   sourceChannels?: number[];
@@ -22,6 +36,7 @@ export interface DeepLinkState {
 }
 
 export interface OverlayDeepLink {
+  colorMode?: "instance" | "solid";
   labelPath?: string;
   labelChannel?: number;
   values?: number[];
@@ -51,7 +66,24 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const version = params.get("v");
   if (version !== "1" && version !== "2") return {};
   const state: DeepLinkState = {};
+  const ngCamera = params.get("ngCamera");
+  if (ngCamera && ngCamera.length < 1000) {
+    try {
+      const value = JSON.parse(ngCamera);
+      if (Array.isArray(value.position) && value.position.length === 3 && value.position.every(Number.isFinite)
+        && Array.isArray(value.orientation) && value.orientation.length === 4 && value.orientation.every(Number.isFinite)
+        && Number.isFinite(value.scale) && value.scale > 0 && Math.hypot(...value.orientation) > 0) state.ngCamera = {
+          position: value.position, orientation: value.orientation, scale: value.scale,
+          ...(Number.isFinite(value.crossSectionScale) && value.crossSectionScale > 0 ? { crossSectionScale: value.crossSectionScale } : {}),
+        };
+    } catch { /* Ignore invalid optional camera state. */ }
+  }
+  const volumeView = params.get("volumeView");
+  if (volumeView === "3d" || volumeView === "slice" || volumeView === "orthogonal") state.volumeView = volumeView;
+  const slicePlane = params.get("slicePlane");
+  if (slicePlane === "xy" || slicePlane === "xz" || slicePlane === "yz") state.slicePlane = slicePlane;
   const view = params.get("view");
+  if (params.has("plateField")) state.plateField = Math.floor(finite(params.get("plateField"),0,0,1535));
   if (view === "field" || view === "well" || view === "plate") state.view = view;
   if (params.has("x") || params.has("y") || params.has("zoom")) {
     state.viewport = {
@@ -65,6 +97,11 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const projection = params.get("projection");
   if (projection === "mip" || projection === "mean" || projection === "min") state.projection = projection;
   if (params.get("render") === "3d") state.renderMode = "3d";
+  if (params.get("viewer3d") === "classic") state.volumeRenderer = "classic";
+  if (params.has("brightness3d")) state.volumeBrightness = finite(params.get("brightness3d"), 1, .1, 4);
+  if (params.has("gain3d")) state.volumeGain = finite(params.get("gain3d"), -3, -5, 3);
+  const volumeBlend = params.get("volumeBlend");
+  if (volumeBlend === "additive" || volumeBlend === "maximum" || volumeBlend === "minimum") state.volumeBlend = volumeBlend;
   if (params.has("volumeLevel")) state.volumeLevel = Math.floor(finite(params.get("volumeLevel"), 0, 0, 1024));
   if (params.has("orbit") || params.has("tilt") || params.has("zoom3d")) {
     state.volumeCamera = {
@@ -72,6 +109,18 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
       tilt: finite(params.get("tilt"), 0, -90, 90),
       zoom: finite(params.get("zoom3d"), 0, -30, 30),
     };
+  }
+  const vivSlices = params.get("vivSlices");
+  if (vivSlices && vivSlices.length < 1000) {
+    try {
+      const value = JSON.parse(vivSlices);
+      if (Array.isArray(value.position) && value.position.length === 3 && value.position.every((v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1)) {
+        state.volumeCamera = { orbit: 0, tilt: 0, zoom: 0, ...state.volumeCamera, slicePosition: value.position,
+          sliceZoom: finite(value.zoom, 0, -20, 20),
+          ...(Array.isArray(value.target) && value.target.length === 3 && value.target.every((v: unknown) => typeof v === "number" && Number.isFinite(v) && Math.abs(v) <= 100)
+            ? { sliceTarget: value.target } : {}) };
+      }
+    } catch { /* Ignore invalid optional slice state. */ }
   }
   if (params.get("field")) state.field = params.get("field")!;
   const roi = (params.get("roi") || "").split(",");
@@ -109,6 +158,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
               ...(labelPath ? { labelPath } : { labelChannel }),
               ...(values.length ? { values } : {}),
               mode,
+              colorMode: record.colorMode === "instance" ? "instance" : undefined,
               color,
               opacity: finite(record.opacity, mode === "fill" ? 0.3 : 1, 0, 1),
               outlineWidth: Math.floor(finite(record.outlineWidth, 2, 1, 20)),
@@ -129,7 +179,7 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
     if (!raw || raw.length > 20_000) continue;
     try {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) (state as Record<string, unknown>)[target] = parsed;
+      if (Array.isArray(parsed)) (state as Record<string, unknown>)[target] = parsed.filter(item => item && typeof item === "object" && !Array.isArray(item)).slice(0, 256);
     } catch {
       // Invalid optional state is deliberately ignored.
     }
@@ -138,14 +188,15 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
 }
 
 export function applyChannelDeepLink(channels: ChannelState[], saved?: DeepLinkState["channels"]): ChannelState[] {
-  const byIndex = new Map((saved || []).map((item) => [Number(item.index), item]));
+  const byIndex = new Map((saved || []).filter(item => item && typeof item === "object" && Number.isInteger(item.index) && item.index>=0).map((item) => [item.index, item]));
   return channels.map((channel) => {
     const value = byIndex.get(channel.index);
     if (!value) return channel;
-    const low = finite(value.low, channel.low, channel.domainMin, channel.domainMax);
-    const high = finite(value.high, channel.high, channel.domainMin, channel.domainMax);
+    const low = typeof value.low==="number" && Number.isFinite(value.low) ? value.low : channel.low;
+    const high = typeof value.high==="number" && Number.isFinite(value.high) ? value.high : channel.high;
     return {
       ...channel,
+      contrastSource: (value as ChannelState).contrastSource || "restored",
       visible: typeof value.visible === "boolean" ? value.visible : channel.visible,
       color: /^#[0-9a-f]{6}$/i.test(value.color || "") ? value.color! : channel.color,
       low: Math.min(low, high),
@@ -164,6 +215,7 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
   const defaults = new Map(labels.map((item) => [item.id, item]));
   const ordered: LabelState[] = [];
   for (const value of saved || []) {
+    if (!value || typeof value !== "object") continue;
     const item = defaults.get(String(value.id));
     if (!item) continue;
     ordered.push({
@@ -187,6 +239,7 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   params.set("image", String(imageId));
   params.set("v", "2");
   if (state.view && state.view !== "field") params.set("view", state.view);
+  if (state.plateField != null) params.set("plateField",String(Math.max(0,Math.floor(state.plateField))));
   if (state.viewport) {
     params.set("x", state.viewport.x.toFixed(2));
     params.set("y", state.viewport.y.toFixed(2));
@@ -196,8 +249,16 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   params.set("t", String(Math.max(0, Math.floor(state.t))));
   if (state.projection && state.projection !== "slice") params.set("projection", state.projection);
   if (state.renderMode === "3d") params.set("render", "3d");
+  if (state.volumeRenderer === "classic") params.set("viewer3d", "classic");
+  if (state.volumeBrightness != null && state.volumeBrightness !== 1) params.set("brightness3d", String(state.volumeBrightness));
+  if (state.volumeGain != null && state.volumeGain !== -3) params.set("gain3d", String(state.volumeGain));
+  if (state.volumeView && state.volumeView !== "3d") params.set("volumeView", state.volumeView);
+  if (state.slicePlane && state.slicePlane !== "xy") params.set("slicePlane", state.slicePlane);
+  if (state.ngCamera) params.set("ngCamera", JSON.stringify(state.ngCamera));
+  if (state.volumeBlend) params.set("volumeBlend", state.volumeBlend);
   if (state.renderMode === "3d" && state.volumeLevel != null) params.set("volumeLevel", String(Math.max(0, Math.floor(state.volumeLevel))));
   if (state.renderMode === "3d" && state.volumeCamera) {
+    if (state.volumeCamera.slicePosition) params.set("vivSlices", JSON.stringify({ position: state.volumeCamera.slicePosition, target: state.volumeCamera.sliceTarget, zoom: state.volumeCamera.sliceZoom || 0 }));
     params.set("orbit", state.volumeCamera.orbit.toFixed(2));
     params.set("tilt", state.volumeCamera.tilt.toFixed(2));
     params.set("zoom3d", state.volumeCamera.zoom.toFixed(3));

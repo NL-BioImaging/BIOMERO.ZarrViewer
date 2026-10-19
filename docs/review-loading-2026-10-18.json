@@ -1,0 +1,118 @@
+{
+  "cache_definition": "Cold derived cache only; OS filesystem cache is not flushed.",
+  "base": "http://zarrviewer-nginx:4080",
+  "records": [
+    {
+      "name": "IDR6001240-native",
+      "image_id": 14006,
+      "level": 0,
+      "run": 1,
+      "state": "cold",
+      "shape_zyx": [
+        236,
+        275,
+        271
+      ],
+      "transport": "zarr",
+      "prepare_s": 0.5978,
+      "first_chunk_s": 0.2948,
+      "first_data_s": 0.8925,
+      "labels_ready_s": 3.4587,
+      "mesh_fetch_s": 0.1239,
+      "total_s": 3.5827,
+      "chunk_bytes": 524288,
+      "mesh_bytes": [
+        262108,
+        271900,
+        285652
+      ],
+      "mesh_errors": {},
+      "cache_bytes": 822231,
+      "prepare_requests": 6
+    },
+    {
+      "name": "IDR6001240-native",
+      "image_id": 14006,
+      "level": 0,
+      "run": 1,
+      "state": "cached",
+      "shape_zyx": [
+        236,
+        275,
+        271
+      ],
+      "transport": "zarr",
+      "prepare_s": 0.6827,
+      "first_chunk_s": 0.166,
+      "first_data_s": 0.8487,
+      "labels_ready_s": 0.8487,
+      "mesh_fetch_s": 0.1218,
+      "total_s": 0.9705,
+      "chunk_bytes": 524288,
+      "mesh_bytes": [
+        262108,
+        271900,
+        285652
+      ],
+      "mesh_errors": {},
+      "cache_bytes": 822231,
+      "prepare_requests": 1
+    },
+    {
+      "name": "IDR6001240-half-XY",
+      "image_id": 14006,
+      "level": 1,
+      "run": 1,
+      "state": "cold",
+      "shape_zyx": [
+        236,
+        137,
+        135
+      ],
+      "transport": "zarr",
+      "prepare_s": 0.433,
+      "first_chunk_s": 0.1874,
+      "first_data_s": 0.6203,
+      "labels_ready_s": 1.9226,
+      "mesh_fetch_s": 0.124,
+      "total_s": 2.0467,
+      "chunk_bytes": 524288,
+      "mesh_bytes": [
+        111340,
+        118756,
+        124444
+      ],
+      "mesh_errors": {},
+      "cache_bytes": 356995,
+      "prepare_requests": 4
+    },
+    {
+      "name": "IDR6001240-half-XY",
+      "image_id": 14006,
+      "level": 1,
+      "run": 1,
+      "state": "cached",
+      "shape_zyx": [
+        236,
+        137,
+        135
+      ],
+      "transport": "zarr",
+      "prepare_s": 0.4175,
+      "first_chunk_s": 0.1597,
+      "first_data_s": 0.5773,
+      "labels_ready_s": 0.5773,
+      "mesh_fetch_s": 0.1234,
+      "total_s": 0.7006,
+      "chunk_bytes": 524288,
+      "mesh_bytes": [
+        111340,
+        118756,
+        124444
+      ],
+      "mesh_errors": {},
+      "cache_bytes": 356995,
+      "prepare_requests": 1
+    }
+  ]
+}

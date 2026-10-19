@@ -1,0 +1,25 @@
+import { DetailView, OverviewView, MAX_CHANNELS } from '@hms-dbmi/viv';
+
+/** Never send invisible channels or more textures than Viv can bind in one draw. */
+export function channelBatches(props:any):any[] {
+  const visible=props.selections.map((_:unknown,i:number)=>i).filter((i:number)=>props.channelsVisible?.[i]!==false);
+  const result:any[]=[];
+  for(let offset=0;offset<visible.length;offset+=MAX_CHANNELS){
+    const indices=visible.slice(offset,offset+MAX_CHANNELS);
+    result.push({...props,selections:indices.map((i:number)=>props.selections[i]),channelsVisible:indices.map(()=>true),
+      colors:indices.map((i:number)=>props.colors[i]),contrastLimits:indices.map((i:number)=>props.contrastLimits[i]),
+      onViewportLoad:()=>props.onBatchViewportLoad?props.onBatchViewportLoad(resultIndex(offset)):props.onViewportLoad?.(),
+      onTileError:(error:unknown)=>props.onBatchTileError?props.onBatchTileError(resultIndex(offset),error):props.onTileError?.(error),
+      ...(offset?{parameters:{...props.parameters,depthWriteEnabled:false,blend:true,blendColorOperation:'add',blendColorSrcFactor:'one',blendColorDstFactor:'one',blendAlphaSrcFactor:'zero',blendAlphaDstFactor:'one'}}:{}),
+    });
+  }
+  return result;
+}
+const resultIndex=(offset:number)=>Math.floor(offset/MAX_CHANNELS);
+
+export class MultiplexDetailView extends DetailView {
+  getLayers(args:any):any{return channelBatches(args.props).flatMap((props,index)=>super.getLayers({props}).flat().map((layer:any)=>layer.clone({id:`${layer.id}-channels-${index}`})));}
+}
+export class MultiplexOverviewView extends OverviewView {
+  getLayers(args:any):any{return channelBatches(args.props).flatMap((props,index)=>super.getLayers({...args,props}).flat().map((layer:any)=>layer.clone({id:`${layer.id}-channels-${index}`})));}
+}

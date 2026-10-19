@@ -1,0 +1,14 @@
+/* Navigation and display controls belong to the surrounding viewer toolbar. */
+.neuroglancer-data-panel-layout-controls,
+.neuroglancer-display-dimensions-widget {
+  display: none !important;
+}
+.perspective-panel-show-slice-views { display: none !important; }
+
+/* A single embedded pane does not need Neuroglancer's active-panel border. */
+.neuroglancer-show-panel-borders .neuroglancer-panel,
+.neuroglancer-panel:focus-within {
+  border: 0 !important;
+}
+
+.image-cursor-surface .neuroglancer-panel, .image-cursor-surface .neuroglancer-panel canvas { cursor: var(--image-cursor, zoom-in) !important; }

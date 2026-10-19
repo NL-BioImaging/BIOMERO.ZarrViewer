@@ -5,6 +5,7 @@ import {
   fitRoiViewport,
   parseDeepLink,
   writeDeepLink,
+  defaultVolumeBlend,
 } from "./viewer-state";
 import type { ChannelState, LabelState } from "./types";
 
@@ -15,6 +16,37 @@ const labels: LabelState[] = [
 ];
 
 beforeEach(() => window.history.replaceState(null, "", "/viewer/?image=42"));
+
+test("Classic 3D round-trips in links while unconfigured and invalid links use the new default", () => {
+  const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeRenderer: "classic" });
+  expect(parseDeepLink(new URL(url, window.location.origin).search).volumeRenderer).toBe("classic");
+  expect(parseDeepLink("?v=2&viewer3d=unknown").volumeRenderer).toBeUndefined();
+  expect(writeDeepLink(42, { z: 0, t: 0, volumeRenderer: "neuroglancer" })).not.toContain("viewer3d");
+});
+
+test("3D display modes round-trip, including an explicit additive choice", () => {
+  for (const volumeBlend of ["additive", "maximum", "minimum"] as const) {
+    const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeBlend });
+    expect(parseDeepLink(new URL(url, window.location.origin).search).volumeBlend).toBe(volumeBlend);
+  }
+  expect(parseDeepLink("?v=2&render=3d").volumeBlend).toBeUndefined();
+  expect(parseDeepLink("?v=2&volumeBlend=unknown").volumeBlend).toBeUndefined();
+});
+
+test("unconfigured display uses maximum for Neuroglancer and additive for Viv", () => {
+  expect(defaultVolumeBlend()).toBe("maximum");
+  expect(defaultVolumeBlend("neuroglancer")).toBe("maximum");
+  expect(defaultVolumeBlend("classic")).toBe("additive");
+});
+
+test("3D appearance and Neuroglancer camera survive sharing, with bounded appearance inputs", () => {
+  const ngCamera = { position: [100, 200, 300], orientation: [0, 0, 0, 1], scale: 500 };
+  const url = writeDeepLink(42, { z: 0, t: 0, ngCamera, volumeBrightness: 2, volumeGain: -1 });
+  const parsed = parseDeepLink(new URL(url, window.location.origin).search);
+  expect(parsed).toMatchObject({ ngCamera, volumeBrightness: 2, volumeGain: -1 });
+  expect(parseDeepLink("?v=2&brightness3d=999&gain3d=-999&background3d=invalid")).toMatchObject({ volumeBrightness: 4, volumeGain: -5 });
+  expect(parseDeepLink("?v=2&ngCamera=invalid").ngCamera).toBeUndefined();
+});
 
 test("deep-link state round trips", () => {
   const url = writeDeepLink(42, {
@@ -78,9 +110,9 @@ test("invalid optional state is ignored and numeric state is clamped", () => {
   expect(parsed.volumeCamera).toEqual({ orbit: 360, tilt: -90, zoom: 30 });
 });
 
-test("saved channels are constrained to their domain", () => {
+test("saved contrast remains exact even outside metadata display windows", () => {
   const result = applyChannelDeepLink(channels, [{ index: 0, visible: false, color: "bad", low: -50, high: 999 }]);
-  expect(result[0]).toMatchObject({ visible: false, color: "#00FF00", low: 0, high: 255 });
+  expect(result[0]).toMatchObject({ visible: false, color: "#00FF00", low: -50, high: 999, contrastSource:"restored" });
 });
 
 test("one-based source channels select viewer channels", () => {
@@ -103,4 +135,19 @@ test("saved label order is restored without losing new layers", () => {
   expect(result.map((item) => item.id)).toEqual(["b", "a"]);
   expect(result[0].opacity).toBe(1);
   expect(result[0].outlineWidth).toBe(20);
+});
+
+test("volume layouts and both renderers' slice cameras round-trip with bounded optional state", () => {
+  const url = writeDeepLink(42, { z: 0, t: 0, renderMode: "3d", volumeView: "orthogonal", slicePlane: "yz",
+    ngCamera: {position:[10,20,30],orientation:[0,0,0,1],scale:500,crossSectionScale:2},
+    volumeCamera: {orbit:30,tilt:20,zoom:1,slicePosition:[.1,.5,.9],sliceTarget:[.25,.4,.75],sliceZoom:2} });
+  const parsed = parseDeepLink(new URL(url, window.location.origin).search);
+  expect(parsed.volumeView).toBe("orthogonal");
+  expect(parsed.slicePlane).toBe("yz");
+  expect(parsed.ngCamera?.crossSectionScale).toBe(2);
+  expect(parsed.volumeCamera?.slicePosition).toEqual([.1,.5,.9]);
+  expect(parsed.volumeCamera?.sliceTarget).toEqual([.25,.4,.75]);
+  expect(parsed.volumeCamera?.sliceZoom).toBe(2);
+  expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad&vivSlices={"position":[-1,0,1]}').volumeCamera).toBeUndefined();
+  expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad').volumeView).toBeUndefined();
 });

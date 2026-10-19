@@ -22,6 +22,8 @@ def validate():
     stylesheet = STATIC / "app.css"
     if not entry.is_file() or not stylesheet.is_file():
         raise RuntimeError("The frontend build did not create app.js and app.css")
+    if not (STATIC / "neuroglancer/index.html").is_file():
+        raise RuntimeError("The frontend build did not create the Neuroglancer viewer")
     text = entry.read_text(encoding="utf-8")
     if "Frontend bundle not built" in text:
         raise RuntimeError("The generated frontend placeholder is still installed")

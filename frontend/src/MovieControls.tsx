@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MOVIE_FPS, movieSequence, type MovieRecipe } from './movie-recipe';
-import { exportMovie } from './movie-renderer';
+import { exportMovie, type MovieResult } from './movie-renderer';
 
-export function TimePlayback({ sizeT, t, onT }: { sizeT: number; t: number; onT: (value: number) => void }) {
+export function TimePlayback({ sizeT, t, onT, ready=true }: { sizeT: number; t: number; onT: (value: number) => void; ready?:boolean }) {
   const [playing, setPlaying] = useState(false), [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [loop, setLoop] = useState(true);
   const current = useRef(t); current.current = t;
   useEffect(() => {
     setPlaying(false);
   }, [sizeT]);
   useEffect(() => {
-    if (!playing) return;
-    const timer = setInterval(() => {
+    if (!playing || !ready) return;
+    const timer = setTimeout(() => {
       const next = current.current + 1;
       if (next >= sizeT && !loop) { setPlaying(false); return; }
       current.current = next % sizeT; onT(current.current);
     }, 1000 / fps);
-    return () => clearInterval(timer);
-  }, [playing, fps, sizeT, loop, onT]);
+    return () => clearTimeout(timer);
+  }, [playing, fps, sizeT, loop, onT, t, ready]);
   if (sizeT <= 1) return null;
   return <div className="time-playback" role="group" aria-label="Time playback">
     <button aria-label="Previous frame" disabled={t === 0} onClick={() => { setPlaying(false); onT(t - 1); }}>◀</button>
@@ -33,10 +33,11 @@ function download(name: string, data: ArrayBuffer, type: string) {
   link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function MovieExport({ imageId, sizeT, recipe }: { imageId: number; sizeT: number; recipe: MovieRecipe }) {
+export function MovieExport({ imageId, sizeT, recipe, exporter, onBusy }: { imageId: number; sizeT: number; recipe: MovieRecipe;
+  exporter?: (recipe:MovieRecipe,signal:AbortSignal,progress:(done:number,total:number)=>void)=>Promise<MovieResult>; onBusy?:(busy:boolean)=>void }) {
   const [open, setOpen] = useState(false), [start, setStart] = useState(1), [end, setEnd] = useState(Math.min(sizeT, 600));
   const [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [busy, setBusy] = useState(false), [status, setStatus] = useState('');
-  const [result, setResult] = useState<Awaited<ReturnType<typeof exportMovie>>>();
+  const [result, setResult] = useState<MovieResult>();
   const controller = useRef<AbortController | undefined>(undefined);
   useEffect(() => { controller.current?.abort(); setStart(1); setEnd(Math.min(sizeT, 600)); setResult(undefined); }, [sizeT, recipe.panels[0].field]);
   useEffect(() => () => controller.current?.abort(), []);
@@ -44,25 +45,26 @@ export function MovieExport({ imageId, sizeT, recipe }: { imageId: number; sizeT
   const cropFits = x1 > x0 && y1 > y0 && x1 - x0 <= 2048 && y1 - y0 <= 2048;
   const stem = (recipe.filename || 'zarr-movie').replace(/[^A-Za-z0-9._-]/g, '-').replace(/\.mp4$/i, '');
   const run = async () => {
-    setBusy(true); setResult(undefined); controller.current = new AbortController();
+    setBusy(true); onBusy?.(true); setResult(undefined); controller.current = new AbortController();
     try {
       const requested = { ...recipe, sequence: { version: 1 as const, start: start - 1, end: end - 1, fps } };
-      movieSequence(requested, sizeT);
+      if (!exporter) movieSequence(requested, sizeT);
       setStatus('Preparing movie…');
-      const movie = await exportMovie(imageId, requested, controller.current.signal, (done, total) => setStatus(`Creating frame ${done} of ${total}…`));
+      const movie = await (exporter ? exporter(requested, controller.current.signal, (done,total)=>setStatus(`Creating frame ${done} of ${total}…`))
+        : exportMovie(imageId, requested, controller.current.signal, (done, total) => setStatus(`Creating frame ${done} of ${total}…`)));
       setResult(movie); setStatus(`Movie ready · ${movie.provenance.frameCount} frames at ${fps} FPS`);
       download(`${stem}.mp4`, movie.data, 'video/mp4');
-    } catch (error) { setStatus(error instanceof Error ? error.message : String(error)); }
-    finally { setBusy(false); }
+    } catch (error) { setStatus(controller.current?.signal.aborted ? 'Movie export stopped.' : error instanceof Error ? error.message : String(error)); }
+    finally { setBusy(false); onBusy?.(false); }
   };
   return <div className="movie-export">
-    <button aria-expanded={open} onClick={() => setOpen(value => !value)}>Export movie</button>
+    <button disabled={busy} aria-expanded={open} onClick={() => setOpen(value => !value)}>Export movie</button>
     {open && <section aria-label="Export movie" className="movie-export-panel">
-      <p>Export the visible area ({x1 - x0} ? {y1 - y0} pixels) and its visible layers. Playback speed is separate from acquisition timing. Maximum 600 frames, 2048 × 2048 pixels, 256 MiB.</p>
+      <p>{exporter ? 'Export the rendered 3D view at the current screen resolution, with its camera and visible layers held fixed.' : `Export the visible area (${x1 - x0} × ${y1 - y0} pixels) and its visible layers.`} Playback speed is separate from acquisition timing. Maximum 600 frames, 2048 × 2048 pixels, 256 MiB.</p>
       <label>First frame <input type="number" min="1" max={sizeT} value={start} disabled={busy} onChange={event => setStart(Number(event.target.value))} /></label>
       <label>Last frame <input type="number" min="1" max={sizeT} value={end} disabled={busy} onChange={event => setEnd(Number(event.target.value))} /></label>
       <label>Frames per second <input type="number" min="1" max="60" value={fps} disabled={busy} onChange={event => setFps(Number(event.target.value))} /></label>
-      {!cropFits && <p>Keep the image in view and zoom in to select an area of at most 2048 ? 2048 pixels.</p>}
+      {!cropFits && <p>Keep the image in view and zoom in to select an area of at most 2048 × 2048 pixels.</p>}
       <button disabled={busy || !cropFits} onClick={() => void run()}>Create MP4</button>
       {busy && <button onClick={() => controller.current?.abort()}>Stop</button>}
       <p role="status">{status}</p>

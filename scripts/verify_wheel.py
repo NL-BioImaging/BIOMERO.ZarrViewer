@@ -15,6 +15,7 @@ STATIC = PurePosixPath("biomero_zarr_viewer/static/biomero_zarr_viewer")
 REQUIRED = {
     str(STATIC / "app.js"),
     str(STATIC / "app.css"),
+    str(STATIC / "neuroglancer/index.html"),
     str(STATIC / "openwith-v2.js"),
     "biomero_zarr_viewer/templates/biomero_zarr_viewer/viewer.html",
     "biomero_zarr_viewer/analysis_skills/use-omero-zarr-viewer/SKILL.md",

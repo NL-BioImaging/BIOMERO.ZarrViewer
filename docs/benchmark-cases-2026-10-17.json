@@ -1,0 +1,86 @@
+[
+  {
+    "name": "DNAcrop",
+    "image_id": 14001,
+    "level": 0,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "DividingCellcrop",
+    "image_id": 14002,
+    "level": 0,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "DNA",
+    "image_id": 14003,
+    "level": 3,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "DNA",
+    "image_id": 14003,
+    "level": 2,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "Dendrites",
+    "image_id": 14004,
+    "level": 2,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "Dendrites",
+    "image_id": 14004,
+    "level": 1,
+    "channels": [
+      0
+    ]
+  },
+  {
+    "name": "IDR6001240",
+    "image_id": 14005,
+    "level": 0,
+    "channels": [
+      0
+    ],
+    "labels": [
+      {
+        "path": "labels/0",
+        "segments": [
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "IDR6001240",
+    "image_id": 14005,
+    "level": 1,
+    "channels": [
+      0
+    ],
+    "labels": [
+      {
+        "path": "labels/0",
+        "segments": [
+          "1",
+          "2",
+          "3"
+        ]
+      }
+    ]
+  }
+]

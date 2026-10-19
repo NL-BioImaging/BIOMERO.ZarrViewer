@@ -37,6 +37,8 @@ jobs:
             "numpy>=1.24,<3" \
             "Pillow>=10,<13" \
             "zarr>=2.18,<4" \
+            "scikit-image>=0.25,<1" \
+            "scipy>=1.11.4,<2" \
             pytest \
             pytest-django \
             build \

@@ -1,0 +1,68 @@
+[
+  {
+    "file": "condensin-2d-mip-labels-6frames.mp4",
+    "frames": 6,
+    "fps": 5.0,
+    "width": 256,
+    "height": 256,
+    "bytes": 182744,
+    "minimum_frame_mean": 59.60944620768229,
+    "first_last_pixel_difference": 36.393941243489586,
+    "minimum_panel_mean": null
+  },
+  {
+    "file": "condensin-neuroglancer-orthogonal-5frames.mp4",
+    "frames": 5,
+    "fps": 5.0,
+    "width": 1174,
+    "height": 920,
+    "bytes": 1084764,
+    "minimum_frame_mean": 18.487204034269066,
+    "first_last_pixel_difference": 15.093211305335407,
+    "minimum_panel_mean": 13.213943411599141
+  },
+  {
+    "file": "condensin-neuroglancer-volume-40frames.mp4",
+    "frames": 40,
+    "fps": 5.0,
+    "width": 1174,
+    "height": 920,
+    "bytes": 5606415,
+    "minimum_frame_mean": 18.06064365602548,
+    "first_last_pixel_difference": 11.050002160333802,
+    "minimum_panel_mean": null
+  },
+  {
+    "file": "condensin-viv-orthogonal-5frames.mp4",
+    "frames": 5,
+    "fps": 5.0,
+    "width": 1174,
+    "height": 920,
+    "bytes": 854852,
+    "minimum_frame_mean": 7.305769325728958,
+    "first_last_pixel_difference": 30.242787571291014,
+    "minimum_panel_mean": 3.0452546724933955
+  },
+  {
+    "file": "melanoma-2d-12frames.mp4",
+    "frames": 12,
+    "fps": 5.0,
+    "width": 1174,
+    "height": 920,
+    "bytes": 2134363,
+    "minimum_frame_mean": 39.606355084808534,
+    "first_last_pixel_difference": 4.653957114287831,
+    "minimum_panel_mean": null
+  },
+  {
+    "file": "zebrafish-neuroglancer-volume-3frames.mp4",
+    "frames": 3,
+    "fps": 5.0,
+    "width": 1174,
+    "height": 920,
+    "bytes": 108106,
+    "minimum_frame_mean": 15.396613522455127,
+    "first_last_pixel_difference": 5.302168975137644,
+    "minimum_panel_mean": null
+  }
+]

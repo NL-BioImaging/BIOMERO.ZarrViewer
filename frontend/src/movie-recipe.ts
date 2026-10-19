@@ -9,11 +9,12 @@ export interface MoviePanel {
   field: string; roi: [number, number, number, number]; sourceChannels: number[]; t: number; z: number;
   title?: string; scaleBar?: boolean; projection?: 'slice' | 'mip' | 'mean' | 'min';
   channelSettings?: Array<{ index: number; color: string; low: number; high: number }>;
-  overlays: Array<{ labelPath?: string; labelChannel?: number; values?: number[]; mode: 'outline' | 'fill' | 'outline-fill'; color?: string; opacity: number; outlineWidth: number }>;
+  overlays: Array<{ colorMode?:'instance'|'solid'; labelPath?: string; labelChannel?: number; values?: number[]; mode: 'outline' | 'fill' | 'outline-fill'; color?: string; opacity: number; outlineWidth: number }>;
   vectors?: { version: 1; items: MovieVector[] };
   tracks?: { rows: Record<string, unknown>[]; columns: { id: string; x: string; y: string; t: string; z?: string }; color?: string };
 }
 export interface MovieRecipe {
+  viewCapture?: {version:1; space:'screen'; renderer:string; mode:string; quality:number; settings:Record<string,unknown>};
   version?: 2; storeUuid?: string; sourceBinding?: string; source?: { kind: "current-image" }; filename?: string; title?: string; panels: MoviePanel[];
   sequence: { version: 1; start: number; end: number; step?: number; fps?: number; maxBytes?: number; trailFrames?: number };
 }

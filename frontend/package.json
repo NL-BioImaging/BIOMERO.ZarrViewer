@@ -1,13 +1,13 @@
 {
   "name": "biomero-zarr-viewer-frontend",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "clean": "node scripts/clean-output.mjs",
     "licenses": "node scripts/generate-third-party-notices.mjs",
-    "build": "npm run licenses && npm run clean && tsc --noEmit && vite build",
+    "build": "npm run licenses && npm run clean && tsc --noEmit && vite build && vite build --config vite.neuroglancer.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -18,7 +18,9 @@
     "@deck.gl/layers": "9.3.7",
     "@deck.gl/react": "9.3.7",
     "@hms-dbmi/viv": "0.22.0",
+    "@math.gl/core": "4.1.0",
     "mediabunny": "1.61.0",
+    "neuroglancer": "2.41.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "zarrita": "0.7.3"
@@ -37,6 +39,12 @@
     "vitest": "4.1.11"
   },
   "overrides": {
+    "ikonate": {
+      ".": "1.1.1",
+      "jsdom": "npm:dry-uninstall@0.3.0",
+      "xmldom": "npm:dry-uninstall@0.3.0",
+      "pretty": "npm:dry-uninstall@0.3.0"
+    },
     "@loaders.gl/zip": {
       "fflate": "0.7.5"
     },

@@ -1,0 +1,205 @@
+{
+  "project_id": 201,
+  "dataset_id": 803,
+  "group": "system",
+  "labels": "Only original public labels are included. No labels generated from TIFFs.",
+  "datasets": [
+    {
+      "name": "Condensin_3D_time_IDR5514375",
+      "id": 14012,
+      "category": "3D time-lapse with original labels",
+      "license": "CC BY 4.0",
+      "source": "https://idr.openmicroscopy.org/webclient/?show=image-5514375",
+      "paper": "https://doi.org/10.1083/jcb.201801048",
+      "calibration": "XYZ: 0.2516, 0.2516, 0.75 micrometers; 90 seconds/frame.",
+      "evidence": "Native NGFF and IDR pixels; IDR experiment description states 90 seconds. Normalized legacy label axes units to unit; original metadata retained under sources/.",
+      "selection": "All 40 frames, 3 channels, and both original Cell/Chromosomes label layers.",
+      "axes": [
+        "t",
+        "c",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        40,
+        3,
+        31,
+        256,
+        256
+      ],
+      "dtype": "uint16",
+      "bytes_on_disk": 483981248,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Condensin_3D_time_IDR5514375.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14012"
+    },
+    {
+      "name": "Lung_tilescan_IDR9798462",
+      "id": 14013,
+      "category": "Large 2D tile scan",
+      "license": "CC BY 4.0",
+      "source": "https://idr.openmicroscopy.org/webclient/?show=image-9798462",
+      "paper": "https://doi.org/10.1371/journal.pcbi.1007385",
+      "calibration": "XY: 0.253 micrometers/pixel.",
+      "evidence": "Publication: Tissue samples and image acquisition, Aperio AT2 at 0.253 micrometers/pixel. Added missing calibration to the prepared copy.",
+      "selection": "Full 21,115 x 16,433 RGB image and all 8 source pyramid levels.",
+      "axes": [
+        "t",
+        "c",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        1,
+        3,
+        1,
+        16433,
+        21115
+      ],
+      "dtype": "uint8",
+      "bytes_on_disk": 923218407,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Lung_tilescan_IDR9798462.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14013"
+    },
+    {
+      "name": "Melanoma_2D_time_IDR12922361",
+      "id": 14014,
+      "category": "2D phase-contrast time-lapse",
+      "license": "CC BY 4.0",
+      "source": "https://idr.openmicroscopy.org/webclient/?show=image-12922361",
+      "paper": "https://doi.org/10.1016/j.cels.2021.05.003",
+      "calibration": "XY: 0.325 micrometers/pixel. Acquisition interval not verified; temporal axis remains frame index.",
+      "evidence": "IDR REST Pixels PhysicalSizeX/Y values. Publication and annotation sources checked; no reliable matching acquisition interval recovered.",
+      "selection": "First 60 consecutive frames of the 721-frame source, full 2560 x 2160 native pixels, all 6 pyramid levels.",
+      "axes": [
+        "t",
+        "y",
+        "x"
+      ],
+      "shape": [
+        60,
+        2160,
+        2560
+      ],
+      "dtype": "uint16",
+      "bytes_on_disk": 561051990,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Melanoma_2D_time_IDR12922361.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14014"
+    },
+    {
+      "name": "Neurites_fluorescence_DRG",
+      "id": 14011,
+      "category": "Fluorescent neural outgrowth with original masks",
+      "license": "CC0 1.0",
+      "source": "https://doi.org/10.6084/m9.figshare.6752873",
+      "paper": "https://doi.org/10.1038/sdata.2018.183",
+      "calibration": "XY: 2.58 micrometers/pixel.",
+      "evidence": "Dataset readme and publication Data Records section specify 2.58 micrometers/pixel.",
+      "selection": "Original image 01_0101u_0p0_001p000.tif, original explant and neurite binary masks. No segmentation generated.",
+      "axes": [
+        "t",
+        "c",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        1,
+        1,
+        1,
+        1040,
+        1388
+      ],
+      "dtype": "uint8",
+      "bytes_on_disk": 834233,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Neurites_fluorescence_DRG.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14011"
+    },
+    {
+      "name": "Neurites_phase_NeuroQuantify",
+      "id": 14015,
+      "category": "Phase-contrast neural outgrowth",
+      "license": "CC0 1.0",
+      "source": "https://doi.org/10.17617/3.UIBMJX",
+      "paper": "https://doi.org/10.1016/j.jneumeth.2024.110273",
+      "calibration": "XY: 1/2.21 = 0.4524886878 micrometers/pixel.",
+      "evidence": "Publication states 1 micrometer = 2.21 pixels. TIFF Snap-573 from test set B; preserve all three source RGB planes.",
+      "selection": "Original Snap-573.tif, 2560 x 1920; new downsampled pyramid; no generated labels.",
+      "axes": [
+        "t",
+        "c",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        1,
+        3,
+        1,
+        1920,
+        2560
+      ],
+      "dtype": "uint8",
+      "bytes_on_disk": 10451955,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Neurites_phase_NeuroQuantify.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14015"
+    },
+    {
+      "name": "Tonsil_27channels_IDR5025553",
+      "id": 14016,
+      "category": "27-channel multiplex tissue image",
+      "license": "CC BY 4.0",
+      "source": "https://idr.openmicroscopy.org/webclient/?show=image-5025553",
+      "paper": "https://doi.org/10.1084/jem.20181994",
+      "calibration": "Spatial calibration unverified; pixel units only.",
+      "evidence": "Native NGFF and IDR Pixels omit physical sizes. Publication confirms Hyperion imaging mass cytometry but does not specify a matching pixel pitch; no instrument-default calibration assumed.",
+      "selection": "Full 2500 x 2500 image, all 27 original named channels and 5 pyramid levels.",
+      "axes": [
+        "t",
+        "c",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        1,
+        27,
+        1,
+        2500,
+        2500
+      ],
+      "dtype": "uint8",
+      "bytes_on_disk": 142109878,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Tonsil_27channels_IDR5025553.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14016"
+    },
+    {
+      "name": "Zebrafish_lightsheet_IDR4007817",
+      "id": 14017,
+      "category": "Small zebrafish light-sheet 3D time-lapse",
+      "license": "CC BY 4.0",
+      "source": "https://idr.openmicroscopy.org/webclient/?show=image-4007817",
+      "paper": "https://doi.org/10.1242/dev.166728",
+      "calibration": "Spatial calibration unverified; pixel units only. Time interval 120 seconds according to the IDR experiment description.",
+      "evidence": "IDR study describes this dataset as one frame per 2 minutes. Publication describes a 2.5-minute imaging protocol; discrepancy is retained here. Preview downsampling factor and physical pixel size are not verified, so no micrometer pitch assigned.",
+      "selection": "All 79 source preview volumes, 333 x 333 x 201, all 3 pyramid levels; no generated labels.",
+      "axes": [
+        "t",
+        "z",
+        "y",
+        "x"
+      ],
+      "shape": [
+        79,
+        201,
+        333,
+        333
+      ],
+      "dtype": "uint16",
+      "bytes_on_disk": 2238380568,
+      "path": "F:\\L-Drive\\Project B\\publicdata\\Zebrafish_lightsheet_IDR4007817.ome.zarr",
+      "viewer": "http://localhost:4080/biomero_zarr_viewer/?image=14017"
+    }
+  ]
+}

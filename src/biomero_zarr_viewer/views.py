@@ -3,11 +3,11 @@ import json
 import hashlib
 import logging
 import mimetypes
-from functools import wraps
+from functools import wraps, lru_cache
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse, FileResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods
@@ -118,6 +118,8 @@ def viewer(request, conn=None, **kwargs):
             query = request.GET.copy()
             query.pop("plate", None)
             query["image"] = str(store.image_id)
+            query["v"] = "2"
+            query.setdefault("view", "plate")
             return HttpResponseRedirect(f"{reverse('biomero_zarr_viewer_index')}?{query.urlencode()}")
         except InvalidShallowManifest:
             raise
@@ -136,6 +138,24 @@ def viewer(request, conn=None, **kwargs):
 def capabilities(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
     return _capability_response(request, conn, store)
+
+
+@require_GET
+@login_required(setGroupContext=True)
+@api_errors
+def metadata_details(request, image_id, conn=None, **kwargs):
+    from .metadata_details import zarr_details, omero_details
+    store = resolve_image_store(conn, image_id)
+    model = _inspect_resolved_store(store, request.GET.get("field"))
+    section = request.GET.get("section", "summary")
+    if section not in ("summary", "nodes", "omero"):
+        raise InvalidROI("Invalid metadata section")
+    details = zarr_details(store, _safe_data_path, section=section, field=model["initial_path"], model=model, cursor=request.GET.get("cursor"))
+    response = JsonResponse({"zarr": {**details,
+                             "format": model["zarr_format"], "ngff_version": model["ngff_version"],
+                             "kind": model["kind"]}, "omero": omero_details(store.image) if section in ("summary", "omero") else {}})
+    response["Cache-Control"] = "private, no-store"
+    return response
 
 
 @require_GET
@@ -165,7 +185,8 @@ def well_eligibility(request, well_id, conn=None, **kwargs):
 
 
 def _capability_response(request, conn, store, *, require_plate=False):
-    model = _inspect_resolved_store(store)
+    from .volume_cache import cache_limit
+    model = _inspect_resolved_store(store, request.GET.get("field"))
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
     token, expires_at = make_read_context(
@@ -210,6 +231,9 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "name": store.identity_path.name if store.identity_path else store.relative.name,
                 "roi_url": roi_url,
                 "render_url": render_url,
+                "volume_url": reverse("biomero_zarr_viewer_volume", kwargs={"image_id": store.image_id}) if cache_limit() else None,
+                "neuroglancer_url": reverse("biomero_zarr_viewer_neuroglancer", kwargs={"image_id": store.image_id}) if cache_limit() else None,
+                "preview_url": reverse("biomero_zarr_viewer_previews", kwargs={"image_id": store.image_id}) if cache_limit() else None,
                 "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
                 "binding_digest": binding_digest,
                 "render_svg_url": render_svg_url,
@@ -219,8 +243,17 @@ def _capability_response(request, conn, store, *, require_plate=False):
     )
 
 
-def _inspect_resolved_store(store):
+def _inspect_resolved_store(store, selected_field=None):
+    if selected_field is not None and not isinstance(selected_field, str):
+        raise InvalidROI("The selected field must be a path")
     model = inspect_store(store.path, store.recorded_files)
+    if selected_field is not None and selected_field != model["initial_path"]:
+        from .metadata import _image_model
+        valid = {f["path"] for w in model.get("plate", {}).get("wells", []) for f in w["fields"]}
+        if selected_field not in valid:
+            raise DataNotFound("The selected field is not available")
+        model.update(_image_model(store.path, selected_field, model["ngff_version"]))
+        model["initial_path"] = selected_field
     if store.identity_path is not None:
         model["store_uuid"] = read_store_uuid(store.identity_path)
     if not store.routes:
@@ -247,6 +280,11 @@ def _inspect_resolved_store(store):
     return model
 
 
+def _recipe_field(recipe):
+    panels = recipe.get("panels") if isinstance(recipe, dict) else None
+    return panels[0].get("field") if isinstance(panels, list) and panels and isinstance(panels[0], dict) else None
+
+
 def _label_roots(store):
     root = Path(mount_root())
     return {
@@ -260,7 +298,7 @@ def _label_roots(store):
 @api_errors
 def roi_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, request.GET.get("field"))
     rendered = render_roi_png(
         store.path, model, request.GET, label_roots=_label_roots(store)
     )
@@ -283,7 +321,7 @@ def render_png(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, _recipe_field(recipe))
     rendered = render_recipe_png(
         store.path, model, recipe, label_roots=_label_roots(store)
     )
@@ -306,7 +344,7 @@ def render_svg(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store)
+    model = _inspect_resolved_store(store, _recipe_field(recipe))
     rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store))
     response = HttpResponse(rendered.content, content_type="image/svg+xml")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
@@ -317,7 +355,20 @@ def render_svg(request, image_id, conn=None, **kwargs):
     return response
 
 
-def _safe_data_path(store_relative, zarr_key, routes=()):
+@lru_cache(maxsize=4)
+def _route_index(routes):
+    """Parse a signed manifest once, rather than thousands of times per plate."""
+    index = {}
+    for logical_text, physical_text in routes:
+        logical = PurePosixPath(logical_text.replace("\\", "/"))
+        physical = PurePosixPath(physical_text.replace("\\", "/"))
+        if logical.is_absolute() or physical.is_absolute() or ".." in logical.parts or ".." in physical.parts:
+            raise UnsafePath("The signed Zarr route is unsafe")
+        index[logical.parts] = physical
+    return index
+
+
+def _safe_data_path(store_relative, zarr_key, routes=(), *, allow_directory=False):
     store = PurePosixPath(str(store_relative).replace("\\", "/"))
     key_text = str(zarr_key).replace("\\", "/")
     key = PurePosixPath(key_text)
@@ -332,28 +383,124 @@ def _safe_data_path(store_relative, zarr_key, routes=()):
         raise UnsafePath("The requested Zarr key is unsafe")
     selected_store = store
     suffix = key
-    matches = []
+    normalized = []
     for route in routes if isinstance(routes, list) else ():
         if not isinstance(route, list) or len(route) != 2:
             raise UnsafePath("The signed Zarr route is invalid")
-        logical = PurePosixPath(str(route[0]).replace("\\", "/"))
-        physical = PurePosixPath(str(route[1]).replace("\\", "/"))
-        if logical.is_absolute() or physical.is_absolute() or ".." in logical.parts or ".." in physical.parts:
-            raise UnsafePath("The signed Zarr route is unsafe")
-        if key == logical or key.parts[: len(logical.parts)] == logical.parts:
-            matches.append((len(logical.parts), logical, physical))
-    if matches:
-        _, logical, selected_store = max(matches, key=lambda item: item[0])
-        suffix = PurePosixPath(*key.parts[len(logical.parts):])
+        normalized.append((str(route[0]), str(route[1])))
+    index = _route_index(tuple(normalized))
+    for length in range(len(key.parts), 0, -1):
+        if key.parts[:length] in index:
+            selected_store = index[key.parts[:length]]
+            suffix = PurePosixPath(*key.parts[length:])
+            break
     root = Path(mount_root()).resolve(strict=True)
     candidate = root.joinpath(*selected_store.parts, *suffix.parts).resolve(strict=False)
     try:
         candidate.relative_to(root)
     except ValueError as exc:
         raise UnsafePath("The requested Zarr key escapes the configured mount") from exc
-    if not candidate.is_file():
+    if not (candidate.is_dir() if allow_directory else candidate.is_file()):
         raise DataNotFound("The requested Zarr key does not exist")
     return candidate, PurePosixPath(*selected_store.parts, *suffix.parts)
+
+
+@require_GET
+@login_required(setGroupContext=True)
+@api_errors
+def cached_volume(request, image_id, conn=None, **kwargs):
+    from . import volume_cache
+    if not volume_cache.cache_limit():
+        raise UnsupportedStore("Volume cache is disabled")
+    claims = validate_read_context(request, conn, image_id)
+    scope = volume_cache.scope_key(claims, image_id)
+    job = request.GET.get("job")
+    if job:
+        result = volume_cache.entry(job, scope)
+    else:
+        field = request.GET.get("field", ".")
+        try:
+            level, channel, timepoint = [int(request.GET.get(key, "0")) for key in ("level", "c", "t")]
+        except ValueError as exc:
+            raise InvalidROI("Invalid volume selection") from exc
+        if field.startswith("/") or ".." in PurePosixPath(field.replace("\\", "/")).parts:
+            raise UnsafePath("Invalid volume field")
+        field_prefix = "" if field == "." else field.strip("/") + "/"
+        group_path = None
+        for filename in ("zarr.json", ".zattrs"):
+            try:
+                group_path, _ = _safe_data_path(claims["store"], field_prefix + filename, claims.get("routes", []))
+                break
+            except DataNotFound:
+                continue
+        if group_path is None:
+            raise DataNotFound("Volume metadata not found")
+        if group_path.stat().st_size > 4*1024*1024:
+            raise ROILimitExceeded("Volume metadata is too large")
+        metadata = json.loads(group_path.read_text())
+        if group_path.name == "zarr.json":
+            metadata = metadata.get("attributes", {}).get("ome", {})
+        multiscale = metadata.get("multiscales", [{}])[0]
+        datasets = multiscale.get("datasets", [])
+        if level < 0 or level >= len(datasets):
+            raise InvalidROI("Invalid pyramid level")
+        axes = [axis.get("name") if isinstance(axis, dict) else axis for axis in multiscale.get("axes", [])]
+        dataset_path = str(datasets[level]["path"])
+        if PurePosixPath(dataset_path).is_absolute():
+            raise UnsafePath("Invalid volume dataset")
+        array_key = field_prefix + dataset_path
+        array_metadata, _ = _safe_data_path(claims["store"], array_key + ("/zarr.json" if group_path.name == "zarr.json" else "/.zarray"), claims.get("routes", []))
+        description = volume_cache.describe_volume(array_metadata.parent, axes, channel, timepoint)
+        version = hashlib.sha256(group_path.read_bytes()).hexdigest() + volume_cache.fingerprint(
+            array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
+        result = volume_cache.request_volume(array_metadata.parent, axes, channel, timepoint, scope, version, description=description, retry=request.GET.get("retryFailed") == "1")
+    if request.GET.get("download") == "1" and result["status"] == "ready":
+        try:
+            handle = (volume_cache.cache_root() / (result["key"] + ".bin")).open("rb")
+        except FileNotFoundError as exc:
+            raise DataNotFound("Volume was evicted; request it again") from exc
+        response = FileResponse(handle, content_type="application/octet-stream")
+        response["Content-Length"] = str(result["size"])
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+        return response
+    response = JsonResponse({"key": result["key"], "status": result["status"], "progress": result["progress"], **result["metadata"], "error": result["error"]})
+    response["Cache-Control"] = "no-store"
+    return response
+
+
+@require_GET
+@login_required(setGroupContext=True)
+@api_errors
+def cached_previews(request, image_id, conn=None, **kwargs):
+    from . import volume_cache, preview_cache
+    if not volume_cache.cache_limit():
+        raise UnsupportedStore("Preview cache is disabled")
+    claims = validate_read_context(request, conn, image_id)
+    scope = volume_cache.scope_key(claims, image_id)
+    try:
+        fields=json.loads(request.GET.get("fields","[]"))
+        channels=json.loads(request.GET.get("channels","[]"))
+        size=int(request.GET.get("size","64"))
+        z=int(request.GET.get("z","0")); t=int(request.GET.get("t","0"))
+    except (ValueError,TypeError) as exc:
+        raise InvalidROI("Invalid preview request") from exc
+    if not isinstance(fields,list) or not 1<=len(fields)<=16 or not isinstance(channels,list) or len(channels)>8 or not 32<=size<=2048 or min(z,t)<0:
+        raise InvalidROI("Invalid preview batch")
+    if len(fields)*min(4_194_304,(size*1.6)**2)>16_777_216:
+        raise ROILimitExceeded("Preview batch is too large")
+    results=[]
+    for field in fields:
+        try:
+            results.append(preview_cache.render_preview(claims,scope,field,size,channels,z,t,_safe_data_path))
+        except ViewerError as exc:
+            results.append({"field":field,"error":str(exc)})
+        except Exception:
+            logger.exception("Unable to render plate preview")
+            results.append({"field":field,"error":"Preview could not be rendered"})
+    response=JsonResponse({"previews":results})
+    response["Cache-Control"]="no-store"
+    return response
 
 
 @require_http_methods(["GET", "HEAD"])

@@ -1,17 +1,21 @@
+import { useImageCursor } from "./use-image-cursor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ColorPaletteExtension,
-  DetailView,
+  MAX_CHANNELS,
   DETAIL_VIEW_ID,
   getDefaultInitialViewState,
-  OverviewView,
   OVERVIEW_VIEW_ID,
   VivViewer,
 } from "@hms-dbmi/viv";
-import type { ChannelState, LabelState, ViewportState } from "./types";
+import type { ChannelState, LabelState, ViewportState, ProjectionMode } from "./types";
 import { CategoricalMultiscaleImageLayer } from "./categorical-image-layer";
 import { InstanceColorExtension } from "./instance-color-extension";
 import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-inspection";
+import { previewLevel } from "./preview-resolution";
+import { ScaleBar } from "./ScaleBar";
+import { Matrix4 } from "@math.gl/core";
+import { MultiplexDetailView as DetailView, MultiplexOverviewView as OverviewView } from "./multiplex-views";
 
 interface LabelTooltip {
   screenX: number;
@@ -31,6 +35,7 @@ interface Props {
   z: number;
   t: number;
   viewport?: ViewportState;
+  projection?: ProjectionMode;
   showMinimap: boolean;
   showScale: boolean;
   physicalScale?: { size: number; unit: string };
@@ -62,6 +67,7 @@ export function ViewerCanvas({
   z,
   t,
   viewport,
+  projection = "slice",
   showMinimap,
   showScale,
   physicalScale,
@@ -69,26 +75,37 @@ export function ViewerCanvas({
   onTileError,
   onTilesLoaded,
 }: Props) {
-  const failedLayers = useRef(new Set<string>());
+  const cursorHost=useImageCursor("viv-2d");
+  const loadingFrame=useMemo(()=>({ready:new Set<string>(),failed:new Set<string>(),expected:new Set([
+    ...Array.from({length:Math.ceil(channels.filter(c=>c.visible).length/MAX_CHANNELS)},(_,i)=>`image:${i}`),
+    ...labelStates.filter(state=>state.visible&&labels.some(label=>label.id===state.id)).map(state=>`label:${state.id}`),
+  ])}),[loader,labels,z,t,JSON.stringify(channels.map(c=>c.visible)),JSON.stringify(labelStates.map(l=>[l.id,l.visible]))]);
+  const liveFrame=useRef(loadingFrame);liveFrame.current=loadingFrame;
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hoverRequest = useRef(0);
+  const hoverAbort=useRef<AbortController|undefined>(undefined);
   const [labelTooltip, setLabelTooltip] = useState<LabelTooltip | undefined>(undefined);
   const reportTileError = useCallback((layerId: string, error: unknown) => {
-    failedLayers.current.add(layerId);
+    if(liveFrame.current!==loadingFrame)return;
+    if (error instanceof DOMException && error.name === "AbortError") return;
+    loadingFrame.failed.add(layerId);
     onTileError(error instanceof Error ? error.message : "A tile failed to load");
-  }, [onTileError]);
+  }, [onTileError,loadingFrame]);
   const reportViewportLoad = useCallback((layerId: string) => {
-    failedLayers.current.delete(layerId);
-    if (!failedLayers.current.size) onTilesLoaded();
-  }, [onTilesLoaded]);
+    if(liveFrame.current!==loadingFrame)return;
+    loadingFrame.failed.delete(layerId);loadingFrame.ready.add(layerId);
+    if (!loadingFrame.failed.size&&[...loadingFrame.expected].every(id=>loadingFrame.ready.has(id))) onTilesLoaded();
+  }, [onTilesLoaded,loadingFrame]);
   useEffect(() => {
-    failedLayers.current.clear();
-  }, [loader, labels, z, t]);
+    if(!loadingFrame.expected.size)onTilesLoaded();
+  }, [loadingFrame]);
   useEffect(() => () => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverRequest.current += 1;
   }, []);
   useEffect(() => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverRequest.current += 1;
     setLabelTooltip(undefined);
@@ -96,11 +113,14 @@ export function ViewerCanvas({
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
   const baseLabels = loader[0]?.labels || [];
   const baseSelections = channels.map((channel) => selection(baseLabels, channel.index, z, t));
-  const baseView = useMemo(() => getDefaultInitialViewState(loader, { width, height }, 0.35) as any, [loader, width, height]);
+  const spacingX=loader[0]?.meta?.physicalSizes?.x?.size||1;
+  const aspect=(loader[0]?.meta?.physicalSizes?.y?.size||spacingX)/spacingX;
+  const imageMatrix=useMemo(()=>new Matrix4().scale([1,aspect,1]),[aspect]);
+  const baseView = useMemo(() => (getDefaultInitialViewState as any)(loader, { width, height }, 0.35,false,imageMatrix), [loader, width, height,imageMatrix]);
   const views: any[] = [view];
   const viewStates: any[] = [{
     ...baseView,
-    ...(viewport ? { target: [viewport.x, viewport.y, 0], zoom: viewport.zoom } : {}),
+    ...(viewport ? { target: [viewport.x, viewport.y*aspect, 0], zoom: viewport.zoom } : {}),
     id: DETAIL_VIEW_ID,
   }];
 
@@ -115,6 +135,7 @@ export function ViewerCanvas({
         id: `label-${state.id}-#${DETAIL_VIEW_ID}#`,
         viewportId: DETAIL_VIEW_ID,
         loader: loaded.loader,
+        modelMatrix:new Matrix4().translate(["x","y","z"].map(axis=>((loaded.loader[0]?.meta?.physicalOrigin?.[axis]||0)-(loader[0]?.meta?.physicalOrigin?.[axis]||0))/spacingX)).scale(["x","y","z"].map(axis=>(loaded.loader[0]?.meta?.physicalSizes?.[axis]?.size||spacingX)/spacingX)),
         selections: [selection(sourceLabels, loaded.channelIndex || 0, z, t)],
         channelsVisible: [true],
         contrastLimits: [[0, 1]],
@@ -135,24 +156,26 @@ export function ViewerCanvas({
 
   const layerProps: any[] = [{
     loader,
+    modelMatrix:imageMatrix,
     selections: baseSelections,
     channelsVisible: channels.map((channel) => channel.visible),
     colors: channels.map((channel) => hexToRgb(channel.color)),
     contrastLimits: channels.map((channel) => [channel.low, channel.high]),
     extensions: [new ColorPaletteExtension()],
-    onTileError: (error: unknown) => reportTileError("image", error),
-    onViewportLoad: () => reportViewportLoad("image"),
+    onBatchTileError: (index:number,error: unknown) => reportTileError(`image:${index}`, error),
+    onBatchViewportLoad: (index:number) => reportViewportLoad(`image:${index}`),
   }];
 
   if (showMinimap) {
-    views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
-    layerProps.push(layerProps[0]);
+    const overviewLoader = loader.slice(0, previewLevel(loader, 160 * (window.devicePixelRatio || 1)) + 1);
+    views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader: overviewLoader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
+    layerProps.push({ ...layerProps[0], loader: overviewLoader, onBatchViewportLoad:()=>{},onBatchTileError:()=>{} });
     viewStates.push({ id: OVERVIEW_VIEW_ID });
   }
 
   const zoom = Number(viewStates[0].zoom || 0);
-  const scaleBar = physicalScale ? scaleBarSize(physicalScale.size, zoom) : undefined;
   const inspectHover = useCallback((info: any) => {
+    hoverAbort.current?.abort();
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     const coordinate = info.viewport?.id === DETAIL_VIEW_ID ? info.coordinate : undefined;
     if (!coordinate || coordinate.length < 2) {
@@ -161,10 +184,11 @@ export function ViewerCanvas({
       return;
     }
     const imageX = Math.floor(Number(coordinate[0]));
-    const imageY = Math.floor(Number(coordinate[1]));
+    const imageY = Math.floor(Number(coordinate[1])/aspect);
     const request = ++hoverRequest.current;
     hoverTimer.current = setTimeout(() => {
-      void inspectLabelPixel(labels, labelStates, imageX, imageY, z, t).then((hits) => {
+      const controller=new AbortController();hoverAbort.current=controller;
+      void inspectLabelPixel(labels, labelStates, imageX, imageY, z, t, loader[0],controller.signal).then((hits) => {
         if (request !== hoverRequest.current) return;
         setLabelTooltip(hits.length ? {
           screenX: Number(info.x),
@@ -175,9 +199,9 @@ export function ViewerCanvas({
         } : undefined);
       });
     }, 80);
-  }, [labels, labelStates, z, t]);
+  }, [labels, labelStates, z, t,aspect,loader]);
 
-  return <>
+  return <div className="image-cursor-surface" ref={cursorHost} style={{width:"100%",height:"100%",position:"relative"}}>
     <VivViewer
       views={views}
       viewStates={viewStates}
@@ -185,7 +209,7 @@ export function ViewerCanvas({
       onViewStateChange={({ viewId, viewState }: any) => {
         if (viewId !== DETAIL_VIEW_ID) return;
         const target = viewState.target || baseView.target;
-        onViewportChange({ x: Number(target[0]), y: Number(target[1]), zoom: Number(viewState.zoom) });
+        onViewportChange({ x: Number(target[0]), y: Number(target[1])/aspect, zoom: Number(viewState.zoom) });
       }}
       deckProps={{
         layers: labelLayers,
@@ -202,24 +226,8 @@ export function ViewerCanvas({
       }}
     >
       {labelTooltip.hits.map((hit) => <div key={hit.id} title={hit.path}><strong>{hit.name}</strong><span>mask #{hit.value}</span></div>)}
-      <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · z {z} · t {t}</small>
+      <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · {projection === "slice" ? `z ${z}` : "all Z (projected)"} · t {t}</small>
     </div>}
-    {showScale && scaleBar && <div className="physical-scale" aria-label={`Scale ${scaleBar.value} ${physicalScale!.unit}`}>
-      <span style={{ width: `${scaleBar.pixels}px` }} />
-      <strong>{scaleBar.value} {unitLabel(physicalScale!.unit)}</strong>
-    </div>}
-  </>;
-}
-
-function scaleBarSize(pixelSize: number, zoom: number): { value: number; pixels: number } {
-  const unitsPerScreenPixel = pixelSize / Math.pow(2, zoom);
-  const target = unitsPerScreenPixel * 110;
-  const power = Math.pow(10, Math.floor(Math.log10(target)));
-  const normalized = target / power;
-  const nice = (normalized < 1.5 ? 1 : normalized < 3.5 ? 2 : normalized < 7.5 ? 5 : 10) * power;
-  return { value: nice, pixels: Math.max(45, Math.min(180, nice / unitsPerScreenPixel)) };
-}
-
-function unitLabel(unit: string): string {
-  return unit === "micrometer" || unit === "micrometre" || unit === "µm" ? "µm" : unit;
+    {showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** zoom} unit={physicalScale.unit} />}
+  </div>;
 }

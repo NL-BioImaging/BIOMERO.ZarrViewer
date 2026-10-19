@@ -4,6 +4,8 @@ import { resolve } from "node:path";
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  // The user guide is shared by the docs site and bundled viewer help.
+  server: { fs: { allow: [resolve(__dirname, "..")] } },
   base: "./",
   worker: { format: "es" },
   // Some transitive Deck.gl dependencies still branch on Node's conventional

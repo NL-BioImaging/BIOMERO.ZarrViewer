@@ -22,6 +22,11 @@ the caller's upload limit. Processing is sequential and decoded frames are not
 retained for the entire sequence. Projection loading also reduces slices
 incrementally rather than requesting every slice at once.
 
+For Z projections, raster labels use the same categorical projection as the
+viewer: the first nonzero object ID along Z is retained at each pixel, after
+any focused-ID filtering. This applies to MIP, mean and minimum intensity
+projections; IDs are never averaged. Slice exports retain the selected Z plane.
+
 The additive render recipe uses `version: 2` and a `sequence` declaration with
 `version: 1`, `start`, `end`, optional `step`, and optional `fps` (default 5).
 The source is an explicitly verified store UUID or `source: {kind: "current-image"}`
@@ -36,6 +41,12 @@ OMERO.Analysis Methods and Notebooks. Their render request declares
 viewer links remain supported. The bundled `use-omero-zarr-viewer` skill (v7)
 documents both formats; its canonical source is under `_agents/skills/`, with
 the packaged copy checked by `scripts/sync_analysis_skills.py --check`.
+
+## Rendered 3D movies
+
+The viewer also exports Volume, Slice and Orthogonal layouts in Neuroglancer and Viv. These exports capture the current screen view with its camera, visible layers and scale bars, and fit within the same 2048 × 2048 limit. They are not native-resolution 3D stacks. Neuroglancer can include label surfaces; Viv renders intensities. Export waits for each frame, permits cancellation and restores the original timepoint. The fixed background is shared with the viewer.
+
+Recipes record `viewCapture`, engine, layout, quality, camera and display settings. The Analysis integration's native 2D renderer cannot replay these screen-space recipes. Playback FPS is independent of acquisition timing.
 
 ## Acceptance
 
