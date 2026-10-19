@@ -37,7 +37,7 @@ MAX_MESH_BYTES = 32 * 1024 * 1024
 NANOMETERS = {unit:factor*1000 for unit,factor in MICROMETERS.items()}
 
 
-def spatial_transform(multiscale, dataset):
+def spatial_transform(multiscale, dataset, *, allow_uncalibrated=False):
     axes = multiscale.get("axes", [])
     names = [a.get("name") if isinstance(a, dict) else a for a in axes]
     try:
@@ -46,13 +46,17 @@ def spatial_transform(multiscale, dataset):
         raise UnsupportedStore(str(exc)) from exc
     if not found_scale:
         raise UnsupportedStore("3D labels require physical voxel-size metadata")
+    spatial_units = [axes[names.index(a)].get("unit", "") if isinstance(axes[names.index(a)], dict) else ""
+                     for a in "xyz" if a in names]
+    pixel_coordinates = allow_uncalibrated and len(spatial_units) == 3 and all(
+        unit.lower() in ("", "pixel", "pixels", "px") for unit in spatial_units)
     resolution, translation = [], []
     for axis in "xyz":
         if axis not in names:
             raise UnsupportedStore("3D labels require X, Y and Z axes")
         index = names.index(axis)
         unit = axes[index].get("unit", "") if isinstance(axes[index], dict) else ""
-        factor = NANOMETERS.get(unit.lower())
+        factor = 1 if pixel_coordinates else NANOMETERS.get(unit.lower())
         if factor is None:
             raise UnsupportedStore("3D labels require calibrated X, Y and Z units")
         resolution.append(float(scale[index] * factor))
@@ -87,7 +91,11 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     if selected >= len(datasets):
         raise InvalidROI("Invalid 3D pyramid level")
     dataset = datasets[selected]
-    axes, resolution, translation = spatial_transform(multiscale, dataset)
+    axes, resolution, translation = spatial_transform(multiscale, dataset, allow_uncalibrated=not segmentation)
+    coordinate_unit = "nanometer" if all(
+        isinstance(axis, dict) and axis.get("unit", "").lower() in NANOMETERS
+        for axis in multiscale["axes"] if (axis.get("name") if isinstance(axis, dict) else axis) in "xyz"
+    ) else "pixel"
     dataset_path = str(dataset["path"])
     if dataset_path.startswith("/") or "\\" in dataset_path or ".." in PurePosixPath(dataset_path).parts:
         raise UnsafePath("Invalid 3D dataset path")
@@ -113,7 +121,7 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     key = hashlib.sha256(json.dumps(["ng-stream-v1", scope, prefix + dataset_path,
         axes, channel, timepoint, version], sort_keys=True).encode()).hexdigest()
     source = {"key": key, "shape": shape, "dtype": dtype.str, "resolution": resolution,
-              "translation": translation, "segmentation": segmentation, "status": "ready", "progress": 1,
+              "translation": translation, "coordinate_unit": coordinate_unit, "segmentation": segmentation, "status": "ready", "progress": 1,
               "array": prefix + dataset_path, "axes": axes, "channel": channel, "timepoint": timepoint}
     source["transport"] = "zarr" if native_metadata(source, claims) is not None else "chunks"
     if source["transport"] == "chunks" and not segmentation:
@@ -326,6 +334,9 @@ def prepare(request, image_id, conn=None, **kwargs):
     except (TypeError, ValueError) as exc:
         raise InvalidROI("Invalid 3D selection") from exc
     field = request.GET.get("field", ".")
+    view_id = request.GET.get("view_id")
+    if view_id is not None and not re.fullmatch(r"[0-9a-f]{32}", view_id):
+        raise InvalidROI("Invalid 3D view identifier")
     sources = {}
     for channel in channels:
         sources[f"image-{channel}"] = prepare_source(claims, scope, field, level, channel, timepoint)
@@ -333,6 +344,8 @@ def prepare(request, image_id, conn=None, **kwargs):
         sources[f"label-{index}"] = prepare_source(claims, scope, label["path"], level, label.get("channel", 0), timepoint, True)
     if not sources:
         raise InvalidROI("Select an image or label layer")
+    if len({source["coordinate_unit"] for source in sources.values()}) > 1:
+        raise UnsupportedStore("Image and labels must use matching calibrated coordinate units")
     pending = False
     for index, label in enumerate(labels):
         selected = label.get("segments")
@@ -340,11 +353,11 @@ def prepare(request, image_id, conn=None, **kwargs):
                 any(not isinstance(v,str) or not re.fullmatch(r"[1-9][0-9]{0,19}",v) for v in selected)):
             raise InvalidROI("Invalid selected segmentation IDs")
         pending = prepare_labels(sources[f"label-{index}"], claims, scope, selected, label.get("interactive") is True, request.GET.get("retryFailed") == "1") or pending
-    identity = hashlib.sha256(json.dumps([scope, [(name, s["key"]) for name,s in sources.items()]], sort_keys=True).encode()).hexdigest()[:32]
+    identity = hashlib.sha256(json.dumps([scope, view_id, [(name, s["key"]) for name,s in sources.items()]], sort_keys=True).encode()).hexdigest()[:32]
     import time
     from .settings import context_ttl_seconds
     now = time.time()
-    contexts.put(request.session, identity, {"token": request.META[TOKEN_HEADER], "sources": sources, "scope": scope, "expires": now + context_ttl_seconds()})
+    contexts.put(request.session, identity, {"token": request.META[TOKEN_HEADER], "sources": sources, "scope": scope, "expires": now + context_ttl_seconds(), **({"view_id": view_id} if view_id else {})})
     base = reverse("biomero_zarr_viewer_neuroglancer_data", kwargs={"image_id": image_id, "context_id": identity, "data_key": "placeholder"}).removesuffix("placeholder")
     # Strip server-only paths/selections from the public response.
     public = {name: {k:v for k,v in item.items() if k not in ("array","axes","channel","timepoint")}

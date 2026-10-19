@@ -24,6 +24,17 @@ def test_spatial_transform_composes_dataset_then_global_transforms_by_named_axis
         ng.spatial_transform({"axes": ["z", "y", "x"]}, {"coordinateTransformations": []})
 
 
+def test_uncalibrated_intensities_use_explicit_pixel_coordinates_without_inventing_units():
+    multi = {"axes": [{"name": a, "type": "space"} for a in "zyx"]}
+    dataset = {"coordinateTransformations": [{"type": "scale", "scale": [1, 2, 2]}]}
+    assert ng.spatial_transform(multi, dataset, allow_uncalibrated=True) == (["z", "y", "x"], [2, 2, 1], [0, 0, 0])
+    with pytest.raises(UnsupportedStore, match="calibrated"):
+        ng.spatial_transform(multi, dataset)
+    multi["axes"][0]["unit"] = "micrometer"
+    with pytest.raises(UnsupportedStore, match="calibrated"):
+        ng.spatial_transform(multi, dataset, allow_uncalibrated=True)
+
+
 def test_label_mesh_preserves_physical_bounds_and_closes_edge_objects():
     data = np.zeros((6, 7, 8), dtype=np.uint32)
     data[0:3, 2:5, 3:7] = 4000000001

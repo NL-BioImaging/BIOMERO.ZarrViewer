@@ -43,7 +43,7 @@ function Section({ panel, source, plane, index, t, extent, shape, fractions, tar
       contrastLimits: channels.map(c => [c.low, c.low + (c.high - c.low) / brightness]), extensions: [new ColorPaletteExtension()],
       onViewportLoad: () => window.setTimeout(onReady, 0), onTileError: (error: unknown) => onError(String(error)),
     }]} onViewStateChange={({ viewState }: any) => onNavigate(plane, viewState)}
-      deckProps={{ onClick: (info: any) => {
+      deckProps={{ deviceProps:{webgl:{preserveDrawingBuffer:true}}, onClick: (info: any) => {
         if (info.viewport) onSelect(plane, info.viewport.unproject([info.x, info.y]));
       } }} />
     <svg className="section-crosshair" width="100%" height="100%" aria-hidden="true">

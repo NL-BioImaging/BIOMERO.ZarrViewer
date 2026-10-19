@@ -77,6 +77,7 @@ test("3D scale uses Viv's smallest calibrated base axis and matches projection a
     expect(distance * scale.size).toBeCloseTo(bar.value, 6);
   }
   expect(volumePhysicalScale([{}])).toBeUndefined();
+  expect(volumePhysicalScale([{meta:{physicalSizes:Object.fromEntries(["x","y","z"].map(axis=>[axis,{size:1,unit:"pixel"}]))}}])).toEqual({size:1,unit:"pixel"});
   expect(volumePhysicalScale([{ meta: { physicalSizes: { ...loader[0].meta.physicalSizes, z: { size: 1, unit: "pixel" } } } }])).toBeUndefined();
 });
 

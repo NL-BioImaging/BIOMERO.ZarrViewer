@@ -1,5 +1,7 @@
 import { ViewerMetadata } from "./MetadataWindow";
 import { MovieExport, TimePlayback } from "./MovieControls";
+import { exportVolumeMovie, waitForVolumeFrame } from "./volume-movie";
+import { viewerContextId } from "./viewer-context";
 import { ViewerHelp } from "./HelpWindow";
 import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
@@ -111,13 +113,13 @@ function channelStates(capability: Capability, loader: any[]): ChannelState[] {
   });
 }
 
-export function labelStates(capability: Capability): LabelState[] {
+export function labelStates(capability: Capability, sizeZ = 1): LabelState[] {
   return capability.labels.map((label) => ({
     id: label.id,
     name: label.name,
     path: label.path,
     visible: true,
-    opacity: 0.7,
+    opacity: sizeZ > 1 ? 0.55 : 0.15,
     mode: "fill",
     color: label.color,
     outlineWidth: 2,
@@ -195,8 +197,9 @@ export function focusedLabelStates(
   capability: Capability,
   field: string,
   focus: Pick<DeepLinkState, "labelPath" | "labelChannel" | "labelValue" | "overlays">,
+  sizeZ = 1,
 ): LabelState[] {
-  const states = labelStates(capability);
+  const states = labelStates(capability, sizeZ);
   const overlays: OverlayDeepLink[] = focus.overlays?.length
     ? focus.overlays
     : focus.labelPath || focus.labelChannel
@@ -319,6 +322,7 @@ export default function App() {
   const [volumeView, setVolumeView] = useState<VolumeView>(deepLink.volumeView || "3d");
   const [slicePlane, setSlicePlane] = useState<SlicePlane>(deepLink.slicePlane || "xy");
   const [ngCamera, setNgCamera] = useState<NeuroglancerCamera | undefined>(deepLink.ngCamera);
+  const [ngViewId] = useState(viewerContextId);
   const ngCameraField = useRef(field);
   useEffect(() => {
     if (ngCameraField.current != null && ngCameraField.current !== field) setNgCamera(undefined);
@@ -373,6 +377,18 @@ export default function App() {
   const frameKey=JSON.stringify([field,zIndex,tIndex,projection,renderMode,volumeRenderer,volumeLevel,volumeView,slicePlane,viewMode]);
   const latestFrameKey=useRef(frameKey);latestFrameKey.current=frameKey;
   const frameReady=readyFrameKey===frameKey;
+  const [exportingVolume,setExportingVolume]=useState(false);
+  const liveMovieFrame=useRef({t:tIndex,ready:frameReady});liveMovieFrame.current={t:tIndex,ready:frameReady};
+  const movieScreenScale=Math.min(1,2048/Math.max(1,viewerSize.width,viewerSize.height));
+  const volumeMovieSize:[number,number]=[Math.max(1,Math.floor(viewerSize.width*movieScreenScale)),Math.max(1,Math.floor(viewerSize.height*movieScreenScale))];
+  const volumeMovieExporter=effectiveRenderMode!=="3d"?undefined:async(recipe:MovieRecipe,signal:AbortSignal,progress:(done:number,total:number)=>void)=>{
+    const host=viewerRef.current!,previous=tIndex;
+    try{return await exportVolumeMovie(imageId!,recipe,currentLoaded!.sizeT,host,async(t,abort)=>{
+      if(liveMovieFrame.current.t!==t){setReadyFrameKey("");setTIndex(t);}
+      await waitForVolumeFrame(()=>liveMovieFrame.current.t===t&&liveMovieFrame.current.ready,abort);
+    },signal,progress);}
+    finally{if(viewerRef.current===host)setTIndex(previous);}
+  };
   const setFrameReady=(value:boolean)=>setReadyFrameKey(value?frameKey:"");
   const readyFrame=()=>{if(latestFrameKey.current===frameKey)setFrameReady(true);};
   const acceptNavigation=(next:SharedNavigation)=>{
@@ -493,7 +509,7 @@ export default function App() {
           : restored;
       });
       setLabels((current) => {
-        const defaults = focusedLabelStates(fieldCapability, field, deepLink);
+        const defaults = focusedLabelStates(fieldCapability, field, deepLink, next.sizeZ);
           const matching=defaults.flatMap(label=>{
             const previous=current.find(item=>item.name===label.name&&item.path.split("/labels/").at(-1)===label.path.split("/labels/").at(-1));
             return previous?[{...previous,id:label.id}]:[];
@@ -604,10 +620,13 @@ export default function App() {
                   ...deepLink, field, z: zIndex, t: tIndex, overlays:labelOverlays(labels,displayCapability,field),
                 }, channels)} download>{projection==="slice"?"Download ROI PNG":"Download ROI slice PNG"}</a>}
           </>}
-          {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && effectiveRenderMode === "2d" && viewMode === "field" && <MovieExport
-            imageId={imageId} sizeT={currentLoaded.sizeT} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
+          {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && viewMode === "field" && <MovieExport
+            key={`${effectiveRenderMode}:${volumeRenderer}:${volumeView}`} imageId={imageId} sizeT={currentLoaded.sizeT} exporter={volumeMovieExporter} onBusy={setExportingVolume} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
+              ...(effectiveRenderMode==="3d"?{viewCapture:{version:1,space:"screen",renderer:useNeuroglancer?"neuroglancer":"viv",mode:volumeView,quality:selectedVolumeLevel!.index,
+                settings:{background:volumeBackground,brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,
+                  renderedChannels:(useNeuroglancer?channels.filter(c=>c.visible).slice(0,10):volumeChannels).map(c=>c.index),labelsRendered:useNeuroglancer}}}:{}),
               filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
-              panels: [{ field, roi: visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
+              panels: [{ field, roi: effectiveRenderMode==="3d"?[0,0,...volumeMovieSize]:visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
                 sourceChannels: channels.filter(channel => channel.visible).map(channel => channel.index + 1),
                 channelSettings: channels, t: tIndex, z: zIndex, projection, scaleBar: showScale,
                 overlays: labels.filter(label => label.visible).map(label => ({
@@ -617,7 +636,7 @@ export default function App() {
                   mode: label.mode, colorMode:label.color?"solid":"instance", color: label.color, opacity: label.opacity, outlineWidth: label.outlineWidth || 2
                 })) }]
             } as MovieRecipe} />}
-          <div className="view-toolbar" role="group" aria-label="View controls">
+          <div className="view-toolbar" role="group" aria-label="View controls" inert={exportingVolume}>
             {currentLoaded && viewMode === "field" && currentLoaded.sizeZ > 1 && <RenderModeToggle mode={effectiveRenderMode} disabled3d={!volumeAvailable}
               onChange={mode => {captureNavigation(); if (mode === "3d" && selectedVolumeLevel) setVolumeLevel(selectedVolumeLevel.index); setRenderMode(mode); }} />}
             {currentLoaded && viewMode === "field" && effectiveRenderMode === "3d" &&
@@ -637,7 +656,7 @@ export default function App() {
         </div>
       </header>
       <div className="workspace">
-        <main className="viewer-host" ref={viewerRef}>
+        <main className="viewer-host" ref={viewerRef} inert={exportingVolume} aria-busy={exportingVolume}>
           {loadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && !(effectiveRenderMode === "3d" && useNeuroglancer) && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{loadProgress.phase}… {Math.round(loadProgress.fraction*100)}%</span><progress aria-label="Volume loading progress" max="1" value={loadProgress.fraction}/></div>}
           {capability?.plate && authStore && viewMode !== "field" ? (
             <OverviewGrid
@@ -668,7 +687,7 @@ export default function App() {
               labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
               t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
               brightness={volumeBrightness} background={volumeBackground}
-              gain={volumeGain} height={viewerSize.height}
+              gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
               view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
               onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
@@ -712,7 +731,7 @@ export default function App() {
             />
           ) : <div className="loading">{error || status}</div>}
         </main>
-        <ViewerPanel
+        <div className="viewer-panel-export-wrapper" style={{display:"contents"}} inert={exportingVolume}><ViewerPanel
           capability={displayCapability}
           field={field}
           onField={(path) => {
@@ -731,7 +750,7 @@ export default function App() {
           t={tIndex}
           onZ={value=>{setZIndex(value);if(geometry&&sharedViewport)acceptNavigation(from2D(sharedViewport,value,geometry));}}
           onT={value=>{setFrameReady(false);setTIndex(value);}}
-          frameReady={frameReady}
+          frameReady={frameReady && !exportingVolume}
           projection={projection}
           onProjection={setProjection}
           renderMode={effectiveRenderMode}
@@ -751,7 +770,7 @@ export default function App() {
           onViewMode={setViewMode}
           plateFieldIndex={plateFieldIndex}
           onPlateFieldIndex={setPlateFieldIndex}
-        />
+        /></div>
       </div>
     </div>
   );

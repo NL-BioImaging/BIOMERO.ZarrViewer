@@ -226,7 +226,7 @@ function VolumeRenderer({
       viewStates={[viewState]}
       layerProps={layerProps}
       useDevicePixels={false}
-      deckProps={{ style: { backgroundColor: background } }}
+      deckProps={{ style: { backgroundColor: background }, deviceProps:{webgl:{preserveDrawingBuffer:true}} }}
       onViewStateChange={({ viewId, viewState: next }: any) => {
         if (viewId !== "3d") return;
         onCameraChange({ ...camera,

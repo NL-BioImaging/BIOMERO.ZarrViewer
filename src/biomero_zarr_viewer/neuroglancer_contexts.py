@@ -18,11 +18,18 @@ def table(db):
 
 def put(session, identity, value):
     session_owner = owner(session)
+    view_id = value.get("view_id", identity)
     if session_owner is None:
         # Compatibility for session adapters without a persistent session key.
         contexts = {k:v for k,v in session.get("biomero_neuroglancer", {}).items() if v.get("expires", 0) > time.time()}
-        if identity not in contexts and len(contexts) >= 32:
+        views = {v.get("view_id", k) for k, v in contexts.items()}
+        if view_id not in views and len(views) >= 32:
             raise ROILimitExceeded("32 live 3D views are open. Retry after unused read contexts expire.")
+        previous = [k for k, v in contexts.items() if k != identity and v.get("view_id", k) == view_id]
+        for key in previous[:-2]:
+            del contexts[key]
+        for key in previous[-2:]:
+            contexts[key] = {**contexts[key], "expires": min(contexts[key]["expires"], time.time()+10)}
         contexts[identity] = value
         session["biomero_neuroglancer"] = contexts
         return
@@ -30,9 +37,17 @@ def put(session, identity, value):
         table(db)
         db.execute("BEGIN IMMEDIATE")
         db.execute("DELETE FROM ng_contexts WHERE expires <= ?", (time.time(),))
-        exists = db.execute("SELECT 1 FROM ng_contexts WHERE owner=? AND id=?", (session_owner, identity)).fetchone()
-        if not exists and db.execute("SELECT COUNT(*) FROM ng_contexts WHERE owner=?", (session_owner,)).fetchone()[0] >= 32:
+        rows = db.execute("SELECT id,value FROM ng_contexts WHERE owner=? ORDER BY rowid", (session_owner,)).fetchall()
+        views = {json.loads(row["value"]).get("view_id", row["id"]) for row in rows}
+        if view_id not in views and len(views) >= 32:
             raise ROILimitExceeded("32 live 3D views are open. Retry after unused read contexts expire.")
+        # A time-lapse is one live view. Keep two recently superseded frames for
+        # in-flight chunk requests, without invalidating any other browser tab.
+        previous = [row["id"] for row in rows if row["id"] != identity and json.loads(row["value"]).get("view_id", row["id"]) == view_id]
+        for key in previous[:-2]:
+            db.execute("DELETE FROM ng_contexts WHERE owner=? AND id=?", (session_owner, key))
+        for key in previous[-2:]:
+            db.execute("UPDATE ng_contexts SET expires=MIN(expires,?) WHERE owner=? AND id=?", (time.time()+10, session_owner, key))
         db.execute("INSERT OR REPLACE INTO ng_contexts VALUES (?,?,?,?)", (session_owner, identity, value["expires"], json.dumps(value)))
 
 

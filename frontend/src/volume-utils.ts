@@ -38,8 +38,8 @@ export function volumePhysicalScale(loader: any[]): PhysicalSize | undefined {
   const sizes = ["x", "y", "z"].map(axis => loader[0]?.meta?.physicalSizes?.[axis]);
   if (sizes.some(value => !Number.isFinite(value?.size) || value.size <= 0 || !value.unit)) return undefined;
   const unit = sizes[0].unit;
-  if (unit === "pixel" || unit === "px" || sizes.some(value => value.unit !== unit)) return undefined;
-  return { size: Math.min(...sizes.map(value => value.size)), unit };
+  if (sizes.some(value => value.unit !== unit)) return undefined;
+  return { size: Math.min(...sizes.map(value => value.size)), unit:unit === "px" ? "pixel" : unit };
 }
 
 export function activeVolumeChannels(channels: ChannelState[]): ChannelState[] {

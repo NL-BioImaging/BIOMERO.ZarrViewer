@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import json
 import re
 import base64
 from html import escape

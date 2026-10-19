@@ -57,8 +57,19 @@ const capability: Capability = {
   },
 };
 
-test("new labels default to 70% opacity", () => {
-  expect(labelStates(capability)[0].opacity).toBe(.7);
+test("new single-plane labels default to 15% and volume labels to 55%", () => {
+  expect(labelStates(capability)[0].opacity).toBe(.15);
+  expect(labelStates(capability, 1)[0].opacity).toBe(.15);
+  expect(labelStates(capability, 31)[0].opacity).toBe(.55);
+  expect(focusedLabelStates(capability, "A/1/0", {}, 31)[0].opacity).toBe(.55);
+});
+
+test("explicit overlay opacity survives dimensional defaults", () => {
+  for (const sizeZ of [1, 31]) {
+    expect(focusedLabelStates(capability, "A/1/0", {overlays: [{
+      labelPath: "A/1/0/labels/cells", opacity: .32, mode: "fill", outlineWidth: 2,
+    }]}, sizeZ)[0].opacity).toBe(.32);
+  }
 });
 
 test("3D labels expose visibility, colors and opacity without 2D outline controls", () => {

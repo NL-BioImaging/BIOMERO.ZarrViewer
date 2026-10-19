@@ -1,0 +1,60 @@
+{
+  "publisher_chunk_hashes_rechecked": 99,
+  "datasets": [
+    {
+      "name": "Condensin_3D_time_IDR5514375",
+      "arrays": 11,
+      "downloaded_chunks": 11392,
+      "source_pixels": "Original compressed chunks; representative hashes rechecked against publisher."
+    },
+    {
+      "name": "Lung_tilescan_IDR9798462",
+      "arrays": 8,
+      "downloaded_chunks": 1506,
+      "source_pixels": "Original compressed chunks; representative hashes rechecked against publisher."
+    },
+    {
+      "name": "Melanoma_2D_time_IDR12922361",
+      "arrays": 6,
+      "downloaded_chunks": 360,
+      "source_pixels": "Original compressed chunks; representative hashes rechecked against publisher."
+    },
+    {
+      "name": "Tonsil_27channels_IDR5025553",
+      "arrays": 5,
+      "downloaded_chunks": 432,
+      "source_pixels": "Original compressed chunks; representative hashes rechecked against publisher."
+    },
+    {
+      "name": "Zebrafish_lightsheet_IDR4007817",
+      "arrays": 3,
+      "downloaded_chunks": 47637,
+      "source_pixels": "Original compressed chunks; representative hashes rechecked against publisher."
+    },
+    {
+      "name": "Neurites_phase_NeuroQuantify",
+      "source_pixels": "Every native pixel verified against original TIFF.",
+      "dtype": "uint8",
+      "shape": [
+        1,
+        3,
+        1,
+        1920,
+        2560
+      ]
+    },
+    {
+      "name": "Neurites_fluorescence_DRG",
+      "source_pixels": "Every native pixel verified against original TIFF.",
+      "dtype": "uint8",
+      "shape": [
+        1,
+        1,
+        1,
+        1040,
+        1388
+      ]
+    }
+  ],
+  "labels": "Original masks verified; no generated labels."
+}

@@ -101,3 +101,31 @@ def test_gallery_resolves_metadata_independently_for_heterogeneous_fields(config
     model=inspect_store(root)
     assert _field_model(root,model,{"field":"A/1/0"},{}) is model
     assert _field_model(root,model,{"field":"B/2/9"},{})["channels"][0]["label"]=="Independent channel"
+
+def test_roi_get_preserves_json_channel_settings_and_label_opacity(tmp_path, zarr_format):
+    import json
+    from io import BytesIO
+    from PIL import Image
+    from biomero_zarr_viewer.roi import render_roi_png
+    from .zarr_helpers import write_volume_group
+
+    axes = [{"name": a} for a in "cyx"]
+    attrs = {"multiscales": [{"axes": axes, "datasets": [{"path": "0"}]}]}
+    root = tmp_path / "roi.zarr"
+    write_volume_group(root, np.full((1, 4, 4), 50, dtype=np.uint16), (1, 4, 4), attrs, zarr_format)
+    labels = np.zeros((1, 4, 4), dtype=np.uint32)
+    labels[:, :, 2:] = 1
+    write_volume_group(root / "labels/cells", labels, (1, 4, 4), attrs, zarr_format)
+    model = {"kind": "image", "initial_path": ".", "axes": axes,
+             "datasets": [{"path": "0"}], "channels": [{"index": 0}],
+             "labels": [{"path": "labels/cells", "axes": axes, "datasets": [{"path": "0"}]}]}
+    query = {"field": ".", "roi": "0,0,4,4", "sourceChannels": "1", "z": "0", "t": "0",
+             "channelSettings": json.dumps([{"index": 0, "color": "#00FF00", "low": 0, "high": 100}]),
+             "overlays": json.dumps([{"labelPath": "labels/cells", "mode": "fill", "color": "#FF0000", "opacity": .15}])}
+    result = render_roi_png(root, model, query)
+    pixels = np.asarray(Image.open(BytesIO(result.content)))
+    assert pixels.shape == (4, 4, 3)
+    np.testing.assert_allclose(pixels[1, 1], [0, 128, 0], atol=1)
+    np.testing.assert_allclose(pixels[1, 3], [38, 108, 0], atol=1)
+    with pytest.raises(InvalidROI, match="Invalid ROI display settings"):
+        render_roi_png(root, model, {**query, "channelSettings": "[broken"})

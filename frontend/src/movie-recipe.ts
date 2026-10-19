@@ -14,6 +14,7 @@ export interface MoviePanel {
   tracks?: { rows: Record<string, unknown>[]; columns: { id: string; x: string; y: string; t: string; z?: string }; color?: string };
 }
 export interface MovieRecipe {
+  viewCapture?: {version:1; space:'screen'; renderer:string; mode:string; quality:number; settings:Record<string,unknown>};
   version?: 2; storeUuid?: string; sourceBinding?: string; source?: { kind: "current-image" }; filename?: string; title?: string; panels: MoviePanel[];
   sequence: { version: 1; start: number; end: number; step?: number; fps?: number; maxBytes?: number; trailFrames?: number };
 }

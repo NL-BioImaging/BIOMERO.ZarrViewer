@@ -117,6 +117,7 @@ function drawScale(context: OffscreenCanvasRenderingContext2D, capability: Capab
 }
 
 export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal: AbortSignal) {
+  if (recipe.viewCapture) throw new Error('This recipe requires the 3D view exporter.');
   movieSequence(recipe);
   if (JSON.stringify(recipe).length > 1024 * 1024) throw new Error('Movie recipe exceeds 1 MiB. Use a smaller bounded track table.');
   const capability = await fetchCapabilities(imageId,recipe.panels[0].field,signal);
@@ -195,6 +196,15 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
 
 export async function exportMovie(imageId: number, recipe: MovieRecipe, signal: AbortSignal, progress: (completed: number, total: number) => void) {
   const prepared = await prepareMovie(imageId, recipe, signal);
+  return encodePreparedMovie(prepared, recipe.sequence.start, signal, progress);
+}
+
+export interface MovieResult { data: ArrayBuffer; poster: ArrayBuffer; provenance: {frameCount:number; [key:string]:unknown} }
+
+/** One rendered frame and one encoder request pending at a time. */
+export async function encodePreparedMovie<P extends {frameCount:number}>(prepared: {
+  sequence: ReturnType<typeof movieSequence>; canvas: OffscreenCanvas; frame: (t:number)=>Promise<ImageData>; provenance:P;
+}, start: number, signal: AbortSignal, progress: (completed:number,total:number)=>void):Promise<MovieResult> {
   signal.throwIfAborted();
   const worker = new Worker(new URL('./movie-encoder.worker.ts', import.meta.url), { type: 'module' });
   let id = 0;
@@ -218,7 +228,7 @@ export async function exportMovie(imageId: number, recipe: MovieRecipe, signal: 
     let poster: ArrayBuffer | undefined;
     for (let index = 0; index < prepared.sequence.frames; index++) {
       signal.throwIfAborted();
-      const frame = await prepared.frame(recipe.sequence.start + index * prepared.sequence.step);
+      const frame = await prepared.frame(start + index * prepared.sequence.step);
       if (index === 0) poster = await (await prepared.canvas.convertToBlob({ type: 'image/png' })).arrayBuffer();
       await request('frame', { data: frame.data.buffer, width: frame.width, height: frame.height, index }, [frame.data.buffer]);
       progress(index + 1, prepared.sequence.frames);

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ColorPaletteExtension,
-  DetailView,
+  MAX_CHANNELS,
   DETAIL_VIEW_ID,
   getDefaultInitialViewState,
-  OverviewView,
   OVERVIEW_VIEW_ID,
   VivViewer,
 } from "@hms-dbmi/viv";
@@ -15,6 +14,7 @@ import { inspectLabelPixel, type LabelHit, type LoadedLabel } from "./label-insp
 import { previewLevel } from "./preview-resolution";
 import { ScaleBar } from "./ScaleBar";
 import { Matrix4 } from "@math.gl/core";
+import { MultiplexDetailView as DetailView, MultiplexOverviewView as OverviewView } from "./multiplex-views";
 
 interface LabelTooltip {
   screenX: number;
@@ -75,7 +75,7 @@ export function ViewerCanvas({
   onTilesLoaded,
 }: Props) {
   const loadingFrame=useMemo(()=>({ready:new Set<string>(),failed:new Set<string>(),expected:new Set([
-    ...(channels.some(c=>c.visible)?["image"]:[]),
+    ...Array.from({length:Math.ceil(channels.filter(c=>c.visible).length/MAX_CHANNELS)},(_,i)=>`image:${i}`),
     ...labelStates.filter(state=>state.visible&&labels.some(label=>label.id===state.id)).map(state=>`label:${state.id}`),
   ])}),[loader,labels,z,t,JSON.stringify(channels.map(c=>c.visible)),JSON.stringify(labelStates.map(l=>[l.id,l.visible]))]);
   const liveFrame=useRef(loadingFrame);liveFrame.current=loadingFrame;
@@ -160,14 +160,14 @@ export function ViewerCanvas({
     colors: channels.map((channel) => hexToRgb(channel.color)),
     contrastLimits: channels.map((channel) => [channel.low, channel.high]),
     extensions: [new ColorPaletteExtension()],
-    onTileError: (error: unknown) => reportTileError("image", error),
-    onViewportLoad: () => reportViewportLoad("image"),
+    onBatchTileError: (index:number,error: unknown) => reportTileError(`image:${index}`, error),
+    onBatchViewportLoad: (index:number) => reportViewportLoad(`image:${index}`),
   }];
 
   if (showMinimap) {
     const overviewLoader = loader.slice(0, previewLevel(loader, 160 * (window.devicePixelRatio || 1)) + 1);
     views.push(new OverviewView({ id: OVERVIEW_VIEW_ID, loader: overviewLoader, detailHeight: height, detailWidth: width, position: "bottom-left", margin: 16, minimumWidth: 120, maximumWidth: 160, minimumHeight: 90, maximumHeight: 160, clickCenter: true }));
-    layerProps.push({ ...layerProps[0], loader: overviewLoader, onViewportLoad:()=>{},onTileError:()=>{} });
+    layerProps.push({ ...layerProps[0], loader: overviewLoader, onBatchViewportLoad:()=>{},onBatchTileError:()=>{} });
     viewStates.push({ id: OVERVIEW_VIEW_ID });
   }
 

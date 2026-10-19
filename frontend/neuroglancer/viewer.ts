@@ -67,6 +67,18 @@ try {
   viewer.projectionScale.changed.add(cameraChanged);
   viewer.crossSectionScale.changed.add(cameraChanged);
   window.addEventListener("message", event => {
+    if(event.source===window.parent&&event.origin===origin&&event.data?.type==='biomero-ng-capture'){
+      try{
+        if(!viewer.isReady())throw new Error('The 3D frame is still loading.');
+        viewer.display.draw();
+        const source=viewer.display.canvas;
+        if(!source.width||!source.height||source.width*source.height>16_000_000)throw new Error('The 3D view is too large to capture.');
+        const target=new OffscreenCanvas(source.width,source.height),context=target.getContext('2d')!;
+        context.drawImage(source,0,0);const pixels=context.getImageData(0,0,source.width,source.height);
+        window.parent.postMessage({type:'biomero-ng-capture',id:event.data.id,width:source.width,height:source.height,data:pixels.data.buffer},origin,[pixels.data.buffer]);
+      }catch(error){send({type:'biomero-ng-capture',id:event.data.id,error:String(error)});}
+      return;
+    }
     if (event.source !== window.parent || event.origin !== origin || event.data?.type !== "biomero-ng-state") return;
     try {
       updating = true;

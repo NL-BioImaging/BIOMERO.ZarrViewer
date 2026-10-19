@@ -4,11 +4,14 @@ import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
 import { neuroglancerState, type NeuroglancerCamera, type NeuroglancerPrepared } from "./neuroglancer-state";
 import { SliceControls, volumeLayout, type VolumeView, type SlicePlane } from "./VolumeViewControls";
 import { PanelScaleBars, type PanelScale } from "./ScaleBar";
+import { viewerContextId } from "./viewer-context";
 
 interface Props {
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
   brightness: number; background: string; gain: number; height: number;
+  unit?: string;
+  viewId?: string;
   view?: VolumeView; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
   camera?: NeuroglancerCamera; onCameraChange: (camera: NeuroglancerCamera) => void;
   onError: (message: string) => void; onReady: () => void; onCancel: () => void;
@@ -19,9 +22,11 @@ export function NeuroglancerCanvas(props: Props) {
   const plane = props.plane || "xy";
   const [positionCommand, setPositionCommand] = useState<{ position: number[]; id: number }>();
   const iframe = useRef<HTMLIFrameElement>(null);
+  const [contextViewId] = useState(()=>props.viewId || viewerContextId());
   const latest = useRef(props); latest.current = props;
   const [panelScales, setPanelScales] = useState<PanelScale[]>([]);
   const [prepared, setPrepared] = useState<NeuroglancerPrepared>();
+  const meshesPending=useRef(false);meshesPending.current=Boolean(prepared?.pending);
   const [error, setError] = useState<string>();
   const [progress, setProgress] = useState("Opening 3D data…");
   const [initialized, setInitialized] = useState(0);
@@ -55,7 +60,7 @@ export function NeuroglancerCanvas(props: Props) {
       setProgress("");
       return;
     }
-    const query = new URLSearchParams({ field: props.field, level: String(props.resolution), t: String(props.t), channels: channelsKey, labels: labelsKey });
+    const query = new URLSearchParams({ field: props.field, level: String(props.resolution), t: String(props.t), channels: channelsKey, labels: labelsKey, view_id: contextViewId });
     if(retry) query.set("retryFailed","1");
     const prepare = async () => {
       try {
@@ -91,12 +96,12 @@ export function NeuroglancerCanvas(props: Props) {
     const receive = (event: MessageEvent) => {
       if (event.source !== iframe.current?.contentWindow || event.origin !== window.location.origin) return;
       if (event.data?.type === "biomero-ng-initialized") setInitialized(value => value + 1);
-      if (event.data?.type === "biomero-ng-ready") { setProgress(""); latest.current.onReady(); }
+      if (event.data?.type === "biomero-ng-ready" && !meshesPending.current) { setProgress(""); latest.current.onReady(); }
       if (event.data?.type === "biomero-ng-loading") setProgress("Loading image and segmentation surfaces…");
-      if (event.data?.type === "biomero-ng-panels") setPanelScales(event.data.panels.map((panel: PanelScale) => ({...panel,unitsPerPixel:panel.unitsPerPixel / 1000})));
+      if (event.data?.type === "biomero-ng-panels") setPanelScales(event.data.panels.map((panel: PanelScale) => ({...panel,unitsPerPixel:panel.unitsPerPixel / (latest.current.unit === "pixel" ? 1 : 1000)})));
       if (event.data?.type === "biomero-ng-camera") latest.current.onCameraChange(event.data.camera);
       if (event.data?.type === "biomero-ng-depth") {
-        setDepthStep(event.data.nanometers / 1000);
+        setDepthStep(event.data.nanometers / (latest.current.unit === "pixel" ? 1 : 1000));
         clearTimeout(depthTimer.current);
         depthTimer.current = setTimeout(() => setDepthStep(undefined), 2000);
       }
@@ -122,7 +127,7 @@ export function NeuroglancerCanvas(props: Props) {
           scale: props.camera?.scale || state!.projectionScale, crossSectionScale: props.camera?.crossSectionScale || state!.crossSectionScale });
       }} />}
 
-    {depthStep != null && <div className="volume-depth-feedback" role="status">Depth step: {depthStep > 0 ? "+" : ""}{Number(depthStep.toPrecision(3))} µm</div>}
+    {depthStep != null && <div className="volume-depth-feedback" role="status">Depth step: {depthStep > 0 ? "+" : ""}{Number(depthStep.toPrecision(3))} {props.unit === "pixel" ? "px" : "µm"}</div>}
     {channelsKey === "[]" && labelsKey === "[]" && <div className="volume-empty" role="status">All channels and labels are hidden.</div>}
     {prepared && Object.values(prepared.sources).some(source => Object.keys(source.mesh_errors || {}).length) &&
       <div className="volume-depth-feedback" role="status">Some label surfaces could not be prepared. Try a lower quality or <button onClick={()=>setRetry(n=>n+1)}>Retry failed surfaces</button>.</div>}
@@ -131,7 +136,7 @@ export function NeuroglancerCanvas(props: Props) {
       <span>XY</span><span>XZ</span><span>3D</span><span>YZ</span>
     </div>}
     {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
-    {props.showScale && !error && <PanelScaleBars panels={panelScales} unit="micrometer" />}
+    {props.showScale && !error && <PanelScaleBars panels={panelScales} unit={props.unit || "micrometer"} />}
     {error && <div className="volume-error" role="alert"><strong>Unable to load 3D labels</strong><p>{error}</p>
       <button onClick={() => { setError(undefined); setRetry(value => value + 1); }}>Retry</button>
       <button onClick={props.onCancel}>Return to 2D</button></div>}
