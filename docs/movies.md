@@ -42,6 +42,12 @@ viewer links remain supported. The bundled `use-omero-zarr-viewer` skill (v7)
 documents both formats; its canonical source is under `_agents/skills/`, with
 the packaged copy checked by `scripts/sync_analysis_skills.py --check`.
 
+## Rendered 3D movies
+
+The viewer also exports Volume, Slice and Orthogonal layouts in Neuroglancer and Viv. These exports capture the current screen view with its camera, visible layers and scale bars, and fit within the same 2048 × 2048 limit. They are not native-resolution 3D stacks. Neuroglancer can include label surfaces; Viv renders intensities. Export waits for each frame, permits cancellation and restores the original timepoint. The fixed background is shared with the viewer.
+
+Recipes record `viewCapture`, engine, layout, quality, camera and display settings. The Analysis integration's native 2D renderer cannot replay these screen-space recipes. Playback FPS is independent of acquisition timing.
+
 ## Acceptance
 
 The real Chrome smoke test covers four ordered frames at 5 FPS (0.8 seconds),

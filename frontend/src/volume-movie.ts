@@ -1,3 +1,4 @@
+import { IMAGE_BACKGROUND } from "./viewer-appearance";
 import { movieSequence, type MovieRecipe } from './movie-recipe';
 import { encodePreparedMovie } from './movie-renderer';
 import { abortableDelay } from './shared-request';
@@ -27,11 +28,11 @@ export async function captureNeuroglancer(frame:HTMLIFrameElement, signal:AbortS
 }
 
 /** Composite only the image canvases and scientific overlays, not the sidebar. */
-export async function captureVolumeView(host:HTMLElement, canvas:OffscreenCanvas, background:string, signal:AbortSignal) {
+export async function captureVolumeView(host:HTMLElement, canvas:OffscreenCanvas, signal:AbortSignal) {
   signal.throwIfAborted();
   const bounds=host.getBoundingClientRect(),context=canvas.getContext('2d')!;
   const sx=canvas.width/bounds.width,sy=canvas.height/bounds.height;
-  context.fillStyle=background;context.fillRect(0,0,canvas.width,canvas.height);
+  context.fillStyle=IMAGE_BACKGROUND;context.fillRect(0,0,canvas.width,canvas.height);
   const sources=[...host.querySelectorAll<HTMLCanvasElement|HTMLIFrameElement>('canvas, iframe.neuroglancer-frame')].filter(el=>{
     const box=el.getBoundingClientRect();return box.width>0&&box.height>0;
   });
@@ -80,7 +81,7 @@ export async function exportVolumeMovie(imageId:number,recipe:MovieRecipe,sizeT:
     await loadFrame(t,signal);signal.throwIfAborted();
     const current=host.getBoundingClientRect();
     if(current.width!==bounds.width||current.height!==bounds.height)throw new Error('The viewer was resized. Create the movie again.');
-    return captureVolumeView(host,canvas,String(recipe.viewCapture!.settings.background||'#030406'),signal);
+    return captureVolumeView(host,canvas,signal);
   },provenance:{application:'biomero-zarr-viewer',rendererVersion:'browser-volume-movie-v1',omeroImageId:imageId,
     createdAt:new Date().toISOString(),frameCount:sequence.frames,fps:sequence.fps,width:sequence.width,height:sequence.height,
     encodedWidth:sequence.width+sequence.width%2,encodedHeight:sequence.height+sequence.height%2,

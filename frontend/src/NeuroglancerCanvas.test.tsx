@@ -9,7 +9,7 @@ test("layout and slice position changes use the existing authorized scene withou
   const fetch = vi.fn(async () => new Response(JSON.stringify(prepared)));
   const props = { auth:{neuroglancerUrl:"/ng/",fetch} as any, field:".",t:0,resolution:0,
     channels:[{index:0,label:"DNA",color:"#FFFFFF",visible:true,low:0,high:255,domainMin:0,domainMax:255}], labels:[],
-    blendMode:"maximum" as const,showScale:true,resetKey:0,brightness:1,background:"#030406",gain:-3,height:600,
+    blendMode:"maximum" as const,showScale:true,resetKey:0,brightness:1,gain:-3,height:600,
     onCameraChange:vi.fn(),onPlane:vi.fn(),onError:vi.fn(),onReady:vi.fn(),onCancel:vi.fn() };
   try {
     const rendered = render(<NeuroglancerCanvas {...props} view="3d" />);
@@ -44,7 +44,7 @@ test("changing time cancels the old preparation and requests only the new select
   const fetch = vi.fn((_url: string, _options?: { signal?: AbortSignal }) => new Promise<Response>(() => {}));
   const props = { auth: { neuroglancerUrl: "/ng/", fetch } as any, field: ".", t: 0, resolution: 0,
     channels: [{ index: 0, label: "DNA", color: "#FFFFFF", visible: true, low: 0, high: 255, domainMin: 0, domainMax: 255 }],
-    labels: [], blendMode: "maximum" as const, showScale: true, resetKey: 0, brightness: 1, background: "#030406", gain: -3, height: 600,
+    labels: [], blendMode: "maximum" as const, showScale: true, resetKey: 0, brightness: 1, gain: -3, height: 600,
     onCameraChange: vi.fn(), onError: vi.fn(), onReady: vi.fn(), onCancel: vi.fn() };
   try {
     const view = render(<NeuroglancerCanvas {...props} />);

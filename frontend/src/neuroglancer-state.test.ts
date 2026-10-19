@@ -61,11 +61,11 @@ test("label appearance, visibility and intensity projection modes are applied in
 
 test("3D brightness changes only image shaders and leaves segmentation appearance untouched", () => {
   const normal = neuroglancerState(prepared, channels, labels, "additive", true);
-  const bright = neuroglancerState(prepared, channels, labels, "additive", true, 2, "#FFFFFF", -1);
+  const bright = neuroglancerState(prepared, channels, labels, "additive", true, 2, -1);
   expect(bright.layers[0].shader).not.toEqual(normal.layers[0].shader);
   expect(bright.layers[1]).toEqual(normal.layers[1]);
   expect(bright.layers[0].volumeRenderingGain).toBe(-1);
-  expect(bright.projectionBackgroundColor).toBe("#FFFFFF");
+  expect(bright.projectionBackgroundColor).toBe(normal.projectionBackgroundColor);
 });
 
 test("native Zarr streaming maps ZYX axes into the same physical XYZ space", () => {

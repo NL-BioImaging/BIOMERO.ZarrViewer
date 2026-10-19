@@ -8,7 +8,7 @@ Neuroglancer 3D, or choose Viv for intensity-only 3D rendering.
 
 Select an OME-Zarr Image, Plate or Well and choose **Open With → OME-Zarr Viewer**.
 Read the [viewer guide](viewer-guide.md), also available from the viewer's Help
-button, for channels, labels, navigation, 3D controls and sharing.
+button, for channels, labels, Fit and 1:1 zoom, navigation, 3D controls and sharing.
 See [movie playback and export](movies.md) for temporal data.
 
 ## Administration

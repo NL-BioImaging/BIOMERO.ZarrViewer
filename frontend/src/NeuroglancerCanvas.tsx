@@ -9,7 +9,7 @@ import { viewerContextId } from "./viewer-context";
 interface Props {
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
-  brightness: number; background: string; gain: number; height: number;
+  brightness: number; gain: number; height: number;
   unit?: string;
   viewId?: string;
   view?: VolumeView; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
@@ -44,6 +44,11 @@ export function NeuroglancerCanvas(props: Props) {
     }).catch(reason => { if (!abort.signal.aborted) setError(String(reason)); });
     return () => abort.abort();
   }, []);
+  useEffect(()=>{
+    const forward=(event:KeyboardEvent)=>iframe.current?.contentWindow?.postMessage({type:"biomero-ng-modifiers",ctrlKey:event.ctrlKey,altKey:event.altKey,shiftKey:event.shiftKey,metaKey:event.metaKey},window.location.origin);
+    window.addEventListener("keydown",forward,true);window.addEventListener("keyup",forward,true);
+    return ()=>{window.removeEventListener("keydown",forward,true);window.removeEventListener("keyup",forward,true);};
+  },[]);
   const channelsKey = JSON.stringify(props.channels.filter(c => c.visible).slice(0, 10).map(c => c.index));
   const labelsKey = JSON.stringify(props.labels.filter(l => l.visible).map(l => ({ path: l.path, channel: l.id.startsWith("focused-channel-") ? Number(l.id.split("-").at(-1)) - 1 : 0,
     ...(l.highlightValues?.length || l.highlightValue ? { segments: (l.highlightValues?.length ? l.highlightValues : [l.highlightValue!]).map(String), interactive: true } : {}) })));
@@ -86,11 +91,10 @@ export function NeuroglancerCanvas(props: Props) {
     void prepare();
     return () => { cancelled = true; clearTimeout(timer); abort.abort(); };
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
-  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.background, props.gain]);
+  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain]);
   const state = useMemo(() => prepared ? {
-    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.background, props.gain),
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain),
     layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
-    crossSectionBackgroundColor: props.background,
   } : undefined, [prepared, displayKey, view, plane, props.showScale]);
   useEffect(() => {
     const receive = (event: MessageEvent) => {

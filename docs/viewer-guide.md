@@ -10,6 +10,9 @@ your image pixels or segmentation labels.
 ## Navigate in 2D
 
 - Drag the image to pan. Scroll the mouse wheel to zoom.
+- The image cursor shows a magnifying glass for wheel zoom and a closed hand while panning. It updates when modifier keys or mouse buttons change the active action.
+- **Zoom fit**, immediately before Fullscreen, centers the image and fits it inside the window.
+- **Zoom 1:1** shows one native image X pixel per screen pixel. It keeps the current position and applies to the original resolution, even when a coarser quality level is displayed.
 - Use **Navigator** in the top toolbar to show or hide the overview map.
 - Use **Scale bar** to show or hide the physical scale when calibration is available.
 - Use **Fullscreen** for more space; click it again or press Escape to leave fullscreen.
@@ -35,7 +38,7 @@ These controls change the display only. They do not change the underlying measur
 
 Use the checkbox beside **Labels** to show or hide all segmentation layers.
 The Labels tab provides individual visibility, opacity and color controls.
-New label layers start at 70% opacity; saved links retain their explicit opacity.
+New label layers start at **15%** opacity for single-Z images and **55%** for Z stacks, including their 2D slices. Saved links retain their explicit opacity.
 Keep multicolor object colors or select a single color to compare segmentation results.
 
 In 2D, choose filled objects, outlines or both and adjust outline width.
@@ -79,7 +82,7 @@ labels, the navigator and movie export. Both engines provide all three volume la
 - In Viv, sections display actual XY, XZ and YZ voxel planes from the cached intensity volume. Crosshairs show the same selected voxel in every section. Click a section or use the sliders to move the common position. Drag to pan and scroll to zoom; section navigation is linked and framing preserves physical XYZ proportions. Viv remains intensity-only.
 
 Slice positions refer to the selected quality level and are displayed starting at 1.
-Changing quality preserves physical position in Neuroglancer and relative position in Viv.
+Changing quality preserves the shared physical position and scale in both engines.
 Viv reuses one cached volume and three lightweight section images, so Level 0 is available whenever it fits the shared 200 MiB level limit and GPU texture limits.
 In Orthogonal mode, all four panels share the same physical zoom. The 3D panel uses orthographic projection to keep sizes consistent through the volume. Zooming any panel updates the others. The initial scale fits the complete sections, and Viv uses gentle wheel zoom in both the 3D and slice panels. Standalone Volume mode retains perspective.
 
@@ -93,21 +96,24 @@ gently, about 12% per notch. **Ctrl+wheel** moves the focus through depth by ten
 calibrated Z slices per notch, without changing the zoom. The depth readout shows
 the movement distance; rotating the view changes the direction of depth movement.
 
-In **Viv**, drag to rotate and scroll to zoom.
+In **Viv**, drag to rotate and scroll to zoom. Shift, Ctrl, Alt or Meta with a drag pans the volume; a right-button drag also pans. In flat Viv sections, an ordinary left-button drag pans; modified drags do not rotate a flat image.
+
+The cursor previews wheel zoom at rest. While dragging it shows the active pan or rotation action. In Neuroglancer, holding Ctrl shows slice/depth movement for the wheel; Shift shows slice movement in flat panels. Alt+wheel changes the depth range. Clicking changes the cursor to the action bound to that mouse button. The cursor stays with the operation that started a drag until the button is released.
+
+**Zoom fit** and **Zoom 1:1** work in both engines and all layouts. Fit centers and frames the image without resetting volume rotation; a single Slice retains its selected depth. 1:1 uses the native X pixel size at the 3D view center. Perspective objects away from that plane can appear larger or smaller. Orthogonal panels remain linked at one physical scale. These screen pixels are browser CSS pixels; display scaling does not change the source data.
 Use **Reset 3D View** in the toolbar to return to the initial framing.
 The 3D scale bar follows zoom and shows the physical scale at the volume center.
 Perspective means objects nearer or farther from the center have a different apparent scale.
 
 ## 3D display and brightness
 
-The **Display** menu offers **Additive blend**, **Maximum intensity**
+The **Display** choice buttons offer **Additive blend**, **Maximum intensity**
 and **Minimum intensity**. Neuroglancer defaults to Maximum intensity; Viv
 defaults to Additive blend. An explicitly saved choice in a viewer link takes
 precedence. Try the different modes to emphasize different
 structures in the intensity volume.
 
-Use **Background** to choose the canvas color and **Brightness** to adjust
-intensity channels. Neuroglancer also provides **Volume gain** to adjust their
+Use **Brightness** to adjust intensity channels. The image background is fixed. Neuroglancer also provides **Volume gain** to adjust their
 volume appearance. These intensity controls do not alter label color or opacity.
 Use the Labels tab to adjust segmentation surfaces separately.
 
@@ -133,7 +139,7 @@ In a 2D field view, **Export movie** saves a browser-generated MP4 of the select
 frame range and visible image area, with channel settings and label overlays.
 Export shows progress and can be cancelled. Encoding requires browser support;
 Chrome is the tested browser. Exports are limited to 600 frames and 2048 × 2048 pixels.
-3D movie export is not available.
+In 3D, **Export movie** captures the rendered Volume, Slice or Orthogonal view in either engine. It preserves the selected camera, quality, visible layers and scale bars while stepping through time. Neuroglancer includes available label surfaces; Viv includes intensities. These movies use the current screen view, rather than native image pixels. Controls are held during export; Stop cancels and restores the previous timepoint. A recipe and poster accompany the MP4.
 
 ## Share a view
 
@@ -161,7 +167,7 @@ segment may occasionally be absent.
 
 ## Use this help window
 
-Open **Help** to the right of Fullscreen. Search for a feature or select a
+Open **Help** in the top toolbar, after the metadata icon. Search for a feature or select a
 section from Contents. Drag the title bar to move the window and drag its
 bottom-right corner to resize it. You can keep it open while using the viewer.
 Use **Close help**, or press Escape while focused inside help, to close it.
@@ -171,9 +177,7 @@ Use **Close help**, or press Escape while focused inside help, to close it.
 
 Select the **Image metadata** icon immediately after **Fullscreen** in the top toolbar.
 The movable, resizable popup groups stored dimensions, calibration, channels,
-resolution levels, labels and plate information. Search names, keys or values;
-expand **All OME-Zarr metadata** to inspect custom attributes and complete array
-metadata. No pixel chunks are read for this inspection.
+resolution levels, labels and plate information. Search names, keys or values in the currently loaded metadata. The selected field and summary load first; browse additional hierarchy pages on demand to inspect custom attributes and array metadata. No pixel chunks are read for this inspection.
 
 The lower categories show readable OMERO image, acquisition, pixels, channel and
 instrument details, annotations and key-values, parent container annotations,

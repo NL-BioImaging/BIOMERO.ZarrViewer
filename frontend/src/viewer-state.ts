@@ -18,7 +18,6 @@ export interface DeepLinkState {
   volumeRenderer?: VolumeRenderer;
   volumeBlend?: VolumeBlendMode;
   volumeBrightness?: number;
-  volumeBackground?: string;
   volumeGain?: number;
   volumeCamera?: VolumeCameraState;
   ngCamera?: NeuroglancerCamera;
@@ -101,8 +100,6 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   if (params.get("viewer3d") === "classic") state.volumeRenderer = "classic";
   if (params.has("brightness3d")) state.volumeBrightness = finite(params.get("brightness3d"), 1, .1, 4);
   if (params.has("gain3d")) state.volumeGain = finite(params.get("gain3d"), -3, -5, 3);
-  const background = params.get("background3d");
-  if (background && /^#[0-9a-f]{6}$/i.test(background)) state.volumeBackground = background;
   const volumeBlend = params.get("volumeBlend");
   if (volumeBlend === "additive" || volumeBlend === "maximum" || volumeBlend === "minimum") state.volumeBlend = volumeBlend;
   if (params.has("volumeLevel")) state.volumeLevel = Math.floor(finite(params.get("volumeLevel"), 0, 0, 1024));
@@ -255,7 +252,6 @@ export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkStat
   if (state.volumeRenderer === "classic") params.set("viewer3d", "classic");
   if (state.volumeBrightness != null && state.volumeBrightness !== 1) params.set("brightness3d", String(state.volumeBrightness));
   if (state.volumeGain != null && state.volumeGain !== -3) params.set("gain3d", String(state.volumeGain));
-  if (state.volumeBackground && state.volumeBackground !== "#030406") params.set("background3d", state.volumeBackground);
   if (state.volumeView && state.volumeView !== "3d") params.set("volumeView", state.volumeView);
   if (state.slicePlane && state.slicePlane !== "xy") params.set("slicePlane", state.slicePlane);
   if (state.ngCamera) params.set("ngCamera", JSON.stringify(state.ngCamera));

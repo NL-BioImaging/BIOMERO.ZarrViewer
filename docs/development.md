@@ -41,3 +41,11 @@ viewer features; installation and API instructions belong in the other guides.
 
 The `0.8.0-beta1` branch collects the 3D viewer changes. Python package versions
 come from Git tags through setuptools-scm; a branch update is not a published release.
+
+## Preparing 0.8.0
+
+Run backend and frontend tests, the strict documentation build, browser acceptance and distribution checks. The reusable CI workflow includes all of these; the release workflow validates the same source before publishing. See [release readiness](release-0.8.0.md) for this candidate's evidence and the remaining publication steps.
+
+`frontend/package.json` is private and identifies this frontend as 0.8.0; the published Python version still comes exclusively from the Git tag. Use **v0.8.0** for the stable release. A locally built wheel with a 0.8.0 version override is a validation artifact, not a published release. Do not create a tag or publish merely to test the workflow.
+
+The README uses an absolute logo URL and absolute repository documentation links so they work on both GitHub and PyPI. Before publishing, update the default branch to the reviewed release candidate: GitHub Pages currently publishes documentation from `main`.

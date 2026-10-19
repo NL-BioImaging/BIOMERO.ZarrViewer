@@ -45,3 +45,20 @@ export function toViv(nav:SharedNavigation,g:Geometry,camera:VolumeCameraState|u
 export function fromViv(camera:VolumeCameraState,g:Geometry):SharedNavigation {
   return {position:(camera.slicePosition||[.5,.5,.5]).map((n,i)=>g.origin[i]+n*g.shape[i]*g.spacing[i]),unitsPerPixel:g.worldUnitSize/2**camera.zoom,unit:g.unit};
 }
+
+/** Fit leaves section depth intact; 1:1 uses the level-zero X pixel in CSS pixels. */
+export function imageZoomNavigation(g:Geometry,current:SharedNavigation,width:number,height:number,
+  view:VolumeView|"2d",plane:SlicePlane,native=false):SharedNavigation {
+  if(native)return {...current,position:[...current.position],unitsPerPixel:g.spacing[0],unit:g.unit};
+  const extent=g.shape.map((n,i)=>n*g.spacing[i]);
+  if(view==="2d"||view==="slice") {
+    const [a,b]=view==="2d"?[0,1]:plane==="xy"?[0,1]:plane==="xz"?[0,2]:[1,2];
+    const position=[...current.position];
+    for(const axis of [a,b])position[axis]=g.origin[axis]+extent[axis]/2;
+    return {position,unitsPerPixel:Math.max(extent[a]/Math.max(1,width),extent[b]/Math.max(1,height))/.9,unit:g.unit};
+  }
+  const fitted=fitNavigation(g,width,height,view);
+  // A sphere bound includes the rotated volume without changing its rotation.
+  const factor=view==="orthogonal"?.5:1;
+  return {...fitted,unitsPerPixel:Math.max(fitted.unitsPerPixel,Math.hypot(...extent)/Math.max(1,Math.min(width,height)*factor)/.9)};
+}

@@ -1,3 +1,4 @@
+import { useImageCursor } from "./use-image-cursor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ColorPaletteExtension,
@@ -74,6 +75,7 @@ export function ViewerCanvas({
   onTileError,
   onTilesLoaded,
 }: Props) {
+  const cursorHost=useImageCursor("viv-2d");
   const loadingFrame=useMemo(()=>({ready:new Set<string>(),failed:new Set<string>(),expected:new Set([
     ...Array.from({length:Math.ceil(channels.filter(c=>c.visible).length/MAX_CHANNELS)},(_,i)=>`image:${i}`),
     ...labelStates.filter(state=>state.visible&&labels.some(label=>label.id===state.id)).map(state=>`label:${state.id}`),
@@ -199,7 +201,7 @@ export function ViewerCanvas({
     }, 80);
   }, [labels, labelStates, z, t,aspect,loader]);
 
-  return <>
+  return <div className="image-cursor-surface" ref={cursorHost} style={{width:"100%",height:"100%",position:"relative"}}>
     <VivViewer
       views={views}
       viewStates={viewStates}
@@ -227,5 +229,5 @@ export function ViewerCanvas({
       <small>x {labelTooltip.imageX} · y {labelTooltip.imageY} · {projection === "slice" ? `z ${z}` : "all Z (projected)"} · t {t}</small>
     </div>}
     {showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** zoom} unit={physicalScale.unit} />}
-  </>;
+  </div>;
 }

@@ -43,6 +43,7 @@ nav:
       - OMERO deployment kit: deployment-omero-deployment-kit.md
   - Development:
       - Build and test: development.md
+      - Release 0.8.0: release-0.8.0.md
       - API and integrations: api.md
       - Compatibility matrix: compatibility-spike.md
       - Open-source provenance: open-source-provenance.md

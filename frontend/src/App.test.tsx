@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { FullscreenButton, focusedLabelStates, labelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
+import { ImageZoomButtons, FullscreenButton, focusedLabelStates, labelStates, LabelPanel, RenderModeToggle, roiPngUrl, ViewerPanel, VolumeControls } from "./App";
 import type { Capability, ChannelState, LabelState, VolumeLevel } from "./types";
 
 const channels: ChannelState[] = [{
@@ -191,9 +191,9 @@ test("segmentation labels are disabled while rendering intensity data in 3D", ()
   expect(screen.getByRole("tab", { name: "Labels (1)" })).toBeDisabled();
   expect(screen.getByRole("combobox", { name: "3D volume quality" })).toBeInTheDocument();
 
-  const background=screen.getByLabelText("3D background color");
+  expect(screen.queryByLabelText("3D background color")).not.toBeInTheDocument();
   const brightness=screen.getByRole("slider",{name:"3D intensity brightness"});
-  expect(background.closest(".appearance-line")).toContainElement(brightness);
+  expect(brightness.closest(".appearance-line")).toContainElement(brightness);
   expect(screen.getByRole("region",{name:"Volume options"}).firstElementChild).toHaveClass("volume-appearance-controls");
   const display = screen.getByRole("button", { name: "Additive blend" });
   expect(display).toHaveAttribute("aria-pressed", "true");
@@ -312,4 +312,11 @@ test("display choice buttons sit directly below the volume layout choices",()=>{
   const view=screen.getByRole("group",{name:"Volume view"}), display=screen.getByRole("group",{name:"3D display mode"});
   expect(view.parentElement?.nextElementSibling).toBe(display.parentElement);
   expect(screen.getByRole("button",{name:"Maximum intensity"})).toHaveAttribute("aria-pressed","true");
+});
+
+test("Fit and 1:1 toolbar buttons appear directly before fullscreen and dispatch independently",()=>{
+ const fit=vi.fn(),native=vi.fn();render(<><ImageZoomButtons onFit={fit} onNative={native}/><FullscreenButton/></>);
+ const buttons=screen.getAllByRole("button");expect(buttons.map(b=>b.getAttribute("aria-label"))).toEqual(["Zoom fit","Zoom 1:1","Enter fullscreen"]);
+ fireEvent.click(buttons[0]);expect(fit).toHaveBeenCalledOnce();expect(native).not.toHaveBeenCalled();
+ fireEvent.click(buttons[1]);expect(native).toHaveBeenCalledOnce();
 });

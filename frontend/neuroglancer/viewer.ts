@@ -1,3 +1,4 @@
+import { imageAction, installImageCursor } from "../src/image-cursor";
 import "neuroglancer";
 import "../src/browser-mesh-store";
 import { makeDefaultViewer } from "neuroglancer/unstable/ui/default_viewer.js";
@@ -14,6 +15,7 @@ const send = (message: object) => window.parent.postMessage(message, origin);
 try {
   const viewer = makeDefaultViewer({ showUIControls: false, showLayerDialog: false, resetStateWhenEmpty: false });
   setDefaultInputEventBindings(viewer.inputEventBindings);
+
   // Ordinary wheel movement zooms in every panel; modified wheel moves slices.
   configureVolumeWheel(viewer.inputEventBindings.perspectiveView);
   viewer.registerDisposer(registerActionListener<WheelEvent>(viewer.element, "biomero-zoom-via-wheel", event => {
@@ -37,6 +39,13 @@ try {
     viewer.perspectiveNavigationState.pose.translateVoxelsRelative([0, 0, step]);
     send({ type: "biomero-ng-depth", nanometers: step });
   }));
+  viewer.element.classList.add("image-cursor-surface");
+  const imageCursor=installImageCursor(viewer.element,input=>{
+    const panel=[...viewer.display.panels].find(panel=>panel.element.contains(input.target as Node));
+    const bindings=panel instanceof PerspectivePanel?viewer.inputEventBindings.perspectiveView:viewer.inputEventBindings.sliceView;
+    return imageAction("neuroglancer",input,id=>(bindings.get(id)||bindings.get(id.replace("at:","bubble:")))?.action);
+  });
+  viewer.registerDisposer(imageCursor.dispose);
   let positionCommandId = -1;
   let layout = "";
   let initialized = false;
@@ -67,6 +76,9 @@ try {
   viewer.projectionScale.changed.add(cameraChanged);
   viewer.crossSectionScale.changed.add(cameraChanged);
   window.addEventListener("message", event => {
+    if(event.source===window.parent&&event.origin===origin&&event.data?.type==='biomero-ng-modifiers'){
+      imageCursor.setModifiers(event.data);return;
+    }
     if(event.source===window.parent&&event.origin===origin&&event.data?.type==='biomero-ng-capture'){
       try{
         if(!viewer.isReady())throw new Error('The 3D frame is still loading.');

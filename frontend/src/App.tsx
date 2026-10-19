@@ -7,7 +7,7 @@ import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { loadOmeZarrFromStore, getDefaultInitialViewState } from "@hms-dbmi/viv";
 import { capabilityCalibration } from "./calibration";
-import { navigationGeometry, fitNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ, type SharedNavigation } from "./navigation";
+import { navigationGeometry, fitNavigation, imageZoomNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ, type SharedNavigation } from "./navigation";
 import { fetchCapabilities, selectedImageId, ViewerApiError } from "./api";
 import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis, type StatisticsContext } from "./channel-scaling";
@@ -150,6 +150,17 @@ export function RenderModeToggle({
     <button className={mode === "2d" ? "active" : ""} aria-pressed={mode === "2d"} onClick={() => onChange("2d")}>2D</button>
     <button className={mode === "3d" ? "active" : ""} aria-pressed={mode === "3d"} disabled={disabled3d} title={disabled3d ? "No safe 3D level is available" : undefined} onClick={() => onChange("3d")}>3D</button>
   </div>;
+}
+
+export function ImageZoomButtons({onFit,onNative}:{onFit:()=>void;onNative:()=>void}) {
+  return <>
+    <button className="icon-button" aria-label="Zoom fit" title="Fit image to window" onClick={onFit}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5m6 0h5v5m0 6v5h-5m-6 0H4v-5"/><rect x="8" y="8" width="8" height="8" rx="1"/></svg>
+    </button>
+    <button className="icon-button" aria-label="Zoom 1:1" title="1 image pixel per screen pixel (3D: at view center)" onClick={onNative}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><text x="12" y="15" textAnchor="middle" fontSize="9" stroke="none" fill="currentColor">1:1</text></svg>
+    </button>
+  </>;
 }
 
 export function FullscreenButton() {
@@ -316,7 +327,6 @@ export default function App() {
   const [volumeRenderer, setVolumeRenderer] = useState<VolumeRenderer>(deepLink.volumeRenderer || "neuroglancer");
   const [selectedVolumeBlend, setVolumeBlend] = useState<VolumeBlendMode | undefined>(deepLink.volumeBlend);
   const [volumeBrightness, setVolumeBrightness] = useState(deepLink.volumeBrightness ?? 1);
-  const [volumeBackground, setVolumeBackground] = useState(deepLink.volumeBackground || "#030406");
   const [volumeGain, setVolumeGain] = useState(deepLink.volumeGain ?? -3);
   const [volumeCamera, setVolumeCamera] = useState<VolumeCameraState | undefined>(deepLink.volumeCamera);
   const [volumeView, setVolumeView] = useState<VolumeView>(deepLink.volumeView || "3d");
@@ -402,6 +412,17 @@ export default function App() {
     else if(effectiveRenderMode==="3d"&&volumeCamera&&volumeGeometry)acceptNavigation(fromViv(volumeCamera,volumeGeometry));
     else if(sharedViewport)acceptNavigation(from2D(sharedViewport,zIndex,geometry));
   };
+  const applyImageZoom=(native:boolean)=>{
+    if(!geometry)return;
+    const current=navigation||(effectiveRenderMode==="3d"&&useNeuroglancer&&ngCamera?fromNeuroglancer(ngCamera,geometry.unit,panelHeight,volumeView):
+      effectiveRenderMode==="3d"&&volumeCamera&&volumeGeometry?fromViv(volumeCamera,volumeGeometry):
+      sharedViewport?from2D(sharedViewport,zIndex,geometry):fitNavigation(geometry,viewerSize.width,viewerSize.height,volumeView));
+    acceptNavigation(imageZoomNavigation(geometry,current,viewerSize.width,viewerSize.height,effectiveRenderMode==="2d"?"2d":volumeView,slicePlane,native));
+    // The embedded viewer preserves its live camera during appearance updates.
+    // Use its explicit camera command when a toolbar zoom is requested.
+    if(effectiveRenderMode==="3d"&&useNeuroglancer)setVolumeReset(value=>value+1);
+  };
+
   const visibleChannelCount = channels.filter((channel) => channel.visible).length;
   const volumeChannelWarning = visibleChannelCount > volumeChannels.length
     ? `3D loads the first ${volumeChannels.length} visible channels; hide another channel to change the set.`
@@ -587,7 +608,6 @@ export default function App() {
         volumeRenderer,
         volumeBlend,
         volumeBrightness,
-        volumeBackground,
         volumeGain,
         volumeCamera:sharedVivCamera,
         ngCamera:sharedNgCamera, volumeView, slicePlane,
@@ -605,7 +625,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, plateFieldIndex, navigation, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeBackground, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, navigation, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -623,7 +643,7 @@ export default function App() {
           {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && viewMode === "field" && <MovieExport
             key={`${effectiveRenderMode}:${volumeRenderer}:${volumeView}`} imageId={imageId} sizeT={currentLoaded.sizeT} exporter={volumeMovieExporter} onBusy={setExportingVolume} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
               ...(effectiveRenderMode==="3d"?{viewCapture:{version:1,space:"screen",renderer:useNeuroglancer?"neuroglancer":"viv",mode:volumeView,quality:selectedVolumeLevel!.index,
-                settings:{background:volumeBackground,brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,
+                settings:{brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,
                   renderedChannels:(useNeuroglancer?channels.filter(c=>c.visible).slice(0,10):volumeChannels).map(c=>c.index),labelsRendered:useNeuroglancer}}}:{}),
               filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
               panels: [{ field, roi: effectiveRenderMode==="3d"?[0,0,...volumeMovieSize]:visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
@@ -649,6 +669,7 @@ export default function App() {
                 onClick={() => setShowMinimap(value => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m7 17 3-7 7-3-3 7Z"/><path d="m10 10 4 4"/></svg></button>}
               <button className={`icon-button ${showScale ? "active" : ""}`} aria-label="Scale bar" title="Scale bar" aria-pressed={showScale} onClick={() => setShowScale(value => !value)}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 7v5m5-5v3m5-3v5"/></svg></button>
             </>}
+            {currentLoaded && viewMode === "field" && <ImageZoomButtons onFit={()=>applyImageZoom(false)} onNative={()=>applyImageZoom(true)} />}
             <FullscreenButton />
             <ViewerMetadata imageId={imageId} field={field || "."} />
             <ViewerHelp />
@@ -686,7 +707,7 @@ export default function App() {
             <NeuroglancerCanvas key={`neuroglancer:${currentLoaded.path}`} auth={authStore} field={currentLoaded.path} channels={channels}
               labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
               t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
-              brightness={volumeBrightness} background={volumeBackground}
+              brightness={volumeBrightness}
               gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
               view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
@@ -702,7 +723,7 @@ export default function App() {
               t={tIndex}
               resolution={selectedVolumeLevel.index}
               blendMode={volumeBlend}
-              brightness={volumeBrightness} background={volumeBackground}
+              brightness={volumeBrightness}
               showScale={showScale}
               camera={sharedVivCamera} view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               onCameraChange={camera=>{setVolumeCamera(camera);if(volumeGeometry)acceptNavigation(fromViv(camera,volumeGeometry));}}
@@ -762,7 +783,6 @@ export default function App() {
           volumeBlend={volumeBlend}
           onVolumeBlend={setVolumeBlend}
           volumeBrightness={volumeBrightness} onVolumeBrightness={setVolumeBrightness}
-          volumeBackground={volumeBackground} onVolumeBackground={setVolumeBackground}
           volumeGain={volumeGain} onVolumeGain={useNeuroglancer ? setVolumeGain : undefined}
           onVolumeLevel={setVolumeLevel}
           volumeChannelWarning={volumeChannelWarning}
@@ -807,8 +827,6 @@ interface ViewerPanelProps {
   onVolumeBlend?: (value: VolumeBlendMode) => void;
   volumeBrightness?: number;
   onVolumeBrightness?: (value: number) => void;
-  volumeBackground?: string;
-  onVolumeBackground?: (value: string) => void;
   volumeGain?: number;
   onVolumeGain?: (value: number) => void;
   onVolumeLevel: (value: number) => void;
@@ -851,7 +869,6 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 channelWarning={props.volumeChannelWarning}
                 appearance={<DisplayOptions volumeBlend={props.volumeBlend} onVolumeBlend={props.renderMode === "3d" ? props.onVolumeBlend : undefined}
           volumeBrightness={props.volumeBrightness} onVolumeBrightness={props.onVolumeBrightness}
-          volumeBackground={props.volumeBackground} onVolumeBackground={props.onVolumeBackground}
           volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />}
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
@@ -883,20 +900,17 @@ export function ViewerPanel(props: ViewerPanelProps) {
   </aside>;
 }
 
-function DisplayOptions({ volumeBlend = "additive", onVolumeBlend, volumeBrightness = 1, onVolumeBrightness, volumeBackground = "#030406", onVolumeBackground, volumeGain = -3, onVolumeGain }: {
+function DisplayOptions({ volumeBlend = "additive", onVolumeBlend, volumeBrightness = 1, onVolumeBrightness, volumeGain = -3, onVolumeGain }: {
   volumeBlend?: VolumeBlendMode;
   onVolumeBlend?: (value: VolumeBlendMode) => void;
   volumeBrightness?: number;
   onVolumeBrightness?: (value: number) => void;
-  volumeBackground?: string;
-  onVolumeBackground?: (value: string) => void;
   volumeGain?: number;
   onVolumeGain?: (value: number) => void;
 }) {
   if (!onVolumeBlend) return null;
   return <div className="volume-appearance-controls">
     <div className="appearance-line">
-      <label>Background<input aria-label="3D background color" type="color" value={volumeBackground} onChange={event=>onVolumeBackground?.(event.target.value)}/></label>
       <label>Brightness<input aria-label="3D intensity brightness" type="range" min="0.1" max="4" step="0.1" value={volumeBrightness} onChange={event=>onVolumeBrightness?.(Number(event.target.value))}/><output>{volumeBrightness.toFixed(1)}×</output></label>
     </div>
     {onVolumeGain && volumeBlend === "additive" && <label className="slider volume-gain">Volume gain<input aria-label="3D intensity volume gain" type="range" min="-5" max="3" step="0.1" value={volumeGain} onChange={event=>onVolumeGain(Number(event.target.value))}/><output>{Math.exp(volumeGain).toFixed(2)}×</output></label>}

@@ -1,4 +1,4 @@
-import { navigationGeometry, fitNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ } from "./navigation";
+import { navigationGeometry, fitNavigation, imageZoomNavigation, from2D, to2D, fromViv, toViv, fromNeuroglancer, toNeuroglancer, navigationZ } from "./navigation";
 import type { Capability } from "./types";
 
 const capability={axes:[{name:"z",unit:"micrometer"},{name:"y",unit:"micrometer"},{name:"x",unit:"micrometer"}],datasets:[
@@ -42,4 +42,25 @@ test("global transforms compose after dataset transforms and normalize units",()
   const transformed={...capability,axes:[{name:"z",unit:"nanometer"},{name:"y",unit:"nanometer"},{name:"x",unit:"nanometer"}],datasets:[{path:"0",coordinate_transformations:[{type:"scale",scale:[100,200,300]},{type:"translation",translation:[1,2,3]},{type:"scale",scale:[2,2,2]},{type:"translation",translation:[5,5,5]}]}]} as Capability;
   const g=navigationGeometry(transformed,loaders);
   expect(g.spacing).toEqual([.6,.4,.2]);expect(g.origin).toEqual([.011,.009000000000000001,.007]);
+});
+
+test.each(['2d','3d','slice','orthogonal'] as const)('1:1 is native level-zero pixel scale, including coarse quality in %s',view=>{
+  const g=navigationGeometry(capability,loaders),current=from2D({x:30,y:20,zoom:2},4,g);
+  const native=imageZoomNavigation(g,current,800,600,view,'xy',true);
+  expect(native.position).toEqual(current.position);expect(to2D(native,g).zoom).toBe(0);
+  const coarse=navigationGeometry(capability,loaders,1);
+  const viv=fromViv(toViv(native,coarse,{orbit:30,tilt:15,zoom:0},view==='2d'?'3d':view,'xy',800,600),coarse);
+  expect(viv.unitsPerPixel).toBeCloseTo(g.spacing[0]);
+  const camera={position:[0,0,0],orientation:[0,.5,0,.8660254],scale:5};
+  const ng=toNeuroglancer(native,camera,600);expect(ng.orientation).toEqual(camera.orientation);
+});
+
+test('Fit uses the active section dimensions and preserves the selected plane depth',()=>{
+  const g=navigationGeometry(capability,loaders),current=from2D({x:3,y:4,zoom:4},7,g);
+  const flat=imageZoomNavigation(g,current,800,600,'2d','xy');
+  expect(flat.position[2]).toBe(current.position[2]);expect(flat.position.slice(0,2)).toEqual([42.5,40]);
+  expect(g.shape[0]*g.spacing[0]/flat.unitsPerPixel).toBeLessThanOrEqual(800*.9);
+  const yz=imageZoomNavigation(g,current,800,600,'slice','yz');
+  expect(yz.position[0]).toBe(current.position[0]);
+  expect(g.shape[2]*g.spacing[2]/yz.unitsPerPixel).toBeLessThanOrEqual(600*.9);
 });

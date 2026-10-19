@@ -117,5 +117,7 @@ revalidated. Cache limits and surface-generation bounds are described in
 
 The renderer URL state defaults to Neuroglancer. `viewer3d=classic` selects Viv;
 the legacy parameter value is retained so previously shared links still work.
-`ngCamera` stores the Neuroglancer camera. Brightness, gain and background are
+`ngCamera` stores the Neuroglancer camera. Brightness and gain are
 display state, independent of segmentation opacity and color.
+
+The removed `background3d` URL parameter is ignored; old links still open with the fixed image background. In-viewer 3D movie recipes include `viewCapture` with renderer, layout, quality and camera provenance. The `zarr-movie-v1` integration renderer remains a native 2D raster compositor; it does not replay screen-space `viewCapture` recipes.

@@ -319,9 +319,11 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .metadata-table pre { white-space: pre-wrap; }
 
 .volume-appearance-controls { padding: .1rem 0 .3rem; }
-.appearance-line { display: grid; grid-template-columns: auto 1.45rem auto minmax(40px, 1fr) 2.8rem; align-items: center; gap: .4rem; color: #aeb5cd; font-size: .72rem; }
+.appearance-line { display: grid; grid-template-columns: auto minmax(40px, 1fr) 2.8rem; align-items: center; gap: .4rem; color: #aeb5cd; font-size: .72rem; }
 .appearance-line label { display: contents; }
-.appearance-line input[type="color"] { width: 1.45rem; height: 1.3rem; padding: 0; border: 1px solid #505570; border-radius: 3px; background: transparent; }
 .appearance-line input[type="range"] { width: 100%; min-width: 0; margin: 0; accent-color: var(--accent); }
 .appearance-line output { text-align: right; font-variant-numeric: tabular-nums; }
 .volume-appearance-controls .volume-gain { margin-top: .25rem; }
+
+/* Deck can set its own inline cursor; the image surface owns interaction feedback. */
+.image-cursor-surface canvas { cursor: var(--image-cursor, zoom-in) !important; }

@@ -1,3 +1,5 @@
+import { useImageCursor } from "./use-image-cursor";
+import { IMAGE_BACKGROUND } from "./viewer-appearance";
 import { Component, useCallback, useEffect, useMemo, useRef, useState, type ErrorInfo, type ReactNode } from "react";
 import {
   ColorPalette3DExtensions,
@@ -23,7 +25,6 @@ export interface VolumeCanvasProps {
   blendMode?: VolumeBlendMode;
   showScale?: boolean;
   brightness?: number;
-  background?: string;
   view?: ViewMode; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
   camera?: VolumeCameraState;
   orthographic?: boolean;
@@ -106,7 +107,6 @@ function VolumeRenderer({
   blendMode = "additive",
   showScale = true,
   brightness = 1,
-  background = "#030406",
   camera,
   orthographic = false,
   onCameraChange,
@@ -114,6 +114,7 @@ function VolumeRenderer({
   onError,
   onReady,
 }: VolumeCanvasProps) {
+  const cursorHost=useImageCursor("viv-volume");
   const [progress, setProgress] = useState(0);
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string>();
@@ -219,14 +220,14 @@ function VolumeRenderer({
       },
   }];
 
-  return <div className="volume-stage" style={{ backgroundColor: background }}>
+  return <div className="volume-stage image-cursor-surface" ref={cursorHost} style={{ backgroundColor: IMAGE_BACKGROUND }}>
     {!loadError && showScale && physicalScale && <ScaleBar unitsPerPixel={physicalScale.size / 2 ** viewState.zoom} unit={physicalScale.unit} perspective={!orthographic} />}
     {preparedKey === prepareKey && <VolumeVivViewer
       views={[view]}
       viewStates={[viewState]}
       layerProps={layerProps}
       useDevicePixels={false}
-      deckProps={{ style: { backgroundColor: background }, deviceProps:{webgl:{preserveDrawingBuffer:true}} }}
+      deckProps={{ style: { backgroundColor: IMAGE_BACKGROUND }, deviceProps:{webgl:{preserveDrawingBuffer:true}} }}
       onViewStateChange={({ viewId, viewState: next }: any) => {
         if (viewId !== "3d") return;
         onCameraChange({ ...camera,

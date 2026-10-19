@@ -41,9 +41,9 @@ test("unconfigured display uses maximum for Neuroglancer and additive for Viv", 
 
 test("3D appearance and Neuroglancer camera survive sharing, with bounded appearance inputs", () => {
   const ngCamera = { position: [100, 200, 300], orientation: [0, 0, 0, 1], scale: 500 };
-  const url = writeDeepLink(42, { z: 0, t: 0, ngCamera, volumeBrightness: 2, volumeGain: -1, volumeBackground: "#FFFFFF" });
+  const url = writeDeepLink(42, { z: 0, t: 0, ngCamera, volumeBrightness: 2, volumeGain: -1 });
   const parsed = parseDeepLink(new URL(url, window.location.origin).search);
-  expect(parsed).toMatchObject({ ngCamera, volumeBrightness: 2, volumeGain: -1, volumeBackground: "#FFFFFF" });
+  expect(parsed).toMatchObject({ ngCamera, volumeBrightness: 2, volumeGain: -1 });
   expect(parseDeepLink("?v=2&brightness3d=999&gain3d=-999&background3d=invalid")).toMatchObject({ volumeBrightness: 4, volumeGain: -5 });
   expect(parseDeepLink("?v=2&ngCamera=invalid").ngCamera).toBeUndefined();
 });

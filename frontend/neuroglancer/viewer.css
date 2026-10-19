@@ -10,3 +10,5 @@
 .neuroglancer-panel:focus-within {
   border: 0 !important;
 }
+
+.image-cursor-surface .neuroglancer-panel, .image-cursor-surface .neuroglancer-panel canvas { cursor: var(--image-cursor, zoom-in) !important; }

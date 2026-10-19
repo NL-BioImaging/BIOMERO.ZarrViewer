@@ -8,7 +8,7 @@ import type { Capability } from "./types";
 vi.mock("./api",async importOriginal=>({...await importOriginal<any>(),fetchCapabilities:vi.fn()}));
 vi.mock("@hms-dbmi/viv",async importOriginal=>({...await importOriginal<any>(),loadOmeZarrFromStore:vi.fn()}));
 vi.mock("./volume-utils",async importOriginal=>({...await importOriginal<any>(),detectMax3dTextureSize:()=>2048}));
-function Canvas(props:any){useEffect(()=>props.onReady?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
+function Canvas(props:any){useEffect(()=>props.onReady?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-camera-command={props.resetKey} data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
 vi.mock("./ViewerCanvas",()=>({ViewerCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./VolumeCanvas",()=>({VolumeCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./NeuroglancerCanvas",()=>({NeuroglancerCanvas:(props:any)=><Canvas {...props}/>}));
@@ -61,4 +61,22 @@ test("resetting a 3D view updates the shared scale used when returning to 2D",as
   fireEvent.click(screen.getByRole("button",{name:"2D"}));
   const viewport=JSON.parse(screen.getByTestId("rendered-contrast").getAttribute("data-navigation")!);
   expect(.2/2**viewport.zoom).toBeCloseTo(camera.scale/1000/600);
+});
+
+
+test("Fit and native zoom explicitly command the embedded camera without changing contrast",async()=>{
+  render(<App/>);await screen.findByTestId("rendered-contrast");
+  fireEvent.click(screen.getByRole("button",{name:"3D"}));
+  const output=screen.getByTestId("rendered-contrast");
+  const initial=Number(output.getAttribute("data-camera-command"));
+  fireEvent.click(screen.getByRole("button",{name:"Zoom 1:1"}));
+  expect(Number(output.getAttribute("data-camera-command"))).toBe(initial+1);
+  const native=JSON.parse(output.getAttribute("data-navigation")!);
+  expect(native.scale/1000/600).toBeCloseTo(.2);
+  fireEvent.click(screen.getByRole("button",{name:"Zoom fit"}));
+  expect(Number(output.getAttribute("data-camera-command"))).toBe(initial+2);
+  expect(output).toHaveTextContent("[10,1000]");
+  fireEvent.click(screen.getByRole("button",{name:"2D"}));
+  fireEvent.click(screen.getByRole("button",{name:"Zoom 1:1"}));
+  expect(JSON.parse(screen.getByTestId("rendered-contrast").getAttribute("data-navigation")!).zoom).toBe(0);
 });

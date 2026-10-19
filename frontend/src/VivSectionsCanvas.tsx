@@ -1,3 +1,5 @@
+import { useImageCursor } from "./use-image-cursor";
+import { IMAGE_BACKGROUND } from "./viewer-appearance";
 import { useMemo, useRef, type ReactNode } from "react";
 import { ColorPaletteExtension, VivViewer } from "@hms-dbmi/viv";
 import { Matrix4 } from "@math.gl/core";
@@ -23,6 +25,7 @@ interface SectionProps {
 
 function Section({ panel, source, plane, index, t, extent, shape, fractions, target, zoom, channels, brightness,
   showScale, physicalUnit, onNavigate, onSelect, onReady, onError }: SectionProps) {
+  const cursorHost=useImageCursor("viv-2d");
   const [a, b] = planeAxes[plane];
   const errorHandler = useRef(onError); errorHandler.current = onError;
   const raster = useMemo(() => {
@@ -36,7 +39,7 @@ function Section({ panel, source, plane, index, t, extent, shape, fractions, tar
   const matrix = useMemo(() => new Matrix4().scale([extent[a] / shape[a], extent[b] / shape[b], 1]), [extent[a], extent[b], shape[a], shape[b]]);
   const state = { id: plane, target: [target[a] * extent[a], target[b] * extent[b], 0], zoom };
   const cross = [a, b].map((axis, i) => (fractions[axis] - target[axis]) * extent[axis] * 2 ** zoom + [panel.width, panel.height][i] / 2);
-  return <div className="viv-section-panel" style={{ left: panel.x, top: panel.y, width: panel.width, height: panel.height }}>
+  return <div className="viv-section-panel image-cursor-surface" ref={cursorHost} style={{ left: panel.x, top: panel.y, width: panel.width, height: panel.height }}>
     <SectionViewer views={[view]} viewStates={[state]} useDevicePixels={false} layerProps={[{
       loader: [raster], modelMatrix: matrix, selections: channels.map(c => ({ c: c.index })),
       channelsVisible: channels.map(() => true), colors: channels.map(c => [1,3,5].map(i => parseInt(c.color.slice(i,i+2),16))),
@@ -80,7 +83,7 @@ export function VivSectionsCanvas({ props, renderVolume }: { props: VolumeCanvas
     planeAxes[plane].forEach((axis, i) => { position[axis] = Math.max(0, Math.min(1, point[i] / extent[axis])); });
     change({ slicePosition: position });
   };
-  return <div className="volume-stage" style={{ backgroundColor: props.background || "#030406" }}>
+  return <div className="volume-stage" style={{ backgroundColor: IMAGE_BACKGROUND }}>
     {panels.map(panel => panel.id === "3d" ? <div className="viv-section-panel" key="3d" style={{left:panel.x,top:panel.y,width:panel.width,height:panel.height}}>
       {renderVolume(panel.width,panel.height, { orbit:0, tilt:0, ...camera, zoom }, next => change({ ...next, sliceZoom:next.zoom-fit }),()=>panelReady("3d"))}
     </div> : <Section key={panel.id} panel={panel} source={source} plane={panel.id as SlicePlane} index={indices[sliceAxis[panel.id as SlicePlane]]} t={t}
