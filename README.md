@@ -44,7 +44,8 @@ window can be moved and resized while you inspect the image.
 
 Part of [BIOMERO](https://nl-bioimaging.github.io/NL-BIOMERO/).
 The [published documentation](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/)
-tracks the main branch; the guides above describe this checkout.
+and guide links track the main branch. For the current candidate, use the
+in-app Help or the guides in this branch.
 
 ## License and source
 
