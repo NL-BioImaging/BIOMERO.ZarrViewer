@@ -111,32 +111,3 @@ and server-side ROI/PNG/SVG rendering through an on-demand read-only Zarr store.
 The filesystem-only Neuroglancer and plate-preview/volume cache endpoints are
 not advertised for virtual sources. Their behavior for physical stores is
 unchanged. This integration does not expose OMERO ROIs as NGFF label arrays.
-
-## Could a filesystem fork replace the HTTP provider?
-
-Yes. The upstream implementation already writes temporary Zarr metadata and a
-temporary single-chunk Zarr array before returning HTTP bytes. Those operations
-can be extracted into a reusable metadata/chunk producer with both HTTP and
-filesystem adapters. The AGPL-3.0 license permits a fork with its source and
-network-use obligations preserved.
-
-Three designs have different storage and deployment costs:
-
-| Design | Behavior | Consequence |
-| --- | --- | --- |
-| Full export | Write all chunks into a normal directory before viewing | Existing filesystem viewer and Nginx work directly; requires conversion time and a complete additional copy |
-| On-demand materialized cache | Generate missing chunks through a producer and keep them on disk | Needs a request handler, permission checks, atomic writes, quotas, eviction and cache invalidation |
-| FUSE filesystem | Generate missing files on filesystem reads | Avoids a separate HTTP source adapter, but adds a mount daemon and `/dev/fuse`/container permission requirements, especially awkward on Docker Desktop |
-
-A plain directory plus static Nginx cannot generate a missing chunk. A lazy
-filesystem also needs a service or filesystem daemon; it does not remove that
-work. Cache keys must distinguish server, image, current pixels/version, pyramid
-level and access scope, and metadata changes must invalidate calibration and
-display settings. Shared cached bytes must not become a second unprotected
-source of image data.
-
-For Docker Desktop, extracting a small producer API upstream is preferable to
-maintaining a FUSE fork. It would remove our need to call decorated Django view
-implementations and let the same producer optionally fill a bounded local cache.
-The current integration intentionally keeps the provider optional and makes no
-full-image filesystem export. No GitHub fork is created by this investigation.
