@@ -25,7 +25,7 @@ from . import neuroglancer_contexts as contexts
 from .calibration import compose_transforms, MICROMETERS
 from .errors import ContextRequired, DataNotFound, InvalidROI, ROILimitExceeded, UnsupportedStore, UnsafePath
 from .settings import mount_root
-from .tokens import TOKEN_HEADER, validate_read_context
+from .tokens import TOKEN_HEADER, validate_read_context, filesystem_context
 from .views import _safe_data_path, api_errors, login_required, data as physical_data
 
 MAX_OBJECTS = 2048
@@ -318,7 +318,7 @@ def mesh_bytes(data, label_id, resolution):
 def prepare(request, image_id, conn=None, **kwargs):
     if not cache.cache_limit():
         raise UnsupportedStore("3D label rendering requires the volume cache")
-    claims = validate_read_context(request, conn, image_id)
+    claims = filesystem_context(validate_read_context(request, conn, image_id))
     scope = cache.scope_key(claims, image_id)
     try:
         level = int(request.GET.get("level", "0"))
@@ -373,7 +373,7 @@ def data(request, image_id, context_id, data_key, conn=None, **kwargs):
     if not context:
         raise ContextRequired("Reopen the 3D view to authorize its data")
     request.META[TOKEN_HEADER] = context["token"]
-    claims = validate_read_context(request, conn, image_id)
+    claims = filesystem_context(validate_read_context(request, conn, image_id))
     scope = cache.scope_key(claims, image_id)
     if scope != context["scope"]:
         raise ContextRequired("The 3D context belongs to another image or group")

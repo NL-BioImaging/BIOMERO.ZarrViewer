@@ -25,6 +25,11 @@ The viewer can locate a store through these registrations:
 4. the readable Image has a standard OMERO Zarr Pixel Buffer `ExternalInfo`
    registration pointing to a local multiscale group, as described below.
 
+With the optional [omero-web-zarr integration](http-zarr.md) explicitly enabled,
+ordinary readable OMERO Images can also use a virtual HTTP OME-Zarr 0.4 source.
+That fallback needs no source annotation and does not change the precedence
+of these physical registrations. The optional dependency may be absent.
+
 The BIOMERO importer produces the second form for in-place imports, including
 plate imports whose individual OMERO Images are named with NGFF field paths
 such as `A/1/0`.

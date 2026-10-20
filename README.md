@@ -14,6 +14,9 @@ The viewer needs an existing OME-Zarr store; it does not convert ordinary OMERO 
 Standard `omero zarr import` registrations using a local `ExternalInfo` path
 work without BIOMERO annotations. Existing BIOMERO imports and shallow results
 remain supported; see [data registration](docs/data-and-registration.md).
+The optional [omero-web-zarr integration](docs/http-zarr.md) can also serve
+ordinary OMERO images as virtual OME-Zarr 0.4. It is disabled by default and
+is not required for physical stores or BIOMERO.
 
 ## Explore the image
 

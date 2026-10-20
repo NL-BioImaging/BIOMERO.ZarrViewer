@@ -39,6 +39,7 @@ nav:
   - Deployment:
       - Installation: installation.md
       - Configuration and security: configuration.md
+      - Optional HTTP Zarr sources: http-zarr.md
       - NL-BIOMERO: deployment-nl-biomero.md
       - OMERO deployment kit: deployment-omero-deployment-kit.md
   - Development:

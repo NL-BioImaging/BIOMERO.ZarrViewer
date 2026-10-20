@@ -25,6 +25,7 @@ from .errors import (
     DataNotFound,
     InvalidROI,
     InvalidShallowManifest,
+    InvalidContext,
     ROILimitExceeded,
     UnsafePath,
     UnsupportedStore,
@@ -41,7 +42,7 @@ from .resolver import (
 )
 from .roi import render_recipe_png, render_recipe_svg, render_roi_png
 from .settings import internal_prefix, mount_root
-from .tokens import make_read_context, validate_read_context
+from .tokens import make_read_context, validate_read_context, filesystem_context
 from .analysis_skill_provider import catalog_payload, package_payload, SKILL_NAME
 
 logger = logging.getLogger(__name__)
@@ -150,7 +151,16 @@ def metadata_details(request, image_id, conn=None, **kwargs):
     section = request.GET.get("section", "summary")
     if section not in ("summary", "nodes", "omero"):
         raise InvalidROI("Invalid metadata section")
-    details = zarr_details(store, _safe_data_path, section=section, field=model["initial_path"], model=model, cursor=request.GET.get("cursor"))
+    if getattr(store, "http", None) is not None:
+        source = store.http
+        nodes = [] if section == "omero" else [
+            {"path": ".", "attributes": source.attributes(), "documents": {".zattrs": source.attributes(), ".zgroup": {"zarr_format": 2}}},
+            *[{"path": level, "attributes": {}, "array": source.array_metadata(level),
+               "documents": {".zarray": source.array_metadata(level)}} for level in source.levels()],
+        ]
+        details = {"nodes": nodes, "notices": []}
+    else:
+        details = zarr_details(store, _safe_data_path, section=section, field=model["initial_path"], model=model, cursor=request.GET.get("cursor"))
     response = JsonResponse({"zarr": {**details,
                              "format": model["zarr_format"], "ngff_version": model["ngff_version"],
                              "kind": model["kind"]}, "omero": omero_details(store.image) if section in ("summary", "omero") else {}})
@@ -190,7 +200,8 @@ def _capability_response(request, conn, store, *, require_plate=False):
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
     token, expires_at = make_read_context(
-        request, conn, store.image_id, store.relative, store.routes
+        request, conn, store.image_id, store.relative, store.routes,
+        backend="omero-web-zarr" if store.http is not None else "filesystem",
     )
     sentinel = "__zarr_key__"
     data_url = reverse(
@@ -228,12 +239,13 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "context": token,
                 "expires_at": expires_at.isoformat(),
                 "uuid": store_uuid,
-                "name": store.identity_path.name if store.identity_path else store.relative.name,
+                "name": store.image_name if store.http is not None else (store.identity_path.name if store.identity_path else store.relative.name),
+                "transport": "http" if store.http is not None else "filesystem",
                 "roi_url": roi_url,
                 "render_url": render_url,
-                "volume_url": reverse("biomero_zarr_viewer_volume", kwargs={"image_id": store.image_id}) if cache_limit() else None,
-                "neuroglancer_url": reverse("biomero_zarr_viewer_neuroglancer", kwargs={"image_id": store.image_id}) if cache_limit() else None,
-                "preview_url": reverse("biomero_zarr_viewer_previews", kwargs={"image_id": store.image_id}) if cache_limit() else None,
+                "volume_url": reverse("biomero_zarr_viewer_volume", kwargs={"image_id": store.image_id}) if store.http is None and cache_limit() else None,
+                "neuroglancer_url": reverse("biomero_zarr_viewer_neuroglancer", kwargs={"image_id": store.image_id}) if store.http is None and cache_limit() else None,
+                "preview_url": reverse("biomero_zarr_viewer_previews", kwargs={"image_id": store.image_id}) if store.http is None and cache_limit() else None,
                 "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
                 "binding_digest": binding_digest,
                 "render_svg_url": render_svg_url,
@@ -246,7 +258,8 @@ def _capability_response(request, conn, store, *, require_plate=False):
 def _inspect_resolved_store(store, selected_field=None):
     if selected_field is not None and not isinstance(selected_field, str):
         raise InvalidROI("The selected field must be a path")
-    model = inspect_store(store.path, store.recorded_files)
+    source = getattr(store, "http", None)
+    model = source.model() if source is not None else inspect_store(store.path, store.recorded_files)
     if selected_field is not None and selected_field != model["initial_path"]:
         from .metadata import _image_model
         valid = {f["path"] for w in model.get("plate", {}).get("wells", []) for f in w["fields"]}
@@ -300,7 +313,8 @@ def roi_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
     model = _inspect_resolved_store(store, request.GET.get("field"))
     rendered = render_roi_png(
-        store.path, model, request.GET, label_roots=_label_roots(store)
+        store.path, model, request.GET, label_roots=_label_roots(store),
+        array_root=store.http.open_group() if store.http is not None else None,
     )
     response = HttpResponse(rendered.content, content_type="image/png")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
@@ -323,7 +337,8 @@ def render_png(request, image_id, conn=None, **kwargs):
     store = resolve_image_store(conn, image_id)
     model = _inspect_resolved_store(store, _recipe_field(recipe))
     rendered = render_recipe_png(
-        store.path, model, recipe, label_roots=_label_roots(store)
+        store.path, model, recipe, label_roots=_label_roots(store),
+        array_root=store.http.open_group() if store.http is not None else None,
     )
     response = HttpResponse(rendered.content, content_type="image/png")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
@@ -345,7 +360,8 @@ def render_svg(request, image_id, conn=None, **kwargs):
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
     model = _inspect_resolved_store(store, _recipe_field(recipe))
-    rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store))
+    rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store),
+                                 array_root=store.http.open_group() if store.http is not None else None)
     response = HttpResponse(rendered.content, content_type="image/svg+xml")
     response["Content-Disposition"] = f'attachment; filename="{rendered.filename}"'
     response["Content-Length"] = str(len(rendered.content))
@@ -412,7 +428,7 @@ def cached_volume(request, image_id, conn=None, **kwargs):
     from . import volume_cache
     if not volume_cache.cache_limit():
         raise UnsupportedStore("Volume cache is disabled")
-    claims = validate_read_context(request, conn, image_id)
+    claims = filesystem_context(validate_read_context(request, conn, image_id))
     scope = volume_cache.scope_key(claims, image_id)
     job = request.GET.get("job")
     if job:
@@ -476,7 +492,7 @@ def cached_previews(request, image_id, conn=None, **kwargs):
     from . import volume_cache, preview_cache
     if not volume_cache.cache_limit():
         raise UnsupportedStore("Preview cache is disabled")
-    claims = validate_read_context(request, conn, image_id)
+    claims = filesystem_context(validate_read_context(request, conn, image_id))
     scope = volume_cache.scope_key(claims, image_id)
     try:
         fields=json.loads(request.GET.get("fields","[]"))
@@ -508,6 +524,22 @@ def cached_previews(request, image_id, conn=None, **kwargs):
 @api_errors
 def data(request, image_id, zarr_key, conn=None, **kwargs):
     claims = validate_read_context(request, conn, image_id)
+    backend = claims.get("backend", "filesystem")
+    if backend == "omero-web-zarr":
+        # Recheck image access and source selection on every virtual read. A
+        # signed token cannot switch providers or survive revoked image access.
+        store = resolve_image_store(conn, image_id)
+        if store.http is None or str(store.relative) != claims.get("store"):
+            raise InvalidContext("The virtual Zarr source has changed")
+        content = store.http.read(zarr_key)
+        response = HttpResponse(b"" if request.method == "HEAD" else content,
+                                content_type="application/json" if zarr_key.rsplit("/", 1)[-1] in (".zattrs", ".zarray", ".zgroup") else "application/octet-stream")
+        response["Content-Length"] = str(len(content))
+        response["Cache-Control"] = "private, no-store"
+        response["X-Content-Type-Options"] = "nosniff"
+        return response
+    if backend != "filesystem":
+        raise InvalidContext("Unknown Zarr backend")
     candidate, relative = _safe_data_path(
         claims.get("store", ""), zarr_key, claims.get("routes", [])
     )

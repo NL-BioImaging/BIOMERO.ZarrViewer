@@ -39,7 +39,7 @@ class ResolvedStore:
     image: object
     image_id: int
     image_name: str
-    path: Path
+    path: Path | None
     relative: PurePosixPath
     recorded_root: PurePosixPath
     recorded_files: tuple[str, ...]
@@ -47,6 +47,8 @@ class ResolvedStore:
     shallow: bool = False
     # The analyzed result owns the identity; pixels may live in another store.
     identity_path: Path | None = None
+    # Optional same-origin omero-web-zarr source; physical paths remain unchanged.
+    http: object | None = None
 
 
 def _string_value(obj, method):
@@ -243,6 +245,9 @@ def _local_external_path(value):
 def _external_info_store(image, conn):
     value = _external_info_path(image, conn)
     if value is None:
+        from .http_source import available, resolve_http_store
+        if available():
+            return resolve_http_store(image, conn)
         raise StoreNotFound("The image is not backed by an in-place OME-Zarr store")
     recorded_root = _local_external_path(value)
     try:
@@ -273,7 +278,8 @@ def _has_registered_store(obj, conn):
         return True
     value = _external_info_path(obj, conn)
     if value is None:
-        return False
+        from .http_source import available
+        return callable(getattr(obj, "getFileset", None)) and available()
     try:
         _local_external_path(value)
     except UnsafePath:

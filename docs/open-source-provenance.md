@@ -80,6 +80,16 @@ dependency. An existing deployment Nginx instance processes the viewer's
 authenticated `X-Accel-Redirect` responses and serves chunk bytes from the
 read-only OME-Zarr mount.
 
+### Optional virtual-image provider
+
+[`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
+is an optional runtime provider when the [HTTP integration](http-zarr.md) is
+explicitly enabled. The standalone compatibility test pins upstream commit
+`4e1e685dff22136abfd2626f6fd6eaf985aba368`. Its source is installed separately,
+not copied into the viewer. The adapter imports the provider's Django response
+implementations for authenticated metadata and chunk generation. Ordinary
+physical-store and BIOMERO deployments do not require or import this provider.
+
 ## Specifications implemented
 
 The metadata adapters implement the
@@ -114,21 +124,6 @@ bitmask-based label rendering. The findings are recorded in
 Vitessce is not a production dependency, and no OMERO-Vitessce source file is
 included in the viewer. Production rendering uses Neuroglancer, Viv, Zarrita, deck.gl, and a
 viewer-specific 2D label shader.
-
-### ome/omero-web-zarr
-
-Source:
-[ome/omero-web-zarr](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
-
-This project was reviewed as an example of exposing OMERO data through a
-Zarr-compatible web interface. It was an architectural comparison only:
-
-- `ome/omero-web-zarr` virtualizes conventional OMERO pixels as Zarr data;
-- BIOMERO OME-Zarr Viewer resolves already-existing BIOMERO OME-Zarr stores
-  and authorizes their bytes through an Nginx internal location.
-
-The viewer neither imports nor copies `ome/omero-web-zarr` code. The two
-projects solve complementary problems.
 
 ### Find Nuclei Viewer
 

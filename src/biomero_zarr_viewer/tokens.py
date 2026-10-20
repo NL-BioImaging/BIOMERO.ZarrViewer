@@ -13,6 +13,13 @@ TOKEN_SALT = "biomero_zarr_viewer.context.v1"
 TOKEN_VERSION = 1
 
 
+def filesystem_context(claims):
+    """Keep virtual-source tokens out of filesystem-only cache readers."""
+    if claims.get("backend", "filesystem") != "filesystem":
+        raise InvalidContext("This endpoint requires a physical Zarr source")
+    return claims
+
+
 def connection_user_id(conn):
     getter = getattr(conn, "getUserId", None)
     if getter:
@@ -30,7 +37,7 @@ def active_group_id(request, conn):
     return int(group_id)
 
 
-def make_read_context(request, conn, image_id, store_relative, routes=()):
+def make_read_context(request, conn, image_id, store_relative, routes=(), *, backend="filesystem"):
     issued_at = datetime.now(timezone.utc)
     claims = {
         "v": TOKEN_VERSION,
@@ -45,6 +52,8 @@ def make_read_context(request, conn, image_id, store_relative, routes=()):
             [str(route.logical).replace("\\", "/"), str(route.physical).replace("\\", "/")]
             for route in routes
         ]
+    if backend != "filesystem":
+        claims["backend"] = backend
     token = signing.dumps(claims, salt=TOKEN_SALT, compress=True)
     expires = issued_at + timedelta(seconds=context_ttl_seconds())
     return token, expires
