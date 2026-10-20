@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+# Build from the docker/ context and provide dist/ as named viewer-wheel context.
+FROM scratch AS viewer-wheel
+
+FROM openmicroscopy/omero-web-standalone:5.33.2@sha256:0ed9880841da97b06db1268d6f28e4bc52dbc25f6217a32eee622e7403f9503b
+
+ARG VIEWER_WHEEL
+ARG ENABLE_HTTP_ZARR=false
+USER root
+
+COPY --from=viewer-wheel ${VIEWER_WHEEL} /tmp/viewer-wheel/
+COPY standalone-constraints.txt /tmp/standalone-constraints.txt
+COPY --chown=omero-web:omero-web 90-biomero-zarr-viewer.omero /opt/omero/web/config/90-biomero-zarr-viewer.omero
+COPY install-http-zarr.py 91-omero-web-zarr.omero /tmp/
+
+RUN /opt/omero/web/venv3/bin/python -m pip install --no-cache-dir \
+        --constraint /tmp/standalone-constraints.txt /tmp/viewer-wheel/*.whl \
+    && /opt/omero/web/venv3/bin/python /tmp/install-http-zarr.py "${ENABLE_HTTP_ZARR}" \
+    && /opt/omero/web/venv3/bin/python -m pip check \
+    && rm -rf /tmp/viewer-wheel /tmp/omero-web-zarr-source.tar.gz
+
+LABEL org.nlbioimaging.zarrviewer.http-enabled="${ENABLE_HTTP_ZARR}" \
+      org.nlbioimaging.zarrviewer.provider-commit="4e1e685dff22136abfd2626f6fd6eaf985aba368"
+ENV GUNICORN_CMD_ARGS="--limit-request-field_size 131072"
+USER omero-web

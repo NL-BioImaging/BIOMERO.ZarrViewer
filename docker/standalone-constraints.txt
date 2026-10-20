@@ -1,0 +1,13 @@
+# Runtime additions to the immutable OMERO.web 5.33.2 image, tested 2026-10-20.
+# Viewer wheels are supplied separately; the optional provider is source-pinned.
+donfig==0.8.1.post1
+google-crc32c==1.9.0
+ImageIO==2.38.1
+lazy-loader==0.6
+msgspec==0.22.0
+networkx==3.7
+numcodecs==0.17.0
+scikit-image==0.26.0
+scipy==1.18.1
+tifffile==2026.10.15
+zarr==3.4.1

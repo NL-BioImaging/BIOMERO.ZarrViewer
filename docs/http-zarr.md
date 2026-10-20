@@ -27,6 +27,61 @@ Docker test uses upstream commit
 Zarr v2 with Zarr-Python 3. Pin and test the provider rather than assuming the
 old PyPI wheel works with a current OMERO.web environment.
 
+## Reproduce the standalone Docker installation
+
+[`docker/Dockerfile.standalone`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.standalone)
+starts from the official OMERO.web 5.33.2 image pinned by digest. It installs
+a supplied viewer wheel with the tested runtime additions pinned in
+`docker/standalone-constraints.txt`. It needs neither a pre-existing local image
+nor a manually downloaded provider archive.
+These pins target Linux/amd64 containers with Python 3.12.
+
+From the repository root, first build and validate a wheel using the
+[development instructions](development.md). The following PowerShell commands
+select that wheel and build the physical-store image; the optional provider is
+absent by default:
+
+```powershell
+$wheel = Get-ChildItem ./dist/biomero_zarr_viewer-*.whl |
+    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+if (-not $wheel) { throw 'Build a viewer wheel in dist/ first' }
+
+docker build --file docker/Dockerfile.standalone `
+    --build-context viewer-wheel=./dist `
+    --build-arg "VIEWER_WHEEL=$($wheel.Name)" `
+    --tag zarrviewer-web:physical docker
+```
+
+To explicitly install and enable the optional provider, build the same recipe
+with this additional build argument:
+
+```powershell
+docker build --file docker/Dockerfile.standalone `
+    --build-context viewer-wheel=./dist `
+    --build-arg "VIEWER_WHEEL=$($wheel.Name)" `
+    --build-arg ENABLE_HTTP_ZARR=true `
+    --tag zarrviewer-web:http-zarr docker
+```
+
+Docker BuildKit/buildx named contexts are required. Only `docker/` and the wheel
+directory are sent to the builder, avoiding local image datasets in the
+repository. Use a directory containing the exact desired wheel when multiple
+releases are present, and record its SHA-256 alongside the source revision.
+
+The opt-in build downloads upstream commit
+`4e1e685dff22136abfd2626f6fd6eaf985aba368` directly from GitHub and checks archive
+SHA-256 `433f1fc3844327f2ef23db837d375ea9b350f6fd417cbcf9fce708ad74dcbd30`
+before installation. A changed archive fails the build. Only that build copies
+`docker/91-omero-web-zarr.omero` into the startup configuration and enables the
+feature. The default build neither downloads nor registers `omero-web-zarr`;
+the existing deployment Dockerfile and required viewer dependencies are unchanged.
+
+Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
+your OMERO.server. Physical stores still need the shared read-only `/data` mount
+and the [authenticated Nginx configuration](installation.md). The recipe builds
+only a web image; it does not start services, attach existing data volumes or
+reconfigure another OMERO stack.
+
 ## Data and authentication
 
 The viewer serves the provider's Zarr representation through its own signed,
