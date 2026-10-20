@@ -93,6 +93,12 @@ the viewer still checks its 32 MiB chunk limit. The browser allows at most six
 concurrent virtual-store requests. These settings leave physical Zarr stores
 unchanged.
 
+The viewer also handles native pyramids that skip binary resolution steps,
+such as Aperio levels at 1x, 4x and 16x downsampling. It selects a native level
+for the current zoom and scales its tiled rendering by the actual X/Y shape
+ratios, including the navigator. This preserves image bounds and physical
+calibration without exporting or resampling the source image.
+
 Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
 your OMERO.server. Physical stores still need the shared read-only `/data` mount
 and the [authenticated Nginx configuration](installation.md). The recipe builds

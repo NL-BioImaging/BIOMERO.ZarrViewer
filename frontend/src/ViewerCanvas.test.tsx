@@ -3,7 +3,7 @@ import { ViewerCanvas } from "./ViewerCanvas";
 const state=vi.hoisted(()=>({props:undefined as any}));
 vi.mock("@hms-dbmi/viv",()=>({
   DETAIL_VIEW_ID:"detail",OVERVIEW_VIEW_ID:"overview",MAX_CHANNELS:10,
-  DetailView:class{},OverviewView:class{},ColorPaletteExtension:class{},
+  DetailView:class{},OverviewView:class{},OverviewLayer:class{},MultiscaleImageLayer:class{},ColorPaletteExtension:class{},
   getDefaultInitialViewState:()=>({target:[2,2,0],zoom:0}),
   VivViewer:(props:any)=>{state.props=props;return null;},
 }));
