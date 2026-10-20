@@ -58,11 +58,40 @@ class FakeParent:
         return list(self.parents)
 
 
+class FakeExternalInfo:
+    def __init__(self, path, entity_type="com.glencoesoftware.ngff:multiscales", entity_id=3, loaded=True):
+        self.path, self.entity_type, self.entity_id, self.loaded = path, entity_type, entity_id, loaded
+
+    def isLoaded(self):
+        return self.loaded
+
+    def getEntityType(self):
+        return Value(self.entity_type)
+
+    def getEntityId(self):
+        return Value(self.entity_id)
+
+    def getLsid(self):
+        return Value(self.path)
+
+
+class FakeImageModel:
+    def __init__(self, external_info):
+        self.external_info = external_info
+
+    def getDetails(self):
+        return self
+
+    def getExternalInfo(self):
+        return self.external_info
+
+
 class FakeImage(FakeParent):
-    def __init__(self, image_id, name, files, annotations=(), parents=()):
+    def __init__(self, image_id, name, files, annotations=(), parents=(), external_info=None):
         super().__init__(image_id, name, annotations, parents)
         self.image_id = image_id
         self.fileset = FakeFileset(files)
+        self._obj = FakeImageModel(external_info)
 
     def getFileset(self):
         return self.fileset

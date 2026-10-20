@@ -11,6 +11,9 @@ time series and high-content screening plates.
 In OMERO.web, select a registered OME-Zarr **Image**, **Plate** or **Well**, then
 choose **Open With → OME-Zarr Viewer**. Your existing OMERO permissions apply.
 The viewer needs an existing OME-Zarr store; it does not convert ordinary OMERO images.
+Standard `omero zarr import` registrations using a local `ExternalInfo` path
+work without BIOMERO annotations. Existing BIOMERO imports and shallow results
+remain supported; see [data registration](docs/data-and-registration.md).
 
 ## Explore the image
 
