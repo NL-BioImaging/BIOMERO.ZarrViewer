@@ -75,6 +75,8 @@ before installation. A changed archive fails the build. Only that build copies
 `docker/91-omero-web-zarr.omero` into the startup configuration and enables the
 feature. The default build neither downloads nor registers `omero-web-zarr`;
 the existing deployment Dockerfile and required viewer dependencies are unchanged.
+Provider packaging uses the build tools in the pinned base image rather than
+downloading a fresh, unpinned build environment.
 
 Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
 your OMERO.server. Physical stores still need the shared read-only `/data` mount

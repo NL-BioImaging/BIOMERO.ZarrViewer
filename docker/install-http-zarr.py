@@ -24,7 +24,8 @@ def main():
     if hashlib.sha256(archive.read_bytes()).hexdigest() != SHA256:
         raise SystemExit("The pinned omero-web-zarr archive checksum does not match")
     subprocess.run([
-        sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-deps", str(archive),
+        sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-deps",
+        "--no-build-isolation", str(archive),
     ], check=True)
     target = Path("/opt/omero/web/config/91-omero-web-zarr.omero")
     shutil.copyfile("/tmp/91-omero-web-zarr.omero", target)
