@@ -4,19 +4,49 @@
 
 Explore OME-Zarr images and segmentation results directly from OMERO.web.
 BIOMERO ZarrViewer is a read-only viewer for multichannel images, Z stacks,
-time series and high-content screening plates.
+time series and high-content screening plates. It works with standalone OMERO
+and with BIOMERO deployments.
 
 ## Open your data
 
 In OMERO.web, select a registered OME-Zarr **Image**, **Plate** or **Well**, then
 choose **Open With → OME-Zarr Viewer**. Your existing OMERO permissions apply.
-The viewer needs an existing OME-Zarr store; it does not convert ordinary OMERO images.
-Standard `omero zarr import` registrations using a local `ExternalInfo` path
-work without BIOMERO annotations. Existing BIOMERO imports and shallow results
-remain supported; see [data registration](docs/data-and-registration.md).
-The optional [omero-web-zarr integration](docs/http-zarr.md) can also serve
-ordinary OMERO images as virtual OME-Zarr 0.4. It is disabled by default and
-is not required for physical stores or BIOMERO.
+Physical OME-Zarr 0.4/0.5 stores can be registered with standard
+`omero zarr import` / `ExternalInfo`, without extra BIOMERO annotations.
+With the optional `omero-web-zarr` integration enabled, ordinary OMERO images
+such as TIFFs can also be opened as virtual OME-Zarr 0.4, without a full export.
+
+## Installation options
+
+### Standalone OMERO
+
+BIOMERO, Slurm and OMERO.Analysis are not required. The
+[standalone Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.standalone)
+uses an official OMERO.web image pinned by digest and tested runtime constraints.
+The default build installs the viewer for physical OME-Zarr 0.4/0.5, with the
+shared data mount and authenticated Nginx route described in the
+[build and installation instructions](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md#reproduce-the-standalone-docker-installation).
+See [OMERO source registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/data-and-registration.md#standard-omero-cli-zarr-imports)
+for linking the physical store to its OMERO Image.
+
+### Optional omero-web-zarr
+
+Build with `ENABLE_HTTP_ZARR=true` to also install and enable the optional
+provider. The recipe pins an upstream commit and verifies its archive checksum.
+Ordinary OMERO images are then served on demand as virtual OME-Zarr 0.4,
+using the existing OMERO permissions. Virtual sources use Viv for 3D viewing.
+See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md).
+
+The provider is disabled by default and is not a required viewer dependency.
+Physical OME-Zarr and BIOMERO continue working when it is absent.
+
+### Existing BIOMERO deployments
+
+Existing imports, HCS plates and shallow segmentation results remain supported.
+Their physical-store registrations keep precedence over the optional HTTP
+provider. Follow the
+[NL-BIOMERO deployment guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md)
+for integrated installation.
 
 ## Explore the image
 
