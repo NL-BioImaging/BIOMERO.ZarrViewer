@@ -99,6 +99,10 @@ for the current zoom and scales its tiled rendering by the actual X/Y shape
 ratios, including the navigator. This preserves image bounds and physical
 calibration without exporting or resampling the source image.
 
+Provider calls also close rendering engines created by their temporary Image
+wrappers, including failed reads. This prevents repeated virtual tile requests
+from retaining pixel readers in the OMERO session until it expires.
+
 Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
 your OMERO.server. Physical stores still need the shared read-only `/data` mount
 and the [authenticated Nginx configuration](installation.md). The recipe builds

@@ -28,6 +28,26 @@ BACKEND = "omero-web-zarr"
 MAX_CHUNK_BYTES = 32 * 1024 * 1024
 
 
+class _ProviderConnection:
+    """Release rendering engines opened by short-lived provider image wrappers."""
+    def __init__(self, conn):
+        self.conn, self.images = conn, []
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+    def getObject(self, kind, *args, **kwargs):
+        image = self.conn.getObject(kind, *args, **kwargs)
+        if kind == "Image" and image is not None:
+            self.images.append((image, getattr(image, "_re", None)))
+        return image
+
+    def close(self):
+        for image, previous in self.images:
+            if previous is None and getattr(image, "_re", None) is not None:
+                image._closeRE()
+
+
 def available():
     # Do not import an optional package in ordinary physical-store deployments.
     if not http_enabled() or not apps.is_installed("omero_web_zarr"):
@@ -67,7 +87,11 @@ class HttpZarrSource:
         function = inspect.unwrap(getattr(provider_views(), name))
         try:
             with self._provider_lock:
-                response = function(self.request, iid=self.image_id, conn=self.conn, **kwargs)
+                scoped = _ProviderConnection(self.conn)
+                try:
+                    response = function(self.request, iid=self.image_id, conn=scoped, **kwargs)
+                finally:
+                    scoped.close()
         except Http404 as exc:
             raise DataNotFound("The virtual Zarr key does not exist") from exc
         if response.status_code != 200:

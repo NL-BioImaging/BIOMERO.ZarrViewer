@@ -70,6 +70,39 @@ def test_disabled_feature_never_imports_optional_provider(monkeypatch):
         resolver.resolve_image_store(FakeConnection(FakeImage(42, "ordinary.tif", [])), 42)
 
 
+@pytest.mark.parametrize("fails", [False, True])
+def test_provider_closes_only_new_rendering_engines_even_on_failure(monkeypatch, fails):
+    image = FakeImage(42, "ordinary.tif", [])
+    image._re = None
+    closed = []
+    def close():
+        closed.append(image._re)
+        image._re = None
+    image._closeRE = close
+    conn = FakeConnection(image)
+    def provider(request, iid, conn):
+        current = conn.getObject("Image", iid)
+        current._re = object()
+        if fails:
+            raise RuntimeError("pixel read failed")
+        return HttpResponse(b"pixels")
+    monkeypatch.setattr(http_source, "provider_views", lambda: SimpleNamespace(image_chunk=provider))
+    source = http_source.HttpZarrSource(image, conn)
+    if fails:
+        with pytest.raises(RuntimeError, match="pixel read failed"):
+            source._call("image_chunk")
+    else:
+        assert source._call("image_chunk") == b"pixels"
+    assert len(closed) == 1 and image._re is None
+    # A pre-existing engine belongs to its caller, not this provider operation.
+    image._re = object()
+    if fails:
+        with pytest.raises(RuntimeError): source._call("image_chunk")
+    else:
+        source._call("image_chunk")
+    assert len(closed) == 1
+
+
 def test_enabled_without_installed_app_does_not_change_physical_support(monkeypatch, configure_storage):
     from .conftest import write_v2_image, write_v3_image
     from .fakes import FakeExternalInfo
