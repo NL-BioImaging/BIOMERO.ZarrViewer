@@ -78,13 +78,20 @@ the existing deployment Dockerfile and required viewer dependencies are unchange
 Provider packaging uses the build tools in the pinned base image rather than
 downloading a fresh, unpinned build environment.
 
-The installer applies one small compatibility fix to that pinned provider:
+The installer applies a compatibility fix to that pinned provider:
 its temporary Zarr chunk encoder explicitly sets `write_empty_chunks=True`.
 Zarr-Python 3 otherwise omits entirely black chunks, which makes the provider's
 immediate file read fail with `FileNotFoundError`. The installer checks the
 expected source fragment before changing it and fails if it differs. No pixel
 values or metadata are changed. This patch lives in the viewer's Docker
 installer; it has not been published as an upstream omero-web-zarr commit.
+
+For pyramidal images the installer also raises the minimum HTTP chunk width
+and height to 1024 pixels. This reduces authenticated OMERO pixel-reader calls
+when viewing a large tilescan. Edge chunks retain the provider's zero padding;
+the viewer still checks its 32 MiB chunk limit. The browser allows at most six
+concurrent virtual-store requests. These settings leave physical Zarr stores
+unchanged.
 
 Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
 your OMERO.server. Physical stores still need the shared read-only `/data` mount

@@ -23,7 +23,14 @@ def preserve_empty_chunks():
     replacement = "zarr_format=2,\n                                     config={'write_empty_chunks': True},\n                                     chunks=chunks"
     if text.count(original) != 1:
         raise SystemExit("The pinned provider's chunk encoder differs from the expected source")
-    source.write_text(text.replace(original, replacement))
+    text = text.replace(original, replacement)
+    original_tile = "width, height = image._re.getTileSize()"
+    if text.count(original_tile) != 1:
+        raise SystemExit("The pinned provider's tile sizing differs from the expected source")
+    # Amortize authenticated OMERO RPCs for whole-slide overviews. The viewer's
+    # existing chunk-byte limit still guards unusually large native tile sizes.
+    text = text.replace(original_tile, original_tile + "\n        width, height = max(width, 1024), max(height, 1024)")
+    source.write_text(text)
 
 
 def main():
@@ -46,7 +53,7 @@ def main():
     shutil.copyfile("/tmp/91-omero-web-zarr.omero", target)
     shutil.chown(target, user="omero-web", group="omero-web")
     target.chmod(0o644)
-    print(f"Installed and enabled omero-web-zarr from upstream commit {COMMIT}, with empty-chunk compatibility fix")
+    print(f"Installed and enabled omero-web-zarr from upstream commit {COMMIT}, with empty-chunk and 1024-pixel tiled-read fixes")
 
 
 if __name__ == "__main__":
