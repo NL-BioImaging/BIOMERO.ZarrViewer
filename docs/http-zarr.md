@@ -78,6 +78,14 @@ the existing deployment Dockerfile and required viewer dependencies are unchange
 Provider packaging uses the build tools in the pinned base image rather than
 downloading a fresh, unpinned build environment.
 
+The installer applies one small compatibility fix to that pinned provider:
+its temporary Zarr chunk encoder explicitly sets `write_empty_chunks=True`.
+Zarr-Python 3 otherwise omits entirely black chunks, which makes the provider's
+immediate file read fail with `FileNotFoundError`. The installer checks the
+expected source fragment before changing it and fails if it differs. No pixel
+values or metadata are changed. This patch lives in the viewer's Docker
+installer; it has not been published as an upstream omero-web-zarr commit.
+
 Use the resulting image for your OMERO.web service with `OMEROHOST` pointing to
 your OMERO.server. Physical stores still need the shared read-only `/data` mount
 and the [authenticated Nginx configuration](installation.md). The recipe builds

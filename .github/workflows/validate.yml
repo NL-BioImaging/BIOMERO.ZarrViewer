@@ -144,3 +144,6 @@ jobs:
               'import importlib.util, pathlib, sys; expected = sys.argv[1] == "true"; assert (importlib.util.find_spec("omero_web_zarr") is not None) == expected; assert pathlib.Path("/opt/omero/web/config/91-omero-web-zarr.omero").exists() == expected; import biomero_zarr_viewer' \
               "$enabled"
           done
+          docker run --rm --entrypoint /opt/omero/web/venv3/bin/python \
+            --volume "$PWD/docker/check-http-zarr.py:/tmp/check-http-zarr.py:ro" \
+            zarrviewer-standalone-check:true /tmp/check-http-zarr.py
