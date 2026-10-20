@@ -58,6 +58,133 @@ Set `BIOMERO_ZARR_VIEWER_ENABLED=FALSE` and recreate `omeroweb` to unregister
 the viewer. Nginx remains the normal OMERO.web frontend when the viewer is
 disabled.
 
+## Optional pinned HTTP-Zarr provider in an existing BIOMERO stack
+
+Use [`docker/Dockerfile.biomero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.biomero)
+to extend your **combined BIOMERO OMERO.web image**, including ZarrViewer
+0.8.1b3 or later. This preserves its installed BIOMERO, Analysis, WorkflowSkills,
+viewer wheel, startup scripts and proxy settings. It does not replace that
+image with standalone OMERO.web, update dependencies or alter source data.
+The recipe targets the existing `/opt/omero/web/venv3` environment and
+`omero-web` runtime user; the tested combined image uses Python 3.12,
+OMERO.web 5.33.2, Zarr-Python 3.4.1, NumPy, Numcodecs and Requests.
+
+The shared installer downloads
+[`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
+at commit `91d7f97abaeab5abe9b64e0db4343b7a7e12ca59`, verifies archive SHA-256
+`2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`,
+then installs it with `--no-deps --no-build-isolation`. The build fails if
+the checksum or existing dependency requirements do not match. No package is
+downloaded from an unpinned provider release. See [provider changes](http-zarr.md).
+
+### Build from the exact existing web image
+
+Run these PowerShell commands from the ZarrViewer repository root. Change the
+container name if necessary. Preserve the base image and record its image ID;
+on another machine, load an archived copy of that image or supply an immutable
+registry reference such as `registry/combined-web@sha256:...`. The provider pin
+alone does not reproduce your combined base image and its other plugins.
+
+```powershell
+$container = 'nl-biomero-omeroweb-1'
+$web = docker inspect $container | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect existing BIOMERO web' }
+$baseId = $web.Image
+$base = 'nl-biomero-omeroweb:http-zarr-base'
+$target = 'nl-biomero-omeroweb:viewer0.8.1b3-http-zarr-nlbi1'
+docker tag $baseId $base
+if ($LASTEXITCODE -ne 0) { throw 'Cannot preserve base image' }
+$baseId | Set-Content ./biomero-http-zarr-base-image.txt
+
+docker build --file docker/Dockerfile.biomero `
+    --build-arg "BIOMERO_WEB_IMAGE=$base" `
+    --build-arg ENABLE_HTTP_ZARR=true `
+    --tag $target docker
+if ($LASTEXITCODE -ne 0) { throw 'Provider image build failed' }
+```
+
+`ENABLE_HTTP_ZARR` defaults to `false`: the recipe then leaves any provider
+inherited from the base untouched, without downloading or registering one.
+It does **not** uninstall an existing provider or disable an inherited flag.
+With `true`, it installs/upgrades the pinned fork and adds
+`91-omero-web-zarr.omero`, which registers the app and enables its viewer flag.
+The existing viewer configuration, source/mount roots and Gunicorn arguments
+are inherited, not overwritten. Physical OME-Zarr and BIOMERO registrations
+keep priority over the optional virtual HTTP source.
+
+### Add the image to the existing Compose command
+
+Keep every existing Compose file, environment file, project name and profile.
+Append an override for **only** `omeroweb`; do not start a second stack.
+This example discovers the active Compose file list, but you must set
+`$envFile` to the same deployment environment file used by your existing start
+command. The example profiles match the integrated Analysis/importer setup;
+retain your site's profiles if they differ.
+
+```powershell
+$envFile = 'C:\deploy\biomero\stack.env' # Set to your existing environment file.
+$stackDir = $web.Config.Labels.'com.docker.compose.project.working_dir'
+$project = $web.Config.Labels.'com.docker.compose.project'
+$files = $web.Config.Labels.'com.docker.compose.project.config_files'.Split(',')
+$compose = @('compose', '--project-directory', $stackDir,
+    '--env-file', $envFile, '-p', $project,
+    '--profile', 'analysis', '--profile', 'IMPORTER_ENABLED')
+foreach ($file in $files) { $compose += @('-f', $file) }
+
+# Absolute build context: relative Compose paths otherwise use the first file.
+$context = (Resolve-Path ./docker).Path
+$override = Join-Path $stackDir 'compose.http-zarr.local.json'
+$overlay = @{ services = @{ omeroweb = @{
+    image = $target
+    build = @{ context = $context; dockerfile = 'Dockerfile.biomero'; args = @{
+        BIOMERO_WEB_IMAGE = $base; ENABLE_HTTP_ZARR = 'true'
+    }}
+}}}
+$overlay | ConvertTo-Json -Depth 8 | Set-Content $override -Encoding UTF8
+$compose += @('-f', $override)
+docker @compose config --quiet
+if ($LASTEXITCODE -ne 0) { throw 'Invalid Compose configuration' }
+docker @compose up -d --no-deps --no-build --pull never omeroweb
+if ($LASTEXITCODE -ne 0) { throw 'Web recreation failed' }
+docker @compose exec -T zarrviewer-nginx nginx -t
+if ($LASTEXITCODE -ne 0) { throw 'Invalid Nginx configuration' }
+docker @compose exec -T zarrviewer-nginx nginx -s reload
+```
+
+Wait for OMERO.web to finish starting before signing in. Reloading the existing
+Nginx frontend refreshes its web-container address; for HTTPS use your existing
+`nginx` service instead of `zarrviewer-nginx`. No new ports, mounts, database,
+server, workers or Slurm services are introduced. Add the same final override
+to the persistent start/rebuild command so subsequent Compose runs use the
+new image. Keep the preserved base image and prior Compose configuration for
+rollback; avoid rebuilding with a mutable base tag that has since moved.
+
+### Validate the combined stack
+
+Confirm the installed versions and dependency consistency:
+
+```powershell
+docker @compose exec -T omeroweb /opt/omero/web/venv3/bin/python -m pip show biomero-zarr-viewer omero-web-zarr
+docker @compose exec -T omeroweb /opt/omero/web/venv3/bin/python -m pip check
+```
+
+The provider version is `0.1.2.dev0+nlbi.1`. Sign in through Nginx and test an
+ordinary SVS at overview/native resolution, a confocal MIP including its
+progress display, and existing physical OME-Zarr images/HCS plates with their
+segmentation layers. Verify Analysis, DataQueryWorker and WorkflowSkills
+through their normal authenticated routes. The physical images must still
+report `store.transport=filesystem`; ordinary TIFF/SVS images use `http`.
+The [deployment checks below](#verify-the-deployment) still apply.
+
+This recipe's installation was validated in the local combined stack with
+OMERO.biomero 1.7.0b9, Analysis 1.0.1, WorkflowSkills 0.4.0 and viewer 0.8.1b3.
+SVS pixels and the complete confocal MIP matched their source data; three
+existing physical image registrations also matched sampled original pixels,
+including a shallow plate with three segmentation layers. Only OMERO.web was
+recreated; the server, workers, data services and separate standalone stack
+were unchanged. These are representative regression checks, not a scan of
+every image in the deployment.
+
 ## Ubuntu HTTPS deployment
 
 The

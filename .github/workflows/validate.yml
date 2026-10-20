@@ -135,15 +135,28 @@ jobs:
               --build-arg "ENABLE_HTTP_ZARR=$enabled" \
               --tag "zarrviewer-standalone-check:$enabled" docker
           done
+      - name: Build the existing-image BIOMERO provider overlay
+        shell: bash
+        run: |
+          # CI checks the overlay contract on the prepared web image. The real
+          # combined BIOMERO stack is covered by the documented local checks.
+          for enabled in false true; do
+            docker build --file docker/Dockerfile.biomero \
+              --build-arg BIOMERO_WEB_IMAGE=zarrviewer-standalone-check:false \
+              --build-arg "ENABLE_HTTP_ZARR=$enabled" \
+              --tag "zarrviewer-biomero-overlay-check:$enabled" docker
+          done
       - name: Verify optional-provider installation in the built images
         shell: bash
         run: |
-          for enabled in false true; do
+          for recipe in standalone biomero-overlay; do
+            for enabled in false true; do
+              docker run --rm --entrypoint /opt/omero/web/venv3/bin/python \
+                "zarrviewer-$recipe-check:$enabled" -c \
+                'import importlib.util, pathlib, sys; expected = sys.argv[1] == "true"; assert (importlib.util.find_spec("omero_web_zarr") is not None) == expected; assert pathlib.Path("/opt/omero/web/config/91-omero-web-zarr.omero").exists() == expected; import biomero_zarr_viewer' \
+                "$enabled"
+            done
             docker run --rm --entrypoint /opt/omero/web/venv3/bin/python \
-              "zarrviewer-standalone-check:$enabled" -c \
-              'import importlib.util, pathlib, sys; expected = sys.argv[1] == "true"; assert (importlib.util.find_spec("omero_web_zarr") is not None) == expected; assert pathlib.Path("/opt/omero/web/config/91-omero-web-zarr.omero").exists() == expected; import biomero_zarr_viewer' \
-              "$enabled"
+              --volume "$PWD/docker/check-http-zarr.py:/tmp/check-http-zarr.py:ro" \
+              "zarrviewer-$recipe-check:true" /tmp/check-http-zarr.py
           done
-          docker run --rm --entrypoint /opt/omero/web/venv3/bin/python \
-            --volume "$PWD/docker/check-http-zarr.py:/tmp/check-http-zarr.py:ro" \
-            zarrviewer-standalone-check:true /tmp/check-http-zarr.py

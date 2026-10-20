@@ -49,6 +49,10 @@ provider. Follow the
 [NL-BIOMERO deployment guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md)
 for integrated installation.
 
+To add the optional pinned HTTP provider to an existing combined web image,
+use the [BIOMERO Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/deployment-nl-biomero.md#optional-pinned-http-zarr-provider-in-an-existing-biomero-stack).
+It preserves the installed BIOMERO/Analysis components and existing storage configuration.
+
 ## Explore the image
 
 - **2D:** pan, zoom, navigate Z and time, and compare maximum, mean or minimum projections.
