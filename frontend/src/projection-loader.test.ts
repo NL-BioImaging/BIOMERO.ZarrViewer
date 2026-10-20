@@ -30,6 +30,30 @@ test("slice mode keeps the original loader", () => {
   expect(projectLoader(input, "slice")).toBe(input);
 });
 
+test("uncached HTTP raster and navigator share one exact projection with intermediate progress",async()=>{
+  const input=source(),progress=vi.fn();
+  const [projected]=projectLoader([input],"mip",progress);
+  const [main,navigator]=await Promise.all([
+    projected.getRaster({selection:{c:0,t:0}}),
+    projected.getTile({x:0,y:0,selection:{c:0,t:0}}),
+  ]);
+  expect(Array.from(main.data)).toEqual([3,30]);
+  expect(Array.from(navigator.data)).toEqual([3,30]);
+  expect(input.getRaster).toHaveBeenCalledTimes(3);
+  expect(input.getTile).not.toHaveBeenCalled();
+  expect(progress.mock.calls.some(([p])=>p.busy&&p.fraction>0&&p.fraction<1)).toBe(true);
+  expect(progress.mock.lastCall?.[0]).toMatchObject({busy:false,fraction:1});
+});
+
+test("failed projections clear progress and can be retried",async()=>{
+  const input=source(),progress=vi.fn();
+  input.getRaster.mockRejectedValueOnce(new Error("read failed"));
+  const projected=projectSource(input,"mip",progress);
+  await expect(projected.getRaster({selection:{c:0}})).rejects.toThrow("read failed");
+  expect(progress.mock.lastCall?.[0].busy).toBe(false);
+  expect(Array.from((await projected.getRaster({selection:{c:0}})).data)).toEqual([3,30]);
+});
+
 test("projection cache has a shared 64 MiB LRU budget across sources and separates C/T/modes",async()=>{
   // Each result is 24 MiB; three sources exceed the single shared budget.
   const getVolume=vi.fn(async()=>({data:new Uint8Array(24*1024*1024),width:24*1024,height:1024,depth:1}));

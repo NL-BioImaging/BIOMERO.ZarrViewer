@@ -11,7 +11,7 @@ USER root
 COPY --from=viewer-wheel ${VIEWER_WHEEL} /tmp/viewer-wheel/
 COPY standalone-constraints.txt /tmp/standalone-constraints.txt
 COPY --chown=omero-web:omero-web 90-biomero-zarr-viewer.omero /opt/omero/web/config/90-biomero-zarr-viewer.omero
-COPY install-http-zarr.py 91-omero-web-zarr.omero /tmp/
+COPY install-http-zarr.py omero-web-zarr-views.py 91-omero-web-zarr.omero /tmp/
 
 RUN /opt/omero/web/venv3/bin/python -m pip install --no-cache-dir \
         --constraint /tmp/standalone-constraints.txt /tmp/viewer-wheel/*.whl \

@@ -1,86 +1,73 @@
-"""Exercise the installed provider's encoder, including an all-black tile."""
-import inspect
-import tempfile
+"""Check the installed provider against original pixels, codecs and pyramid levels."""
+import inspect,itertools,json,tempfile
 from pathlib import Path
 from types import SimpleNamespace
-
-import django
-import numpy as np
-import zarr
+import django,numpy as np,zarr
 from django.conf import settings
 from django.http import HttpRequest
-
-settings.configure(SECRET_KEY="provider-build-check", INSTALLED_APPS=[
-    "django.contrib.auth", "django.contrib.contenttypes",
-])
+settings.configure(SECRET_KEY="provider-build-check",INSTALLED_APPS=["django.contrib.auth","django.contrib.contenttypes"])
 django.setup()
-
 from omero_web_zarr import views
 
 
 class Image:
-    def getSizeT(self): return 1
-    def getSizeC(self): return 1
-    def getSizeZ(self): return 1
-    def getSizeY(self): return 4
-    def getSizeX(self): return 4
-    def requiresPixelsPyramid(self): return False
+    def __init__(self, levels):
+        self.levels=levels;self._re=None;self.closed=0
+    def _size(self,axis):return self.levels[0].shape['TCZYX'.index(axis)]
+    def getSizeT(self):return self._size('T')
+    def getSizeC(self):return self._size('C')
+    def getSizeZ(self):return self._size('Z')
+    def getSizeY(self):return self._size('Y')
+    def getSizeX(self):return self._size('X')
+    def getPixelsId(self):return 1
+    def getId(self):return 1
+    def requiresPixelsPyramid(self):return len(self.levels)>1
+    def getZoomLevelScaling(self):
+        self._re=SimpleNamespace(getResolutionDescriptions=lambda:[SimpleNamespace(sizeX=a.shape[-1],sizeY=a.shape[-2]) for a in self.levels])
+        return {i:1/2**i for i in range(len(self.levels))}
+    def _closeRE(self):self._re=None;self.closed+=1
     def getPrimaryPixels(self):
-        return SimpleNamespace(
-            getPixelsType=lambda: SimpleNamespace(getValue=lambda: "uint8"),
-            getTile=lambda *args: pixels,
-        )
+        return SimpleNamespace(getPixelsType=lambda:SimpleNamespace(getValue=lambda:self.levels[0].dtype.name))
 
 
-image = Image()
-connection = SimpleNamespace(getObject=lambda *args: image)
-for value in (0, 17):
-    pixels = np.full((4, 4), value, dtype=np.uint8)
-    response = inspect.unwrap(views.image_chunk)(
-        HttpRequest(), iid=1, level="0", chunk="0/0", conn=connection,
-    )
-    assert response.status_code == 200
-    metadata = inspect.unwrap(views.image_zarray)(
-        HttpRequest(), iid=1, level="0", conn=connection,
-    )
-    with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory)
-        (root / ".zarray").write_bytes(metadata.content)
-        (root / "0").mkdir()
-        (root / "0" / "0").write_bytes(response.content)
-        actual = zarr.open_array(root, mode="r")[:]
-        assert np.array_equal(actual, pixels), (value, actual)
-print("Installed provider: black and nonzero chunks decode correctly")
+class Pixels:
+    def __init__(self,image):self.image=image;self.level=len(image.levels)-1;self.closed=False
+    def setPixelsId(self,*args):pass
+    def setResolutionLevel(self,level):self.level=level
+    def getTile(self,z,c,t,x,y,w,h):
+        plane=self.image.levels[len(self.image.levels)-1-self.level][t,c,z,y:y+h,x:x+w]
+        return plane.astype(plane.dtype.newbyteorder('>')).tobytes()
+    def close(self):self.closed=True
 
 
-class TiledImage(Image):
-    _re = SimpleNamespace(
-        getTileSize=lambda: (256, 256),
-        getResolutionDescriptions=lambda: [SimpleNamespace(sizeX=1290, sizeY=1040)],
-    )
-    def getSizeY(self): return 1040
-    def getSizeX(self): return 1290
-    def requiresPixelsPyramid(self): return True
-    def getZoomLevelScaling(self): return {0: 1}
-    def getPrimaryPixels(self):
-        return SimpleNamespace(
-            getPixelsType=lambda: SimpleNamespace(getValue=lambda: "uint8"),
-            getTile=lambda z,c,t,tile: pixels[tile[1]:tile[1]+tile[3],tile[0]:tile[0]+tile[2]],
-        )
+def check(levels):
+    image=Image(levels);readers=[]
+    def reader():
+        value=Pixels(image);readers.append(value);return value
+    conn=SimpleNamespace(getObject=lambda *args:image,createRawPixelsStore=reader)
+    for level,expected in enumerate(levels):
+        response=inspect.unwrap(views.image_zarray)(HttpRequest(),iid=1,level=str(level),conn=conn)
+        meta=json.loads(response.content)
+        expected=expected[tuple(slice(None) if size>1 or axis in 'YX' else 0 for axis,size in zip('TCZYX',expected.shape))]
+        assert tuple(meta['shape'])==expected.shape
+        for fast in (False,True):
+            with tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);(root/'.zarray').write_bytes(response.content)
+                for index in itertools.product(*(range((n+c-1)//c) for n,c in zip(meta['shape'],meta['chunks']))):
+                    chunk='/'.join(map(str,index))
+                    options={'array_metadata':meta,'resolution_level':len(levels)-1-level,'_image':image} if fast else {}
+                    result=inspect.unwrap(views.image_chunk)(HttpRequest(),iid=1,level=str(level),chunk=chunk,conn=conn,**options)
+                    path=root/chunk;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(result.content)
+                actual=zarr.open_array(root,mode='r')[:]
+                assert np.array_equal(actual,expected),(level,fast,actual.shape,expected.shape)
+            assert image._re is None
+    assert all(reader.closed for reader in readers)
 
 
-image = TiledImage()
-pixels = (np.arange(1040*1290).reshape(1040,1290) % 251).astype(np.uint8)
-assert views.get_chunk_shape(image) == [1024, 1024]
-with tempfile.TemporaryDirectory() as directory:
-    root = Path(directory)
-    response = inspect.unwrap(views.image_zarray)(HttpRequest(), iid=1, level="0", conn=connection)
-    (root / ".zarray").write_bytes(response.content)
-    for y,x in [(0,0),(1,1)]:
-        response = inspect.unwrap(views.image_chunk)(HttpRequest(), iid=1, level="0", chunk=f"{y}/{x}", conn=connection)
-        (root / str(y)).mkdir(exist_ok=True)
-        (root / str(y) / str(x)).write_bytes(response.content)
-    actual = zarr.open_array(root, mode="r")
-    assert np.array_equal(actual[:1024,:1024],pixels[:1024,:1024])
-    assert np.array_equal(actual[1024:,1024:],pixels[1024:,1024:])
-print("Installed provider: tiled overview and padded edge chunks decode correctly")
+check([np.zeros((1,1,1,4,4),dtype=np.uint8)])
+check([(np.arange(2*3*10*7*9).reshape(2,3,10,7,9)*257%65535).astype(np.uint16)])
+full=(np.arange(3*1040*1290).reshape(1,3,1,1040,1290)%251).astype(np.uint8)
+check([full,full[...,::4,::4]])
+u16=(np.arange(34*39).reshape(1,1,1,34,39)*257%65535).astype(np.uint16)
+check([u16,u16[...,::4,::4]])
+print('Provider: exact black, uint16 endianness, T/C/Z groups, padded edges and native pyramid levels; all readers closed')

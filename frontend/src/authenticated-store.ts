@@ -2,6 +2,7 @@ import * as zarr from "zarrita";
 import type { Capability, ChannelState } from "./types";
 import { requestPreview } from "./preview-client";
 import { abortableDelay } from "./shared-request";
+import { VirtualChunkCache } from "./virtual-chunk-cache";
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -33,6 +34,7 @@ export class AuthenticatedZarrStore {
   private refreshing: Promise<Capability> | null = null;
   private activeHttpRequests = 0;
   private httpQueue: Array<() => void> = [];
+  private virtualChunks = new VirtualChunkCache();
   readonly store: zarr.FetchStore;
 
   constructor(capability: Capability, refreshCapability: RefreshCapability) {
@@ -40,12 +42,21 @@ export class AuthenticatedZarrStore {
     this.refreshCapability = refreshCapability;
     const storeUrl = new URL(capability.store.url, window.location.href).href;
     this.store = new zarr.FetchStore(storeUrl, {
-      fetch: async (request) => this.authorizedFetch(request),
+      fetch: async (request) => {
+        const base = new URL(this.capability.store.url,window.location.href);
+        const url = new URL(request.url);
+        const key = url.pathname.startsWith(base.pathname) ? url.pathname.slice(base.pathname.length) : "";
+        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && !request.headers.has("Range") && /^\d+\/(?:\d+\/)*\d+$/.test(key)) {
+          return this.virtualChunks.fetch(request,signal=>this.authorizedFetch(new Request(request,{signal})));
+        }
+        return this.authorizedFetch(request);
+      },
     });
     if (capability.store.preview_url) Object.assign(this.store, { getPreview: (field: string, size: number, channels: ChannelState[], z: number, t: number, signal: AbortSignal) => requestPreview(this, field, size, channels, z, t, signal) });
   }
 
   update(capability: Capability): void {
+    if (capability.image.id !== this.capability.image.id || capability.store.binding_digest !== this.capability.store.binding_digest || capability.store.url !== this.capability.store.url) this.virtualChunks.clear();
     this.capability = capability;
   }
 

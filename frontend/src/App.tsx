@@ -13,6 +13,7 @@ import { AuthenticatedZarrStore, PrefixStore } from "./authenticated-store";
 import { analyzeChannels, applyChannelAnalysis, dtypeDomain, type ChannelAnalysis, type StatisticsContext } from "./channel-scaling";
 import { attachNgffPhysicalSizes } from "./ngff-physical-sizes";
 import { projectLoader } from "./projection-loader";
+import { abortableDelay } from "./shared-request";
 import { projectLabelLoader } from "./label-projection";
 import type {
   Capability,
@@ -350,7 +351,15 @@ export default function App() {
   const analyzedProjection = useRef<string>(projection);
   const [loadProgress, setLoadProgress] = useState<LoadProgress>({busy:false,fraction:0,phase:""});
   const reportLoadProgress = useCallback((value: LoadProgress) => setLoadProgress(value), []);
-  const displayLoader = useMemo(() => loaded ? projectLoader(loaded.image, projection) : null, [loaded, projection]);
+  const [projectionProgress,setProjectionProgress]=useState<LoadProgress>({busy:false,fraction:0,phase:""});
+  const projectionGeneration=useRef(0);
+  const displayLoader = useMemo(() => {
+    const generation=++projectionGeneration.current;
+    return loaded ? projectLoader(loaded.image,projection,value=>{
+      if(projectionGeneration.current===generation)setProjectionProgress(value);
+    }) : null;
+  }, [loaded, projection]);
+  useEffect(()=>{setProjectionProgress({busy:false,fraction:0,phase:""});},[loaded,projection]);
   const labelProjectionKey = JSON.stringify(labels.map(label => [label.id, label.highlightValues || (label.highlightValue ? [label.highlightValue] : [])]));
   const displayLabels = useMemo(() => loaded?.labels.map(label => {
     const state = labels.find(item => item.id === label.id);
@@ -376,6 +385,7 @@ export default function App() {
   const volumeBlend = selectedVolumeBlend ?? defaultVolumeBlend(useNeuroglancer ? "neuroglancer" : "classic");
   const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && selectedVolumeLevel);
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
+  const visibleLoadProgress = effectiveRenderMode === "3d" || loadProgress.busy ? loadProgress : projectionProgress;
   const statisticsContext:StatisticsContext={field:field||"",renderMode:effectiveRenderMode,projection,z:zIndex,t:tIndex,level:selectedVolumeLevel?.index,channels:channels.filter(c=>c.visible).map(c=>c.index)};
   const statisticsKey=JSON.stringify(statisticsContext);
   const geometry=useMemo(()=>currentLoaded&&displayCapability?navigationGeometry(displayCapability,currentLoaded.image):undefined,[currentLoaded,displayCapability]);
@@ -508,12 +518,13 @@ export default function App() {
         : defaultZIndex(next.sizeZ, zIndex);
       const nextT = Math.min(tIndex, next.sizeT - 1);
       initializedZ.current = true;
-      setStatus("Calculating automatic channel ranges…");
       const defaults = channelStates(fieldCapability, next.image);
-      const analyses = await analyzeChannels(next.image, defaults, nextZ, nextT, {signal: abort.signal, volume: renderMode === "3d" || projection !== "slice"});
+      const virtual = fieldCapability.store.transport === "http";
+      if (!virtual) setStatus("Calculating automatic channel ranges…");
+      const analyses = virtual ? [] : await analyzeChannels(next.image, defaults, nextZ, nextT, {signal: abort.signal, volume: renderMode === "3d" || projection !== "slice"});
       if (cancelled) return;
       const automatic = applyChannelAnalysis(defaults, analyses);
-      const scaled = automatic.map(channel => ({...channel, contrastSource: "auto" as const}));
+      const scaled = automatic.map(channel => ({...channel, contrastSource: virtual ? "source" as const : "auto" as const}));
       analyzedProjection.current = projection;
       setLoaded(next);
       const g=navigationGeometry(fieldCapability,next.image);
@@ -583,7 +594,11 @@ export default function App() {
     let cancelled = false;
     const abort = new AbortController();
     setChannelAnalyses([]);
-    analyzeChannels(loaded.image, channels, zIndex, tIndex, {signal: abort.signal, volume: effectiveRenderMode === "3d" || projection !== "slice"}).then((analyses) => {
+    const analyze = async () => {
+      if (loaded.capability.store.transport === "http") await abortableDelay(350,abort.signal);
+      return analyzeChannels(loaded.image, channels, zIndex, tIndex, {signal: abort.signal, volume: effectiveRenderMode === "3d" || projection !== "slice"});
+    };
+    analyze().then((analyses) => {
       if (cancelled) return;
       analyzedProjection.current = analysisKey;
       setChannelAnalyses(analyses);
@@ -678,7 +693,7 @@ export default function App() {
       </header>
       <div className="workspace">
         <main className="viewer-host" ref={viewerRef} inert={exportingVolume} aria-busy={exportingVolume}>
-          {loadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && !(effectiveRenderMode === "3d" && useNeuroglancer) && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{loadProgress.phase}… {Math.round(loadProgress.fraction*100)}%</span><progress aria-label="Volume loading progress" max="1" value={loadProgress.fraction}/></div>}
+          {visibleLoadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && !(effectiveRenderMode === "3d" && useNeuroglancer) && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{visibleLoadProgress.phase}… {Math.round(visibleLoadProgress.fraction*100)}%</span><progress aria-label={effectiveRenderMode === "3d" ? "Volume loading progress" : "Z projection progress"} max="1" value={visibleLoadProgress.fraction}/></div>}
           {capability?.plate && authStore && viewMode !== "field" ? (
             <OverviewGrid
               capability={capability}

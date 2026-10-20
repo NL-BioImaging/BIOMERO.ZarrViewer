@@ -23,6 +23,16 @@ beforeEach(()=>{
 });
 afterEach(()=>vi.unstubAllGlobals());
 
+test("HTTP images render source contrast before native statistics finish",async()=>{
+  vi.mocked(fetchCapabilities).mockResolvedValue({...capability,store:{...capability.store,transport:"http"}});
+  const pixels=vi.fn(()=>new Promise(()=>{}));
+  vi.mocked(loadOmeZarrFromStore).mockResolvedValue({data:[{labels:["c","z","y","x"],shape:[1,8,2,3],dtype:"Uint16",tileSize:256,getRaster:pixels}],metadata:{multiscales:[{axes:capability.axes,datasets:[{path:"0"}]}]}} as any);
+  render(<App/>);
+  await screen.findByTestId("rendered-contrast");
+  expect(screen.getByTestId("rendered-contrast")).toHaveTextContent("[0,32767]");
+  expect(pixels).not.toHaveBeenCalled();
+});
+
 test("fresh opening samples useful contrast and mode changes preserve a manual range while refreshing statistics",async()=>{
   render(<App/>);await waitFor(()=>expect(screen.getByTestId("rendered-contrast")).toHaveTextContent("[10,1000]"));
   const high=screen.getByRole("spinbutton",{name:"DNA maximum value"});expect(high).toHaveValue(1000);

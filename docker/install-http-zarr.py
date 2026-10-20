@@ -13,24 +13,13 @@ SHA256 = "433f1fc3844327f2ef23db837d375ea9b350f6fd417cbcf9fce708ad74dcbd30"
 URL = f"https://codeload.github.com/ome/omero-web-zarr/tar.gz/{COMMIT}"
 
 
-def preserve_empty_chunks():
-    # Zarr 3 omits fill-only chunks by default. The provider immediately reads
-    # the encoded file back, so black tiles otherwise raise FileNotFoundError.
+def install_performance_views():
     package = importlib.util.find_spec("omero_web_zarr")
     source = Path(package.origin).parent / "views.py"
-    text = source.read_text()
-    original = "zarr_format=2,\n                                     chunks=chunks"
-    replacement = "zarr_format=2,\n                                     config={'write_empty_chunks': True},\n                                     chunks=chunks"
-    if text.count(original) != 1:
-        raise SystemExit("The pinned provider's chunk encoder differs from the expected source")
-    text = text.replace(original, replacement)
-    original_tile = "width, height = image._re.getTileSize()"
-    if text.count(original_tile) != 1:
-        raise SystemExit("The pinned provider's tile sizing differs from the expected source")
-    # Amortize authenticated OMERO RPCs for whole-slide overviews. The viewer's
-    # existing chunk-byte limit still guards unusually large native tile sizes.
-    text = text.replace(original_tile, original_tile + "\n        width, height = max(width, 1024), max(height, 1024)")
-    source.write_text(text)
+    expected = "c3cb2f3faa5b2b1185ae0d6e38ad379ceb243fde8aaaf826e43b1eae86ac74b6"
+    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        raise SystemExit("The pinned provider views differ from the expected source")
+    shutil.copyfile(Path(__file__).with_name("omero-web-zarr-views.py"), source)
 
 
 def main():
@@ -48,12 +37,12 @@ def main():
         sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-deps",
         "--no-build-isolation", str(archive),
     ], check=True)
-    preserve_empty_chunks()
+    install_performance_views()
     target = Path("/opt/omero/web/config/91-omero-web-zarr.omero")
     shutil.copyfile("/tmp/91-omero-web-zarr.omero", target)
     shutil.chown(target, user="omero-web", group="omero-web")
     target.chmod(0o644)
-    print(f"Installed and enabled omero-web-zarr from upstream commit {COMMIT}, with empty-chunk and 1024-pixel tiled-read fixes")
+    print(f"Installed omero-web-zarr {COMMIT} with versioned in-memory encoding and grouped Z reads")
 
 
 if __name__ == "__main__":

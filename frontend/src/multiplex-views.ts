@@ -1,5 +1,12 @@
 import { DetailView, OverviewView, MultiscaleImageLayer, MAX_CHANNELS } from '@hms-dbmi/viv';
 import { actualScaleProps, nonBinaryPyramid, ActualScaleOverviewLayer } from './pyramid-layers';
+const selectedBatches=new WeakMap<object,Map<string,any[]>>();
+function stableSelections(selections:any[],indices:number[]):any[]{
+  let cache=selectedBatches.get(selections);if(!cache){cache=new Map();selectedBatches.set(selections,cache);}
+  const key=indices.join(',')+':'+JSON.stringify(indices.map(i=>selections[i]));
+  let selected=cache.get(key);if(!selected){selected=indices.map(i=>selections[i]);cache.set(key,selected);}
+  return selected;
+}
 
 /** Never send invisible channels or more textures than Viv can bind in one draw. */
 export function channelBatches(props:any):any[] {
@@ -7,7 +14,7 @@ export function channelBatches(props:any):any[] {
   const result:any[]=[];
   for(let offset=0;offset<visible.length;offset+=MAX_CHANNELS){
     const indices=visible.slice(offset,offset+MAX_CHANNELS);
-    result.push({...props,selections:indices.map((i:number)=>props.selections[i]),channelsVisible:indices.map(()=>true),
+    result.push({...props,selections:stableSelections(props.selections,indices),channelsVisible:indices.map(()=>true),
       colors:indices.map((i:number)=>props.colors[i]),contrastLimits:indices.map((i:number)=>props.contrastLimits[i]),
       onViewportLoad:()=>props.onBatchViewportLoad?props.onBatchViewportLoad(resultIndex(offset)):props.onViewportLoad?.(),
       onTileError:(error:unknown)=>props.onBatchTileError?props.onBatchTileError(resultIndex(offset),error):props.onTileError?.(error),

@@ -78,20 +78,30 @@ the existing deployment Dockerfile and required viewer dependencies are unchange
 Provider packaging uses the build tools in the pinned base image rather than
 downloading a fresh, unpinned build environment.
 
-The installer applies a compatibility fix to that pinned provider:
-its temporary Zarr chunk encoder explicitly sets `write_empty_chunks=True`.
-Zarr-Python 3 otherwise omits entirely black chunks, which makes the provider's
-immediate file read fail with `FileNotFoundError`. The installer checks the
-expected source fragment before changing it and fails if it differs. No pixel
-values or metadata are changed. This patch lives in the viewer's Docker
-installer; it has not been published as an upstream omero-web-zarr commit.
+The installer verifies the original views file as well as the archive, then
+installs the reviewed performance variant in `docker/omero-web-zarr-views.py`.
+Its upstream provenance and exact changes are described in
+[`docker/provider-README.md`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/provider-README.md).
+This derived source is versioned in the viewer repository; it is not a newly
+published upstream release.
 
-For pyramidal images the installer also raises the minimum HTTP chunk width
-and height to 1024 pixels. This reduces authenticated OMERO pixel-reader calls
-when viewing a large tilescan. Edge chunks retain the provider's zero padding;
-the viewer still checks its 32 MiB chunk limit. The browser allows at most six
-concurrent virtual-store requests. These settings leave physical Zarr stores
-unchanged.
+The variant encodes lossless Zarr chunks in memory, including all-zero chunks.
+It uses one explicitly closed native pixel reader per chunk, with tiles up to
+1024 pixels and groups of up to eight Z planes (a 2 MiB target). The viewer still
+enforces its 32 MiB chunk limit. Physical Zarr chunk layouts are unchanged.
+
+Virtual metadata JSON is cached for at most 60 seconds, scoped to the OMERO
+session, image/pixels IDs, dimensions, group and provider layout. Every incoming
+data request still checks image access and the signed source. No server pixel
+cache or connection is retained. The browser shares encoded virtual chunks
+within one image binding, with a 32 MiB budget and 60-second lifetime; changes
+of binding clear that cache. Physical stores retain their existing read path.
+
+HTTP images initially use OMERO's channel ranges and render before native
+statistics finish. Statistics continue in the background. MIP, mean and minimum
+projections show progress and share their bounded 64 MiB projection cache
+between the main view and navigator. The existing initial contrast sampling
+for physical BIOMERO/OME-Zarr sources remains unchanged.
 
 The viewer also handles native pyramids that skip binary resolution steps,
 such as Aperio levels at 1x, 4x and 16x downsampling. It selects a native level

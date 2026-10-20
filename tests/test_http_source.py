@@ -62,6 +62,43 @@ def req(token=None, method="get"):
     return request
 
 
+def test_metadata_cache_is_session_scoped_expires_and_does_not_cache_pixels(virtual,monkeypatch):
+    http_source._metadata_cache.clear()
+    virtual.conn._sessionUuid='cache-test-session'
+    virtual.conn.SERVICE_OPTS=SimpleNamespace(getOmeroGroup=lambda:13)
+    virtual.conn.image.getPixelsId=lambda:7
+    now=[100.0]
+    monkeypatch.setattr(http_source.time,'monotonic',lambda:now[0])
+    first=http_source.HttpZarrSource(virtual.conn.image,virtual.conn)
+    first.read('0/1/0/0')
+    metadata_calls=virtual.calls.count('metadata')
+    second=http_source.HttpZarrSource(virtual.conn.image,virtual.conn)
+    second.read('0/1/0/0')
+    assert virtual.calls.count('metadata')==metadata_calls
+    assert virtual.calls.count('1/0/0')==2
+    virtual.conn._sessionUuid='another-session'
+    http_source.HttpZarrSource(virtual.conn.image,virtual.conn).read('0/1/0/0')
+    assert virtual.calls.count('metadata')==metadata_calls+1
+    now[0]+=http_source._METADATA_TTL+1
+    http_source.HttpZarrSource(virtual.conn.image,virtual.conn).read('0/1/0/0')
+    assert virtual.calls.count('metadata')==metadata_calls+2
+    http_source._metadata_cache.clear()
+
+
+def test_optimized_chunk_protocol_uses_validated_metadata_and_current_image(virtual,monkeypatch):
+    original=http_source.provider_views()
+    def attrs(*args,_image=None,**kwargs):return original.image_zattrs(*args,**kwargs)
+    def array(*args,_image=None,**kwargs):return original.image_zarray(*args,**kwargs)
+    def chunk(request,iid,conn,level,chunk,array_metadata,resolution_level,_image):
+        assert array_metadata==virtual.metadata
+        assert resolution_level==0 and _image is virtual.conn.image
+        return HttpResponse(b'chunk')
+    monkeypatch.setattr(http_source,'provider_views',lambda:SimpleNamespace(
+        image_zattrs=attrs,image_zarray=array,image_chunk=chunk,CHUNK_METADATA_API=1))
+    source=http_source.HttpZarrSource(virtual.conn.image,virtual.conn)
+    assert source.read('0/1/0/0')==b'chunk'
+
+
 def test_disabled_feature_never_imports_optional_provider(monkeypatch):
     monkeypatch.setattr(http_source, "http_enabled", lambda: False)
     monkeypatch.setattr(http_source, "provider_views", lambda: pytest.fail("optional provider imported"))

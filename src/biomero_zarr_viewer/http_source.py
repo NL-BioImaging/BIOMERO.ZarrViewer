@@ -13,6 +13,10 @@ import json
 import math
 import re
 import tempfile
+import time
+import hashlib
+from collections import OrderedDict
+from copy import deepcopy
 from threading import RLock
 from collections.abc import MutableMapping
 from pathlib import Path, PurePosixPath
@@ -26,6 +30,15 @@ from .settings import http_enabled, max_metadata_bytes
 
 BACKEND = "omero-web-zarr"
 MAX_CHUNK_BYTES = 32 * 1024 * 1024
+_METADATA_TTL = 60
+_METADATA_CACHE_BYTES = 8 * 1024 * 1024
+_metadata_cache = OrderedDict()
+_metadata_lock = RLock()
+
+
+def _layout():
+    value = getattr(provider_views(), "OPTIMIZED_LAYOUT", "legacy")
+    return value if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", value) else "legacy"
 
 
 class _ProviderConnection:
@@ -68,7 +81,7 @@ def resolve_http_store(image, conn):
     image_id = int(image.getId())
     return ResolvedStore(
         image=image, image_id=image_id, image_name=str(image.getName()),
-        path=None, relative=PurePosixPath(f"__omero_web_zarr__/{image_id}"),
+        path=None, relative=PurePosixPath(f"__omero_web_zarr__/{image_id}/{_layout()}"),
         recorded_root=PurePosixPath("."), recorded_files=(),
         http=HttpZarrSource(image, conn),
     )
@@ -85,6 +98,8 @@ class HttpZarrSource:
 
     def _call(self, name, **kwargs):
         function = inspect.unwrap(getattr(provider_views(), name))
+        if getattr(provider_views(), "CHUNK_METADATA_API", 0) == 1:
+            kwargs["_image"] = self.image
         try:
             with self._provider_lock:
                 scoped = _ProviderConnection(self.conn)
@@ -103,6 +118,15 @@ class HttpZarrSource:
 
     def _json(self, key, function, **kwargs):
         if key not in self.documents:
+            cache_key = self._metadata_key(key)
+            if cache_key is not None:
+                with _metadata_lock:
+                    item = _metadata_cache.get(cache_key)
+                    if item is not None and time.monotonic() - item[0] < _METADATA_TTL:
+                        _metadata_cache.move_to_end(cache_key)
+                        self.documents[key] = deepcopy(item[1])
+                        return self.documents[key]
+                    _metadata_cache.pop(cache_key, None)
             content = self._call(function, **kwargs)
             if len(content) > max_metadata_bytes():
                 raise InvalidMetadata("Virtual Zarr metadata exceeds the configured size limit")
@@ -113,7 +137,25 @@ class HttpZarrSource:
             if not isinstance(value, dict):
                 raise InvalidMetadata("Virtual Zarr metadata must be an object")
             self.documents[key] = value
+            if cache_key is not None:
+                with _metadata_lock:
+                    _metadata_cache[cache_key] = (time.monotonic(), deepcopy(value), len(content))
+                    while len(_metadata_cache) > 256 or sum(item[2] for item in _metadata_cache.values()) > _METADATA_CACHE_BYTES:
+                        _metadata_cache.popitem(last=False)
         return self.documents[key]
+
+    def _metadata_key(self, document):
+        # Cache JSON only, never a connection or reader. Every data view still
+        # resolves the readable Image and validates its signed source context.
+        session = getattr(self.conn, "_sessionUuid", None)
+        if not isinstance(session, str) or not session:
+            return None
+        try:
+            return (hashlib.sha256(session.encode()).digest(), self.image_id,
+                    self.image.getPixelsId(), tuple(getattr(self.image, f"getSize{axis}")() for axis in "TCZYX"),
+                    str(self.conn.SERVICE_OPTS.getOmeroGroup()), _layout(), document)
+        except AttributeError:
+            return None
 
     def levels(self):
         attrs = self._json("raw-attrs", "image_zattrs", version="0.4")
@@ -193,7 +235,10 @@ class HttpZarrSource:
         index = [int(value) for value in suffix.split("/")]
         if len(index) != len(meta["shape"]) or any(i >= (n + c - 1) // c for i, n, c in zip(index, meta["shape"], meta["chunks"])):
             raise DataNotFound("The virtual Zarr chunk is outside the image")
-        return self._call("image_chunk", level=level, chunk=suffix)
+        options = {}
+        if getattr(provider_views(), "CHUNK_METADATA_API", 0) == 1:
+            options = {"array_metadata": meta, "resolution_level": len(self.levels()) - 1 - int(level)}
+        return self._call("image_chunk", level=level, chunk=suffix, **options)
 
     def model(self):
         from .metadata import inspect_store
