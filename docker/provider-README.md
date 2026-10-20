@@ -1,14 +1,15 @@
 # OMERO.web Zarr performance variant
 
-`omero-web-zarr-views.py` derives from
-[`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr), commit
-`4e1e685dff22136abfd2626f6fd6eaf985aba368`. It retains the upstream AGPL-3.0
-copyright and license notice. The upstream repository was cloned and the
-modified views are tracked here so the viewer Docker setup is self-contained.
+The provider source is maintained in the separate
+[`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
+fork, derived from upstream commit `4e1e685dff22136abfd2626f6fd6eaf985aba368`.
+It retains the upstream AGPL-3.0 copyright and license notice.
 
-The installer verifies both the original archive and original `views.py`
-SHA-256 (`c3cb2f3faa5b2b1185ae0d6e38ad379ceb243fde8aaaf826e43b1eae86ac74b6`)
-before installing this version. Other upstream modules and routes are retained.
+The installer pins fork commit `91d7f97abaeab5abe9b64e0db4343b7a7e12ca59`
+and verifies archive SHA-256
+`2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`.
+It installs that source directly; no replacement views file is kept here.
+Other upstream modules and routes are retained.
 Installation remains opt-in through `ENABLE_HTTP_ZARR=true`.
 
 The changes are:

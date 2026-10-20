@@ -11,7 +11,7 @@ USER root
 COPY --from=viewer-wheel ${VIEWER_WHEEL} /tmp/viewer-wheel/
 COPY standalone-constraints.txt /tmp/standalone-constraints.txt
 COPY --chown=omero-web:omero-web 90-biomero-zarr-viewer.omero /opt/omero/web/config/90-biomero-zarr-viewer.omero
-COPY install-http-zarr.py omero-web-zarr-views.py 91-omero-web-zarr.omero /tmp/
+COPY install-http-zarr.py 91-omero-web-zarr.omero /tmp/
 
 RUN /opt/omero/web/venv3/bin/python -m pip install --no-cache-dir \
         --constraint /tmp/standalone-constraints.txt /tmp/viewer-wheel/*.whl \
@@ -20,6 +20,6 @@ RUN /opt/omero/web/venv3/bin/python -m pip install --no-cache-dir \
     && rm -rf /tmp/viewer-wheel /tmp/omero-web-zarr-source.tar.gz
 
 LABEL org.nlbioimaging.zarrviewer.http-enabled="${ENABLE_HTTP_ZARR}" \
-      org.nlbioimaging.zarrviewer.provider-commit="4e1e685dff22136abfd2626f6fd6eaf985aba368"
+      org.nlbioimaging.zarrviewer.provider-commit="91d7f97abaeab5abe9b64e0db4343b7a7e12ca59"
 ENV GUNICORN_CMD_ARGS="--limit-request-field_size 131072"
 USER omero-web

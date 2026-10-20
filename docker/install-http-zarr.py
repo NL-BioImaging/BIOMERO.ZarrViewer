@@ -1,25 +1,15 @@
-"""Install the opt-in provider from one checksum-verified upstream snapshot."""
+"""Install the opt-in provider from one checksum-verified fork snapshot."""
 
 import hashlib
-import importlib.util
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import urllib.request
 
-COMMIT = "4e1e685dff22136abfd2626f6fd6eaf985aba368"
-SHA256 = "433f1fc3844327f2ef23db837d375ea9b350f6fd417cbcf9fce708ad74dcbd30"
-URL = f"https://codeload.github.com/ome/omero-web-zarr/tar.gz/{COMMIT}"
-
-
-def install_performance_views():
-    package = importlib.util.find_spec("omero_web_zarr")
-    source = Path(package.origin).parent / "views.py"
-    expected = "c3cb2f3faa5b2b1185ae0d6e38ad379ceb243fde8aaaf826e43b1eae86ac74b6"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise SystemExit("The pinned provider views differ from the expected source")
-    shutil.copyfile(Path(__file__).with_name("omero-web-zarr-views.py"), source)
+COMMIT = "91d7f97abaeab5abe9b64e0db4343b7a7e12ca59"
+SHA256 = "2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21"
+URL = f"https://codeload.github.com/NL-BioImaging/omero-web-zarr/tar.gz/{COMMIT}"
 
 
 def main():
@@ -37,7 +27,6 @@ def main():
         sys.executable, "-m", "pip", "install", "--no-cache-dir", "--no-deps",
         "--no-build-isolation", str(archive),
     ], check=True)
-    install_performance_views()
     target = Path("/opt/omero/web/config/91-omero-web-zarr.omero")
     shutil.copyfile("/tmp/91-omero-web-zarr.omero", target)
     shutil.chown(target, user="omero-web", group="omero-web")

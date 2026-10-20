@@ -32,7 +32,8 @@ for linking the physical store to its OMERO Image.
 ### Optional omero-web-zarr
 
 Build with `ENABLE_HTTP_ZARR=true` to also install and enable the optional
-provider. The recipe pins an upstream commit and verifies its archive checksum.
+provider from the [NL-BioImaging performance fork](https://github.com/NL-BioImaging/omero-web-zarr).
+The recipe pins a fork commit and verifies its archive checksum.
 Ordinary OMERO images are then served on demand as virtual OME-Zarr 0.4,
 using the existing OMERO permissions. Virtual sources use Viv for 3D viewing.
 See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md).

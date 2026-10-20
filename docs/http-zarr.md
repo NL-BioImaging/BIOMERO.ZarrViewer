@@ -7,7 +7,8 @@ Physical OME-Zarr 0.4/0.5 and BIOMERO registrations keep their normal paths.
 
 ## Enable the optional provider
 
-Install a compatible `ome/omero-web-zarr` version in the OMERO.web environment,
+Install the performance fork [`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
+or a compatible upstream version in the OMERO.web environment,
 register the app, and explicitly enable the viewer integration:
 
 ```text
@@ -22,10 +23,10 @@ does not import the optional provider. The dependency is deliberately not added
 to the viewer's required Python packages.
 
 The upstream PyPI 0.1.1 release predates Zarr-Python 3 support. The standalone
-Docker test uses upstream commit
-`4e1e685dff22136abfd2626f6fd6eaf985aba368`, whose implementation explicitly writes
-Zarr v2 with Zarr-Python 3. Pin and test the provider rather than assuming the
-old PyPI wheel works with a current OMERO.web environment.
+Docker recipe uses the NL-BioImaging performance fork, based on upstream commit
+`4e1e685dff22136abfd2626f6fd6eaf985aba368`, and explicitly writes Zarr v2 chunks
+compatible with Zarr-Python 3. Pin and test the provider rather than assuming
+the old PyPI wheel works with a current OMERO.web environment.
 
 ## Reproduce the standalone Docker installation
 
@@ -68,9 +69,9 @@ directory are sent to the builder, avoiding local image datasets in the
 repository. Use a directory containing the exact desired wheel when multiple
 releases are present, and record its SHA-256 alongside the source revision.
 
-The opt-in build downloads upstream commit
-`4e1e685dff22136abfd2626f6fd6eaf985aba368` directly from GitHub and checks archive
-SHA-256 `433f1fc3844327f2ef23db837d375ea9b350f6fd417cbcf9fce708ad74dcbd30`
+The opt-in build downloads NL-BioImaging fork commit
+`91d7f97abaeab5abe9b64e0db4343b7a7e12ca59` directly from GitHub and checks archive
+SHA-256 `2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`
 before installation. A changed archive fails the build. Only that build copies
 `docker/91-omero-web-zarr.omero` into the startup configuration and enables the
 feature. The default build neither downloads nor registers `omero-web-zarr`;
@@ -78,12 +79,12 @@ the existing deployment Dockerfile and required viewer dependencies are unchange
 Provider packaging uses the build tools in the pinned base image rather than
 downloading a fresh, unpinned build environment.
 
-The installer verifies the original views file as well as the archive, then
-installs the reviewed performance variant in `docker/omero-web-zarr-views.py`.
-Its upstream provenance and exact changes are described in
+The installer installs the checksum-verified fork source directly, including
+its performance improvements. Its upstream provenance and exact changes are described in
 [`docker/provider-README.md`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/provider-README.md).
-This derived source is versioned in the viewer repository; it is not a newly
-published upstream release.
+The provider source and its own regression workflow live in the separate
+[fork repository](https://github.com/NL-BioImaging/omero-web-zarr).
+This is not a newly published upstream or PyPI release.
 
 The variant encodes lossless Zarr chunks in memory, including all-zero chunks.
 It uses one explicitly closed native pixel reader per chunk, with tiles up to

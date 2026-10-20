@@ -82,9 +82,11 @@ read-only OME-Zarr mount.
 
 ### Optional virtual-image provider
 
-[`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
+The [`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
+performance fork of [`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
 is an optional runtime provider when the [HTTP integration](http-zarr.md) is
-explicitly enabled. The standalone compatibility test pins upstream commit
+explicitly enabled. The standalone recipe pins fork commit
+`91d7f97abaeab5abe9b64e0db4343b7a7e12ca59`, derived from upstream
 `4e1e685dff22136abfd2626f6fd6eaf985aba368`. Its source is installed separately,
 not copied into the viewer. The adapter imports the provider's Django response
 implementations for authenticated metadata and chunk generation. Ordinary
