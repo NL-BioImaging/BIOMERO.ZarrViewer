@@ -56,6 +56,7 @@ export interface Capability {
   features?: string[];
   image: { id: number; name: string };
   store: {
+    transport?: "filesystem" | "http";
     url: string;
     context: string;
     expires_at: string;

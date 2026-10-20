@@ -1,6 +1,38 @@
 import { AuthenticatedZarrStore } from "./authenticated-store";
 import type { Capability } from "./types";
 
+test("virtual tile reads bound concurrency and discard cancelled queued requests", async () => {
+  const virtual = capability("context");
+  virtual.store.transport = "http";
+  const releases: Array<() => void> = [];
+  let active = 0, maximum = 0;
+  const fetchMock = vi.fn(async () => {
+    active++; maximum = Math.max(maximum, active);
+    await new Promise<void>(resolve => releases.push(resolve));
+    active--;
+    return new Response(new Uint8Array([1]));
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  try {
+    const auth = new AuthenticatedZarrStore(virtual, async () => virtual);
+    const controller = new AbortController();
+    const first = Array.from({length: 6}, (_, i) => auth.fetch(`/data/${i}`));
+    const cancelled = auth.fetch("/data/cancelled", {signal: controller.signal});
+    const rejected = expect(cancelled).rejects.toMatchObject({name: "AbortError"});
+    const last = auth.fetch("/data/last");
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(6));
+    controller.abort();
+    await rejected;
+    releases.shift()!();
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(7));
+    releases.splice(0).forEach(release => release());
+    await Promise.all([...first, last]);
+    expect(maximum).toBe(6);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 function capability(context: string): Capability {
   return {
     schema_version: 1,

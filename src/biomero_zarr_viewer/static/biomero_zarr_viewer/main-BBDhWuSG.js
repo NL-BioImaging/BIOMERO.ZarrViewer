@@ -28651,19 +28651,19 @@ const Tc = {
 function _s(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => rj.set(i, e));
 }
-_s([void 0, 1], () => import("./raw-CJ44cvbE.js").then((t) => t.default));
-_s(5, () => import("./lzw-XO2SmIzh.js").then((t) => t.default));
+_s([void 0, 1], () => import("./raw-f3VcWUHC.js").then((t) => t.default));
+_s(5, () => import("./lzw-OymWsqoa.js").then((t) => t.default));
 _s(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-_s(7, () => import("./jpeg-CMPd1sDO.js").then((t) => t.default));
-_s([8, 32946], () => import("./deflate-iVRwmDY0.js").then((t) => t.default));
-_s(32773, () => import("./packbits-BIn5A8wk.js").then((t) => t.default));
+_s(7, () => import("./jpeg-CRa4lusw.js").then((t) => t.default));
+_s([8, 32946], () => import("./deflate-DhDBJCD0.js").then((t) => t.default));
+_s(32773, () => import("./packbits-o6X-wrtu.js").then((t) => t.default));
 _s(
   34887,
-  () => import("./lerc-DAAr87qT.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-jQeND6uU.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-_s(50001, () => import("./webimage-K01Tzwld.js").then((t) => t.default));
+_s(50001, () => import("./webimage-BRFvf8tw.js").then((t) => t.default));
 function oj(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -43816,6 +43816,8 @@ class Ew {
   capability;
   refreshCapability;
   refreshing = null;
+  activeHttpRequests = 0;
+  httpQueue = [];
   store;
   constructor(e, i) {
     this.capability = e, this.refreshCapability = i;
@@ -43857,11 +43859,27 @@ class Ew {
       cache: i ? "no-store" : e.cache
     });
   }
+  async fetchRequest(e) {
+    if (this.capability.store.transport !== "http") return fetch(e);
+    await new Promise((i, n) => {
+      const s = () => {
+        e.signal.removeEventListener("abort", r), this.activeHttpRequests++, i();
+      }, r = () => {
+        this.httpQueue = this.httpQueue.filter((a) => a !== s), n(e.signal.reason);
+      };
+      e.signal.throwIfAborted(), this.activeHttpRequests < 6 ? s() : (this.httpQueue.push(s), e.signal.addEventListener("abort", r, { once: !0 }));
+    });
+    try {
+      return e.signal.throwIfAborted(), await fetch(e);
+    } finally {
+      this.activeHttpRequests--, this.httpQueue.shift()?.();
+    }
+  }
   async authorizedFetch(e) {
     let i = !1, n = 0;
     for (; ; ) {
       e.signal.throwIfAborted();
-      const s = await fetch(this.requestWithContext(e, n > 0));
+      const s = await this.fetchRequest(this.requestWithContext(e, n > 0));
       if ((s.status === 401 || s.status === 403) && !i) {
         await Am(s), await this.refresh(), i = !0;
         continue;

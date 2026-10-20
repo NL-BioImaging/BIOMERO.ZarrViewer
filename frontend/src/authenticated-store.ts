@@ -31,6 +31,8 @@ export class AuthenticatedZarrStore {
   private capability: Capability;
   private refreshCapability: RefreshCapability;
   private refreshing: Promise<Capability> | null = null;
+  private activeHttpRequests = 0;
+  private httpQueue: Array<() => void> = [];
   readonly store: zarr.FetchStore;
 
   constructor(capability: Capability, refreshCapability: RefreshCapability) {
@@ -75,6 +77,36 @@ export class AuthenticatedZarrStore {
     });
   }
 
+  private async fetchRequest(request: Request): Promise<Response> {
+    if (this.capability.store.transport !== "http") return fetch(request);
+    // Virtual chunks occupy an OMERO.web worker and an OMERO pixel reader.
+    // A large tiled overview can otherwise dispatch hundreds simultaneously.
+    await new Promise<void>((resolve, reject) => {
+      const start = () => {
+        request.signal.removeEventListener("abort", abort);
+        this.activeHttpRequests++;
+        resolve();
+      };
+      const abort = () => {
+        this.httpQueue = this.httpQueue.filter(item => item !== start);
+        reject(request.signal.reason);
+      };
+      request.signal.throwIfAborted();
+      if (this.activeHttpRequests < 6) start();
+      else {
+        this.httpQueue.push(start);
+        request.signal.addEventListener("abort", abort, {once: true});
+      }
+    });
+    try {
+      request.signal.throwIfAborted();
+      return await fetch(request);
+    } finally {
+      this.activeHttpRequests--;
+      this.httpQueue.shift()?.();
+    }
+  }
+
   private async authorizedFetch(request: Request): Promise<Response> {
     let refreshed = false;
     let serverRetries = 0;
@@ -84,7 +116,7 @@ export class AuthenticatedZarrStore {
       // A browser may reuse an error response for an identical request. Force
       // attempts after the first 5xx back to Nginx so each retry can recover
       // from a transient shared-filesystem read error.
-      const response = await fetch(this.requestWithContext(request, serverRetries > 0));
+      const response = await this.fetchRequest(this.requestWithContext(request, serverRetries > 0));
       if ((response.status === 401 || response.status === 403) && !refreshed) {
         await discard(response);
         await this.refresh();
