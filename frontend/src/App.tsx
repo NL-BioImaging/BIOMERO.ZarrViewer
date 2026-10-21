@@ -50,6 +50,7 @@ import { plateGeometry } from "./plate-geometry";
 import { withVolumeCache, type LoadProgress } from "./volume-loader";
 import { withImageReadCache } from './http-read-cache';
 import { ClippingPlanes } from './ClippingPlanes';
+import { useVolumeMemory, VolumeMemoryControls } from './volume-memory';
 import { fullClipping, type ClippingBounds } from './clipping';
 import {
   activeVolumeChannels,
@@ -320,6 +321,7 @@ export default function App() {
   const [channels, setChannels] = useState<ChannelState[]>([]);
   const [channelAnalyses, setChannelAnalyses] = useState<ChannelAnalysis[]>([]);
   const [playing,setPlaying]=useState(false);
+  const volumeMemory=useVolumeMemory();
   const contrastLockedRef=useRef(false);
   const onPlayingChange=useCallback((value:boolean)=>{contrastLockedRef.current=value;setPlaying(value);},[]);
   const [labels, setLabels] = useState<LabelState[]>([]);
@@ -380,9 +382,9 @@ export default function App() {
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
   const allVolumeLevels = useMemo(
     () => currentLoaded && maxTextureSize != null
-      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize)
+      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes,volumeMemory.budgetBytes)
       : [],
-    [currentLoaded, volumeChannels.length, maxTextureSize],
+    [currentLoaded, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes],
   );
   const availableVolumeLevels = useMemo(() => safeVolumeLevels(allVolumeLevels), [allVolumeLevels]);
   const selectedVolumeLevel = useMemo(
@@ -591,7 +593,7 @@ export default function App() {
     }
     if (!selectedVolumeLevel) {
       setRenderMode("2d");
-      setStatus("No multiscale level fits the 200 MiB 3D memory and GPU texture limits.");
+      setStatus("No multiscale level fits the selected memory budget and GPU texture limits.");
       return;
     }
     if (volumeLevel !== selectedVolumeLevel.index) {
@@ -744,7 +746,7 @@ export default function App() {
           ) : currentLoaded && authStore && useNeuroglancer && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <NeuroglancerCanvas key={`neuroglancer:${currentLoaded.path}`} auth={authStore} field={currentLoaded.path} channels={channels}
               labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
-              t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
+              t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale} memoryBudgetBytes={volumeMemory.budgetBytes}
               brightness={volumeBrightness}
               clipping={volumeView === '3d' ? clipping : undefined}
               gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
@@ -823,6 +825,7 @@ export default function App() {
           clipping={clipping} onClipping={setClipping}
           onVolumeRenderer={value=>{captureNavigation();setVolumeRenderer(value);}} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
+          volumeMemoryControls={currentLoaded && currentLoaded.sizeZ>1 ? <VolumeMemoryControls memory={volumeMemory}/> : undefined}
           volumeLevel={selectedVolumeLevel?.index}
           volumeBlend={volumeBlend}
           onVolumeBlend={setVolumeBlend}
@@ -871,6 +874,7 @@ interface ViewerPanelProps {
   onVolumeRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
   volumeLevels: VolumeLevel[];
+  volumeMemoryControls?:ReactNode;
   volumeLevel?: number;
   volumeBlend?: VolumeBlendMode;
   onVolumeBlend?: (value: VolumeBlendMode) => void;
@@ -914,6 +918,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 frameReady={props.frameReady}
                 playing={props.playing} onPlayingChange={props.onPlayingChange}
                 levels={props.volumeLevels}
+                memoryControls={props.volumeMemoryControls}
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
                 channelWarning={props.volumeChannelWarning}
@@ -924,7 +929,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
                 clipping={props.clipping} onClipping={props.onClipping}
               />
-            : <PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
+            : <>{props.volumeMemoryControls}<PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} /></>}
 
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
@@ -1080,6 +1085,7 @@ export function VolumeControls({
   neuroglancerAvailable = true,
   view = "3d", onView, blend = "additive", onBlend, appearance,
   clipping, onClipping,
+  memoryControls,
 }: {
   playing?:boolean; onPlayingChange?:(value:boolean)=>void;
   frameReady?:boolean;
@@ -1096,6 +1102,7 @@ export function VolumeControls({
   view?: VolumeView; onView?: (view: VolumeView) => void;
   blend?: VolumeBlendMode; onBlend?: (blend:VolumeBlendMode) => void;
   appearance?: ReactNode;
+  memoryControls?:ReactNode;
   clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void;
 }) {
   return <section className="panel-section position-section volume-controls" aria-label="Volume options">
@@ -1118,11 +1125,12 @@ export function VolumeControls({
           title="Viv: intensity channels" onClick={() => onRenderer("classic")}>Viv</button>
       </div>
     </div>}
+    {memoryControls}
     <label className="quality-control">
       <span>Quality</span>
       <select aria-label="3D volume quality" value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
         {levels.map((item) => <option key={item.index} value={item.index}>
-          Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.rawBytes)}
+          Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.gpuBytes ?? item.rawBytes)} est. GPU
         </option>)}
       </select>
     </label>

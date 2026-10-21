@@ -118,6 +118,8 @@ try {
         viewer.showPerspectiveSliceViews.value = state.showSlices;
         viewer.showAxisLines.value = state.showAxisLines;
         viewer.showScaleBar.value = state.showScaleBar;
+        viewer.dataContext.chunkQueueManager.capacities.gpuMemory.sizeLimit.restoreState(state.gpuMemoryLimit);
+        viewer.dataContext.chunkQueueManager.capacities.systemMemory.sizeLimit.restoreState(state.systemMemoryLimit);
         viewer.crossSectionBackgroundColor.restoreState(state.crossSectionBackgroundColor);
         viewer.perspectiveViewBackgroundColor.restoreState(state.projectionBackgroundColor);
         for (const spec of state.layers) {

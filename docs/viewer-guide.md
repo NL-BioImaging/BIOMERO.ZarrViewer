@@ -113,6 +113,31 @@ Clipping works in **Viv** and **Neuroglancer**. In Neuroglancer it also clips se
 
 ## 3D display and brightness
 
+Immediately above **Quality**, **Estimated VRAM budget** shows a window-based
+estimate and **Max VRAM memory** offers 100 MiB, 200 MiB, 500 MiB, and 75% of
+the estimate rounded down to 10 MiB. The fixed 500 MiB option is omitted when
+the 75% option is at most 500 MiB. The default is 200 MiB; your choice is stored
+locally in this browser. A saved 500 MiB choice temporarily falls back to
+200 MiB if the window becomes too small to offer it. The 75% choice follows
+window size and display pixel ratio. These controls are also available in 2D
+for Z stacks, so you can raise the budget if no 3D quality level fits.
+
+This follows [MDN's per-pixel VRAM-budget heuristic](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#estimate_a_per-pixel_vram_budget),
+using an application-selected reference of 1 GiB at 1920×1080 device pixels:
+`estimateMiB = 1024 × width × height × devicePixelRatio² / (1920 × 1080)`.
+The estimate is bounded to 128 MiB–4 GiB. It is **not a measurement of total or
+free GPU memory**, and larger windows do not prove that more VRAM is available.
+
+Quality choices account for all visible channels and at least four GPU bytes
+per voxel, because Viv uploads Float32 volume textures. Texture-dimension limits
+still apply. Reducing the budget selects a fitting lower resolution, or returns
+to 2D when none fits. Neuroglancer's chunk-memory limits follow the same choice.
+Framebuffers, temporary CPU copies, driver allocations and other tabs consume
+additional memory; the chosen number is a viewer budget rather than a guarantee
+of total process usage. The physical-store server cache keeps its separate
+200 MiB per-volume guard; larger permitted volumes use the existing plane/chunk
+reader rather than raising server-side resource limits.
+
 The **Display** choice buttons offer **Additive blend**, **Maximum intensity**
 and **Minimum intensity**. Neuroglancer defaults to Maximum intensity; Viv
 defaults to Additive blend. An explicitly saved choice in a viewer link takes

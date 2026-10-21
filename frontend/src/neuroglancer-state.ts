@@ -19,7 +19,7 @@ export function volumeDepthSamples(source: NeuroglancerSource): number {
   return Number.isFinite(samples) && minimumSpacing > 0 ? Math.max(256, Math.min(8192, samples)) : 256;
 }
 
-export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, gain = -3,clipping?:ClippingBounds) {
+export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, gain = -3,clipping?:ClippingBounds,memoryBudgetBytes=512*1024*1024) {
   const dimensions = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] };
   const source = (name: string, item: NeuroglancerSource) => ({
     url: item.transport === "zarr" && !item.segmentation
@@ -67,5 +67,5 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
   return { dimensions, biomeroClip:physicalClipBounds(first.shape,first.resolution,first.translation,clipping), position: extent.map((size, axis) => size / 2 + first.translation[axis]), projectionScale: Math.max(...extent) * 1.5,
     crossSectionScale: Math.max(...extent) / 500, crossSectionOrientation: [0, 0, 0, 1],
     projectionOrientation: [0, 0, 0, 1], layers, layout: "3d", showSlices: false, showAxisLines: false,
-    showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: IMAGE_BACKGROUND, crossSectionBackgroundColor: IMAGE_BACKGROUND, gpuMemoryLimit: 512 * 1024 * 1024, systemMemoryLimit: 512 * 1024 * 1024 };
+    showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: IMAGE_BACKGROUND, crossSectionBackgroundColor: IMAGE_BACKGROUND, gpuMemoryLimit: memoryBudgetBytes, systemMemoryLimit: memoryBudgetBytes };
 }

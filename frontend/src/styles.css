@@ -337,3 +337,5 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .clipping-axis output { display: block; text-align: center; font-size: 10px; padding-top: 4px; }
 .clipping-axis .icon-button { flex: 0 0 26px; width: 26px; min-width: 26px; height: 26px; padding: 3px; }
 .clipping-axis .icon-button svg { width: 18px; height: 18px; }
+.memory-estimate { margin: 5px 0; font-size: 11px; line-height: 1.4; }
+.memory-estimate small { display: block; color: #9aa3b0; }

@@ -12,6 +12,7 @@ interface Props {
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
   brightness: number; gain: number; height: number;
   clipping?:ClippingBounds;
+  memoryBudgetBytes?:number;
   unit?: string;
   viewId?: string;
   view?: VolumeView; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
@@ -93,9 +94,9 @@ export function NeuroglancerCanvas(props: Props) {
     void prepare();
     return () => { cancelled = true; clearTimeout(timer); abort.abort(); };
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
-  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain,props.clipping]);
+  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain,props.clipping,props.memoryBudgetBytes]);
   const state = useMemo(() => prepared ? {
-    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain,props.clipping),
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain,props.clipping,props.memoryBudgetBytes),
     layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
   } : undefined, [prepared, displayKey, view, plane, props.showScale]);
   useEffect(() => {
