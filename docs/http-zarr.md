@@ -176,3 +176,38 @@ and server-side ROI/PNG/SVG rendering through an on-demand read-only Zarr store.
 The filesystem-only Neuroglancer and plate-preview/volume cache endpoints are
 not advertised for virtual sources. Their behavior for physical stores is
 unchanged. This integration does not expose OMERO ROIs as NGFF label arrays.
+
+## Standalone comparison of virtual 0.4 and 0.5
+
+Local Docker measurements on 21 October 2026 used viewer 0.8.1b4 and
+provider `0.1.2.dev0+nlbi.2`, with the same OMERO.server, web image, chunk
+shapes, lossless Zstd level 1 and three concurrent HTTP readers. Each image
+had one warmup and five measured trials per format, with a warm source
+filesystem cache. The 0.4 block ran before 0.5; this is not a randomized
+performance study. No BIOMERO components were installed in that stack.
+
+| Pixel download case | Requests | 0.4 median | 0.5 median |
+|---|---:|---:|---:|
+| SVS overview (all coarse-level pixels) | 27 | 1.518 s | 1.511 s |
+| SVS native resolution (six sampled tiles) | 6 | 0.337 s | 0.305 s |
+| Confocal stack pixels for the MIP | 15 | 0.803 s | 0.762 s |
+
+These timings exclude capability/metadata setup, browser painting and MIP
+calculation. The MIP row measures downloading all 36 Z slices in three
+channels (15 grouped chunks), not the complete UI operation. Small timing
+differences should not be interpreted as a guaranteed format speedup.
+
+The SVS was CMU-1.svs (46000 x 32914 RGB, 0.499 micrometre pixels),
+with native pyramid levels at 1x/4x/16x. Its complete coarsest level
+and six native-resolution tiles had identical decoded pixel hashes.
+The confocal TIFF was 370 x 370 x 36 Z in three channels, calibrated at
+0.1979036070900946 micrometres XY and 0.5 micrometres Z. Both formats
+produced MIP SHA-256
+`f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7`.
+The compressed pixel byte counts, request counts and calibration also matched.
+
+[Raw trials and timings](assets/http-ngff-comparison-20261021.json) record
+the implementation revisions, hashes, chunk shapes and all warmup/measured
+runs. Physical 0.4/0.5 registrations were separately checked with the
+entire small test image: both still matched the original pixel hash under
+either HTTP setting. The existing BIOMERO stack was not updated.
