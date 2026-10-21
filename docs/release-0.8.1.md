@@ -11,6 +11,8 @@ Stable release based on the validated 0.8.1b14 candidate (`3394786`).
   Virtual sources default to 0.4, with optional unsharded 0.5.
 - Reproducible standalone and BIOMERO Docker recipes pin the optional NL-BioImaging
   provider fork by commit and archive checksum.
+- Stable MIP/mean/minimum requests across progress and contrast redraws, with
+  a two-channel pending-volume regression for [issue #17](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/issues/17).
 - Faster large-image and confocal loading, shared MIP/projection caches and progress,
   native non-binary pyramid handling, and bounded transfer concurrency.
 - Large physical stores with small chunks use exact server-side 2D plane tiles.
