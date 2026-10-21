@@ -10,7 +10,7 @@ and with BIOMERO deployments.
 ## Open your data
 
 In OMERO.web, select a registered OME-Zarr **Image**, **Plate** or **Well**, then
-choose **Open With → OME-Zarr Viewer**. Your existing OMERO permissions apply.
+choose **Open With â†’ OME-Zarr Viewer**. Your existing OMERO permissions apply.
 Physical OME-Zarr 0.4/0.5 stores can be registered with standard
 `omero zarr import` / `ExternalInfo`, without extra BIOMERO annotations.
 With the optional `omero-web-zarr` integration enabled, ordinary OMERO images
@@ -35,7 +35,7 @@ Build with `ENABLE_HTTP_ZARR=true` to also install and enable the optional
 provider from the [NL-BioImaging performance fork](https://github.com/NL-BioImaging/omero-web-zarr).
 The recipe pins a fork commit and verifies its archive checksum.
 Ordinary OMERO images are then served on demand as virtual OME-Zarr 0.4,
-using the existing OMERO permissions. Virtual sources use Viv for 3D viewing.
+using the existing OMERO permissions. Virtual sources support Neuroglancer and Viv for 3D viewing.
 See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md).
 
 The provider is disabled by default and is not a required viewer dependency.
@@ -82,15 +82,18 @@ It preserves the installed BIOMERO/Analysis components and existing storage conf
 Click **Help** in the top toolbar for the searchable viewer guide. The help
 window can be moved and resized while you inspect the image.
 
+See [large-volume loading and memory](docs/large-volumes.md) for engine-specific
+quality estimates, cache behavior and above-budget Neuroglancer levels.
+
 ## Documentation
 
 | For | Guide |
 | --- | --- |
-| Viewer users | [Viewer guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/viewer-guide.md) · [Movies](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/movies.md) |
-| Administrators | [Installation](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/installation.md) · [Configuration and cache](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/configuration.md) |
-| Deployment | [NL-BIOMERO](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md) · [OMERO deployment kit](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-omero-deployment-kit.md) |
+| Viewer users | [Viewer guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/viewer-guide.md) Â· [Movies](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/movies.md) |
+| Administrators | [Installation](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/installation.md) Â· [Configuration and cache](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/configuration.md) |
+| Deployment | [NL-BIOMERO](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md) Â· [OMERO deployment kit](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-omero-deployment-kit.md) |
 | Data providers | [Supported data and OMERO registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/data-and-registration.md) |
-| Developers | [Development](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/development.md) · [API and integrations](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/api.md) · [Compatibility checks](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/compatibility-spike.md) |
+| Developers | [Development](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/development.md) Â· [API and integrations](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/api.md) Â· [Compatibility checks](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/compatibility-spike.md) |
 
 Part of [BIOMERO](https://nl-bioimaging.github.io/NL-BIOMERO/).
 The [published documentation](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/)

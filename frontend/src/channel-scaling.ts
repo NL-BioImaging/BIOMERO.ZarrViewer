@@ -113,7 +113,7 @@ export async function analyzeChannels(
 ): Promise<ChannelAnalysis[]> {
   // Pyramid averaging suppresses bright nuclei. Estimate contrast from bounded,
   // spatially distributed native-resolution tiles, never a blurred overview.
-  const source = loader[0];
+  const source = loader[0]?.statisticsSource || loader[0];
   if (!source) return [];
   const samples=source.getNativeSamples&&!options.volume?source.getNativeSamples(channels.map(c=>c.index),z,t,options.signal):undefined;
   return Promise.all(channels.map(async (channel) => {

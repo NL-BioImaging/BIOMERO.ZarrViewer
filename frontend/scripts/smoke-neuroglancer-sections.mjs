@@ -64,7 +64,7 @@ try{
   }));
   const saved=encodeURIComponent(JSON.stringify([{index:0,visible:true,color:'#FFFFFF',low:0,high:255}]));
   await page.goto(`http://127.0.0.1:${server.address().port}/?image=${id}&v=2&render=3d&channels=${saved}`);
-  await page.getByText('3D image and labels ready',{exact:true}).waitFor({timeout:60000});
+  await page.getByText('3D view ready',{exact:true}).waitFor({timeout:60000});
   const capture=()=>page.evaluate(()=>new Promise((resolve,reject)=>{
    const id=Math.random(),timer=setTimeout(()=>{window.removeEventListener('message',receive);reject(Error('Capture timed out'));},10000);
    const receive=event=>{if(event.data?.type!=='biomero-ng-capture'||event.data.id!==id)return;clearTimeout(timer);window.removeEventListener('message',receive);

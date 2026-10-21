@@ -59,6 +59,7 @@ export function volumeLevels(
   maxTextureSize: number,
   budget = VOLUME_RAW_BUDGET_BYTES,
   gpuBudget = Infinity,
+  streamed = false,
 ): VolumeLevel[] {
   const selectedChannels = Math.max(1, Math.min(MAX_CHANNELS, Math.floor(channelCount)));
   return loader.map((source, index) => {
@@ -67,9 +68,10 @@ export function volumeLevels(
     const depth = axisSize(source, "z");
     const rawBytes = width * height * depth * dtypeBytes(source?.dtype) * selectedChannels;
     // Viv uploads Float32 3D textures even for uint8/uint16 source data.
-    // Use the same conservative image-texture allowance in both engines.
-    const gpuBytes = width * height * depth * Math.max(4,dtypeBytes(source?.dtype)) * selectedChannels;
-    const textureSafe = maxTextureSize > 0 && Math.max(width, height, depth) <= maxTextureSize;
+    // Neuroglancer retains typed chunks rather than one full Float32 volume.
+    // Its full-level size is a conservative selection hint, not measured VRAM.
+    const gpuBytes = width * height * depth * (streamed ? dtypeBytes(source?.dtype) : Math.max(4,dtypeBytes(source?.dtype))) * selectedChannels;
+    const textureSafe = streamed || (maxTextureSize > 0 && Math.max(width, height, depth) <= maxTextureSize);
     const memorySafe = Number.isSafeInteger(rawBytes) && rawBytes <= budget && Number.isSafeInteger(gpuBytes) && gpuBytes <= gpuBudget;
     const threeDimensional = depth > 1;
     const safe = textureSafe && memorySafe && threeDimensional;
@@ -80,6 +82,7 @@ export function volumeLevels(
       depth,
       rawBytes,
       gpuBytes,
+      streamed,
       safe,
       ...(!threeDimensional
         ? { reason: "not-3d" as const }

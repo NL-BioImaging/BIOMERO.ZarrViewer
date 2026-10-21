@@ -43,11 +43,11 @@ import { ViewerCanvas } from "./ViewerCanvas";
 import { VolumeCanvas } from "./VolumeCanvas";
 import { ChannelColorPicker } from "./ChannelColorPicker";
 import type { VolumeView, SlicePlane } from "./VolumeViewControls";
-import { NeuroglancerCanvas } from "./NeuroglancerCanvas";
+import { RetainedNeuroglancerCanvas } from "./NeuroglancerCanvas";
 import type { NeuroglancerCamera } from "./neuroglancer-state";
 import { OverviewGrid, defaultPlateFieldIndex } from "./OverviewGrid";
 import { plateGeometry } from "./plate-geometry";
-import { withVolumeCache, type LoadProgress } from "./volume-loader";
+import { withVolumeCache, setVolumeCacheBudget, type LoadProgress } from "./volume-loader";
 import { withImageReadCache } from './http-read-cache';
 import { ClippingPlanes } from './ClippingPlanes';
 import { useVolumeMemory, VolumeMemoryControls } from './volume-memory';
@@ -57,7 +57,6 @@ import {
   chooseVolumeLevel,
   detectMax3dTextureSize,
   formatBytes,
-  safeVolumeLevels,
   volumeLevels,
 } from "./volume-utils";
 
@@ -322,6 +321,7 @@ export default function App() {
   const [channelAnalyses, setChannelAnalyses] = useState<ChannelAnalysis[]>([]);
   const [playing,setPlaying]=useState(false);
   const volumeMemory=useVolumeMemory();
+  useEffect(()=>{if(authStore)setVolumeCacheBudget(authStore,volumeMemory.budgetBytes);},[authStore,volumeMemory.budgetBytes]);
   const contrastLockedRef=useRef(false);
   const onPlayingChange=useCallback((value:boolean)=>{contrastLockedRef.current=value;setPlaying(value);},[]);
   const [labels, setLabels] = useState<LabelState[]>([]);
@@ -380,23 +380,23 @@ export default function App() {
   const currentLoaded = loaded?.path === field ? loaded : null;
   const displayCapability = currentLoaded?.capability || capability;
   const volumeChannels = useMemo(() => activeVolumeChannels(channels), [channels]);
-  const allVolumeLevels = useMemo(
-    () => currentLoaded && maxTextureSize != null
-      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes,volumeMemory.budgetBytes)
-      : [],
-    [currentLoaded, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes],
-  );
-  const availableVolumeLevels = useMemo(() => safeVolumeLevels(allVolumeLevels), [allVolumeLevels]);
-  const selectedVolumeLevel = useMemo(
-    () => chooseVolumeLevel(allVolumeLevels, volumeLevel),
-    [allVolumeLevels, volumeLevel],
-  );
   const ngAvailable = Boolean(authStore?.neuroglancerUrl);
   const useNeuroglancer = ngAvailable && volumeRenderer === "neuroglancer";
+  const allVolumeLevels = useMemo(
+    () => currentLoaded && maxTextureSize != null
+      ? volumeLevels(currentLoaded.image, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes,volumeMemory.budgetBytes,useNeuroglancer)
+      : [],
+    [currentLoaded, volumeChannels.length, maxTextureSize,volumeMemory.budgetBytes,useNeuroglancer],
+  );
+  const availableVolumeLevels = useMemo(() => allVolumeLevels.filter(level=>level.safe || (useNeuroglancer && level.reason==="memory")), [allVolumeLevels,useNeuroglancer]);
+  const selectedVolumeLevel = useMemo(
+    () => (useNeuroglancer && volumeLevel != null ? allVolumeLevels.find(level=>level.index===volumeLevel && level.reason!=="not-3d") : undefined) || chooseVolumeLevel(allVolumeLevels, volumeLevel),
+    [allVolumeLevels, volumeLevel,useNeuroglancer],
+  );
   const volumeBlend = selectedVolumeBlend ?? defaultVolumeBlend(useNeuroglancer ? "neuroglancer" : "classic");
   const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && allVolumeLevels.some(level=>level.reason!=='texture'&&level.reason!=='not-3d'));
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
-  const visibleLoadProgress = effectiveRenderMode === "3d" || loadProgress.busy ? loadProgress : projectionProgress;
+  const visibleLoadProgress = effectiveRenderMode === "3d" ? loadProgress : projectionProgress;
   const statisticsContext:StatisticsContext={field:field||"",renderMode:effectiveRenderMode,projection,z:zIndex,t:tIndex,level:selectedVolumeLevel?.index,channels:channels.filter(c=>c.visible).map(c=>c.index)};
   const statisticsKey=JSON.stringify(statisticsContext);
   const geometry=useMemo(()=>currentLoaded&&displayCapability?navigationGeometry(displayCapability,currentLoaded.image):undefined,[currentLoaded,displayCapability]);
@@ -717,7 +717,19 @@ export default function App() {
       </header>
       <div className="workspace">
         <main className="viewer-host" ref={viewerRef} inert={exportingVolume} aria-busy={exportingVolume}>
-          {visibleLoadProgress.busy && (projection !== "slice" || effectiveRenderMode === "3d") && !(effectiveRenderMode === "3d" && useNeuroglancer) && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{visibleLoadProgress.phase}… {Math.round(visibleLoadProgress.fraction*100)}%</span><progress aria-label={effectiveRenderMode === "3d" ? "Volume loading progress" : "Z projection progress"} max="1" value={visibleLoadProgress.fraction}/></div>}
+          {visibleLoadProgress.busy && projection !== "slice" && effectiveRenderMode !== "3d" && <div className="volume-cache-progress" role="status" aria-live="polite"><span>{visibleLoadProgress.phase}… {Math.round(visibleLoadProgress.fraction*100)}%</span><progress aria-label="Z projection progress" max="1" value={visibleLoadProgress.fraction}/></div>}
+          {currentLoaded && authStore && useNeuroglancer && selectedVolumeLevel && viewMode === "field" && (
+            <RetainedNeuroglancerCanvas key={`neuroglancer:${capability?.image.id}:${currentLoaded.path}`} active={effectiveRenderMode === "3d"} auth={authStore} field={currentLoaded.path} channels={channels}
+              labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
+              t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale} memoryBudgetBytes={volumeMemory.budgetBytes}
+              brightness={volumeBrightness}
+              clipping={volumeView === '3d' ? clipping : undefined}
+              gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
+              view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
+              resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
+              onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
+              onReady={() => {readyFrame();setStatus(volumeView === "3d" ? (labels.length ? "3D view and labels ready" : "3D view ready") : volumeView === "slice" ? "Slice ready" : "Orthogonal views ready");}} />
+          )}
           {capability?.plate && authStore && viewMode !== "field" ? (
             <OverviewGrid
               capability={capability}
@@ -745,16 +757,7 @@ export default function App() {
           ) : currentLoaded && effectiveRenderMode === "3d" && !selectedVolumeLevel ? (
             <div className="volume-stage"><div className="volume-loading" role="status">No quality level fits this memory budget. Increase Max VRAM or choose your GPU VRAM.</div></div>
           ) : currentLoaded && authStore && useNeuroglancer && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
-            <NeuroglancerCanvas key={`neuroglancer:${currentLoaded.path}`} auth={authStore} field={currentLoaded.path} channels={channels}
-              labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
-              t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale} memoryBudgetBytes={volumeMemory.budgetBytes}
-              brightness={volumeBrightness}
-              clipping={volumeView === '3d' ? clipping : undefined}
-              gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
-              view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
-              resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
-              onCancel={() => setRenderMode("2d")} onError={message => setStatus(`3D warning: ${message}`)}
-              onReady={() => {readyFrame();setStatus(volumeView === "3d" ? "3D image and labels ready" : volumeView === "slice" ? "Slice ready" : "Orthogonal views ready");}} />
+            null
           ) : currentLoaded && displayLoader && viewerSize.width > 0 && viewerSize.height > 0 && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <VolumeCanvas
               key={`${currentLoaded.path}:${tIndex}:${selectedVolumeLevel.index}:${volumeChannels.map((channel) => channel.index).join(",")}:${volumeReset}`}
@@ -764,6 +767,7 @@ export default function App() {
               channels={channels}
               t={tIndex}
               resolution={selectedVolumeLevel.index}
+              cacheProgress={loadProgress}
               blendMode={volumeBlend}
               brightness={volumeBrightness}
               showScale={showScale}
@@ -1131,11 +1135,12 @@ export function VolumeControls({
       <span>Quality</span>
       <select aria-label="3D volume quality" disabled={!levels.length} value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
         {levels.map((item) => <option key={item.index} value={item.index}>
-          Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.gpuBytes ?? item.rawBytes)} est. GPU
+          Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.gpuBytes ?? item.rawBytes)} {item.streamed ? "full data (streamed)" : "est. GPU"}{!item.safe ? " - above budget" : ""}
         </option>)}
       </select>
     </label>
 
+    {levels.find(item=>item.index===level)?.safe === false && <p className="volume-warning" role="status">Above the selected memory budget. Loading may be slow or crash the browser. Neuroglancer streams chunks within its cache budget; the full level may not fit.</p>}
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
     {sizeT > 1 && <TimePlayback playing={playing} onPlayingChange={onPlayingChange} sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
     {sizeT > 1 && <label className="slider">Timepoint <input aria-label="Timepoint" type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}

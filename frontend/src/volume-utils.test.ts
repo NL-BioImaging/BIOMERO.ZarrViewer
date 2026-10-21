@@ -129,3 +129,14 @@ test("only visible channels up to Viv's channel limit are loaded", () => {
   expect(active).toHaveLength(10);
   expect(active.some((item) => item.index === 2)).toBe(false);
 });
+
+
+test('streamed Neuroglancer levels use typed data and expose manual above-budget levels',()=>{
+  const loader=[source([1,3,1402,5192,2947]),source([1,3,1402,1298,736])];
+  const ng=volumeLevels(loader,3,2048,18*1024**3,18*1024**3,true);
+  expect(ng[0]).toMatchObject({safe:false,reason:'memory',streamed:true});
+  expect(ng[1].safe).toBe(true);expect(ng[1].gpuBytes).toBe(ng[1].rawBytes);
+  expect(chooseVolumeLevel(ng)?.index).toBe(1);
+  const viv=volumeLevels(loader,3,2048,18*1024**3,18*1024**3);
+  expect(viv[0].reason).toBe('texture');expect(viv[1].gpuBytes).toBe(ng[1].rawBytes*2);
+});

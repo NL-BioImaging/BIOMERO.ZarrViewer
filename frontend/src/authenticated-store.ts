@@ -3,6 +3,7 @@ import type { Capability, ChannelState } from "./types";
 import { requestPreview } from "./preview-client";
 import { abortableDelay } from "./shared-request";
 import { VirtualChunkCache } from "./virtual-chunk-cache";
+import { StoreReadGate } from './store-read-gate';
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -35,6 +36,8 @@ export class AuthenticatedZarrStore {
   private activeHttpRequests = 0;
   private httpQueue: Array<() => void> = [];
   private virtualChunks = new VirtualChunkCache();
+  private ranges = new VirtualChunkCache();
+  private storeReads = new StoreReadGate();
   private readRevision = 0;
   readonly store: zarr.FetchStore;
 
@@ -43,21 +46,24 @@ export class AuthenticatedZarrStore {
     this.refreshCapability = refreshCapability;
     const storeUrl = new URL(capability.store.url, window.location.href).href;
     this.store = new zarr.FetchStore(storeUrl, {
+      useSuffixRequest:true,
       fetch: async (request) => {
         const base = new URL(this.capability.store.url,window.location.href);
         const url = new URL(request.url);
         const key = url.pathname.startsWith(base.pathname) ? url.pathname.slice(base.pathname.length) : "";
-        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && !request.headers.has("Range") && /^\d+\/(?:c\/)?(?:\d+\/)*\d+$/.test(key)) {
-          return this.virtualChunks.fetch(request,signal=>this.authorizedFetch(new Request(request,{signal})));
+        const load=(signal:AbortSignal)=>{const next=new Request(request,{signal,cache:request.headers.has('Range')?'no-store':request.cache});return this.storeReads.fetch(next,()=>this.authorizedFetch(next));};
+        if(request.headers.has('Range'))return this.ranges.fetch(request,load);
+        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && /^\d+\/(?:c\/)?(?:\d+\/)*\d+$/.test(key)) {
+          return this.virtualChunks.fetch(request,load);
         }
-        return this.authorizedFetch(request);
+        return load(request.signal);
       },
     });
     if (capability.store.preview_url) Object.assign(this.store, { getPreview: (field: string, size: number, channels: ChannelState[], z: number, t: number, signal: AbortSignal) => requestPreview(this, field, size, channels, z, t, signal) });
   }
 
   update(capability: Capability): void {
-    if(capability.image.id!==this.capability.image.id || capability.store.url!==this.capability.store.url || capability.store.binding_digest!==this.capability.store.binding_digest || capability.store.uuid!==this.capability.store.uuid || capability.store.context!==this.capability.store.context)this.readRevision++;
+    if(capability.image.id!==this.capability.image.id || capability.store.url!==this.capability.store.url || capability.store.binding_digest!==this.capability.store.binding_digest || capability.store.uuid!==this.capability.store.uuid || capability.store.context!==this.capability.store.context){this.readRevision++;this.ranges.clear();}
     if (capability.image.id !== this.capability.image.id || capability.store.binding_digest !== this.capability.store.binding_digest || capability.store.url !== this.capability.store.url) this.virtualChunks.clear();
     this.capability = capability;
   }
@@ -132,7 +138,14 @@ export class AuthenticatedZarrStore {
       // A browser may reuse an error response for an identical request. Force
       // attempts after the first 5xx back to Nginx so each retry can recover
       // from a transient shared-filesystem read error.
-      const response = await this.fetchRequest(this.requestWithContext(request, serverRetries > 0));
+      let response:Response;
+      try {response=await this.fetchRequest(this.requestWithContext(request, serverRetries > 0));}
+      catch(error){
+        if(!request.signal.aborted&&error instanceof TypeError&&serverRetries<SERVER_RETRY_DELAYS_MS.length){
+          await waitBeforeRetry(SERVER_RETRY_DELAYS_MS[serverRetries++],request.signal);continue;
+        }
+        throw error;
+      }
       if ((response.status === 401 || response.status === 403) && !refreshed) {
         await discard(response);
         await this.refresh();
@@ -178,6 +191,9 @@ export class PrefixStore {
   }
 
   getRange(key: string, range: Parameters<zarr.FetchStore["getRange"]>[1], options?: Parameters<zarr.FetchStore["getRange"]>[2]) {
-    return this.inner.getRange(this.key(key), range, {...options, signal: options?.signal || this.signal});
+    // Zarrita shares an index promise between chunks. A cancelled tile must
+    // not abort that tiny shared index while other tiles still need it.
+    const index='suffixLength' in range&&range.suffixLength<=65536;
+    return this.inner.getRange(this.key(key), range, {...options, signal: index?this.signal:(options?.signal || this.signal)});
   }
 }

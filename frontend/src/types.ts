@@ -148,6 +148,7 @@ export interface VolumeLevel {
   depth: number;
   rawBytes: number;
   gpuBytes?: number;
+  streamed?: boolean;
   safe: boolean;
   reason?: "memory" | "texture" | "not-3d";
 }

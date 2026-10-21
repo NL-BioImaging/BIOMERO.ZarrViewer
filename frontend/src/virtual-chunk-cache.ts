@@ -11,7 +11,8 @@ export class VirtualChunkCache {
 
   async fetch(request: Request, load: (signal: AbortSignal) => Promise<Response>): Promise<Response> {
     request.signal.throwIfAborted();
-    const key = request.url;
+    const range=request.headers.get('Range');
+    const key = request.url+'\n'+(range||'');
     let entry = this.entries.get(key);
     if (entry && (entry.task.controller.signal.aborted || (entry.bytes > 0 && Date.now()-entry.created > this.ttl))) {
       this.entries.delete(key); entry = undefined;
@@ -27,7 +28,7 @@ export class VirtualChunkCache {
           if (this.entries.get(key) === next) {
             next.bytes = bytes.length;
             next.created = Date.now();
-            if (response.status !== 200 || bytes.length > this.budget || headers.get("Content-Type")?.includes("text/html")) this.entries.delete(key);
+            if ((response.status !== 200 && !(range&&response.status===206)) || bytes.length > this.budget || headers.get("Content-Type")?.includes("text/html")) this.entries.delete(key);
             let total = [...this.entries.values()].reduce((n,item)=>n+item.bytes,0);
             for (const [oldKey,old] of this.entries) {
               if (total <= this.budget) break;

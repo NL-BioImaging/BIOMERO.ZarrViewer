@@ -11,7 +11,7 @@ vi.mock("./volume-utils",async importOriginal=>({...await importOriginal<any>(),
 function Canvas(props:any){useEffect(()=>(props.onReady||props.onTilesLoaded)?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-t={props.t} data-camera-command={props.resetKey} data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
 vi.mock("./ViewerCanvas",()=>({ViewerCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./VolumeCanvas",()=>({VolumeCanvas:(props:any)=><Canvas {...props}/>}));
-vi.mock("./NeuroglancerCanvas",()=>({NeuroglancerCanvas:(props:any)=><Canvas {...props}/>}));
+vi.mock("./NeuroglancerCanvas",()=>({RetainedNeuroglancerCanvas:(props:any)=>props.active===false?null:<Canvas {...props}/>}));
 const capability:Capability={schema_version:1,supported:true,image:{id:539,name:"DNA"},store:{url:"/data/",context:"signed",expires_at:"later",neuroglancer_url:"/ng/"},kind:"image",initial_path:".",axes:[{name:"c"},{name:"z",unit:"micrometer"},{name:"y",unit:"micrometer"},{name:"x",unit:"micrometer"}],datasets:[{path:"0",coordinate_transformations:[{type:"scale",scale:[1,2,.2,.2]}]}],channels:[{index:0,label:"DNA",active:true,color:"#00FF00",window:{min:0,max:32767,start:0,end:32767}}],labels:[],ngff_version:"0.4",zarr_format:2};
 let maximum=1000;
 beforeEach(()=>{
@@ -32,6 +32,7 @@ test('VRAM controls are 3D-only and an insufficient budget keeps settings access
   expect(screen.queryByLabelText('GPU VRAM')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button',{name:'3D'}));
   expect(await screen.findByLabelText('GPU VRAM')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Viv'}));
   fireEvent.change(screen.getByLabelText('Max VRAM'),{target:{value:'100'}});
   await screen.findByText('No quality level fits this memory budget. Increase Max VRAM or choose your GPU VRAM.');
   expect(screen.queryByTestId('rendered-contrast')).not.toBeInTheDocument();

@@ -19,6 +19,7 @@ import { clippingActive, type ClippingBounds } from './clipping';
 const VolumeVivViewer = VivViewer as any;
 
 export interface VolumeCanvasProps {
+  cacheProgress?:import('./volume-loader').LoadProgress;
   width: number;
   height: number;
   loader: any[];
@@ -112,6 +113,7 @@ function VolumeRenderer({
   showScale = true,
   brightness = 1,
   clipping,
+  cacheProgress,
   camera,
   orthographic = false,
   onCameraChange,
@@ -255,7 +257,7 @@ function VolumeRenderer({
     />}
     {!ready && !loadError && <div className="volume-loading" role="status" aria-live="polite">
       <strong>Loading 3D volume…</strong>
-      {preparedKey === prepareKey ? <><progress max="1" value={progress} /><span>{Math.round(progress * 100)}%</span></> : <span>Preparing cached volume data...</span>}
+      {preparedKey === prepareKey ? <><progress max="1" value={progress} /><span>{progress>=1?'Uploading GPU textures…':`${Math.round(progress * 100)}%`}</span></> : cacheProgress?.busy ? <><span>{cacheProgress.phase}</span><progress max="1" value={cacheProgress.fraction}/><span>{Math.round(cacheProgress.fraction*100)}%</span></> : <span>Preparing cached volume data...</span>}
       <button onClick={onCancel}>Cancel and return to 2D</button>
     </div>}
     {loadError && <div className="volume-error" role="alert">

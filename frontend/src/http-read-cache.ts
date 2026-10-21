@@ -50,9 +50,19 @@ let serial=0;
  */
 export function withImageReadCache(loader:any[],auth:AuthenticatedZarrStore):any[]{
   let cache=caches.get(auth);if(!cache){cache=new DecodedReadCache();caches.set(auth,cache);}
+  // Small logical 3D chunks are storage units, not useful screen tiles. Group
+  // them into 256px tiles while keeping the original chunks/pixels unchanged.
+  const base=loader[0],large=base&&['x','y'].some(axis=>Number(base.shape?.[base.labels?.indexOf(axis)])>=512);
+  const retile=!auth.isHttp&&large&&base.tileSize>=16&&base.tileSize<256;
   const result=loader.map(source=>{
     const array=source._data;
     if(!array?.getChunk)return source;
+    if(retile){
+      // Contrast sampling must keep its native-sized reads. Enlarging screen
+      // tiles must not multiply the bounded sampling download by 64.
+      source.statisticsSource=Object.assign(Object.create(Object.getPrototypeOf(source)),source);
+      source.tileSize=256;
+    }
     const id=++serial;
     if(!wrapped.has(array)){
       const original=array.getChunk.bind(array);

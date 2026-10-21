@@ -32,3 +32,25 @@ test.each([2,3])('real Zarr v%i decoding retains full volumes, edge chunks, C/T 
   expect(Array.from(mip.data)).toEqual(expected.slice(48));expect(reads).toHaveLength(3);
   expect(Array.from((await source.getRaster({selection:{t:1,c:1,z:2}})).data)).toEqual(expected.slice(24,36));
 });
+
+
+test.each([2,3])('small storage chunks become 256px screen tiles with exact odd edge pixels (v%i)',async format=>{
+  const encode=(v:unknown)=>new TextEncoder().encode(JSON.stringify(v)),files=new Map<string,Uint8Array>();
+  const shape=[1,1,1,257,519],chunks=[1,1,1,32,32];
+  const attrs={version:format===2?'0.4':'0.5',multiscales:[{axes:['t','c','z','y','x'].map(name=>({name,type:name==='c'?'channel':name==='t'?'time':'space'})),datasets:[{path:'0'}]}]};
+  if(format===2){files.set('.zgroup',encode({zarr_format:2}));files.set('.zattrs',encode(attrs));files.set('0/.zarray',encode({zarr_format:2,shape,chunks,dtype:'<u2',compressor:null,filters:null,fill_value:0,order:'C',dimension_separator:'/'}));}
+  else{files.set('zarr.json',encode({zarr_format:3,node_type:'group',attributes:{ome:attrs}}));files.set('0/zarr.json',encode({zarr_format:3,node_type:'array',attributes:{},shape,data_type:'uint16',dimension_names:['t','c','z','y','x'],chunk_grid:{name:'regular',configuration:{chunk_shape:chunks}},chunk_key_encoding:{name:'default',configuration:{separator:'/'}},fill_value:0,codecs:[{name:'bytes',configuration:{endian:'little'}}]}));}
+  for(let y=0;y<9;y++)for(let x=0;x<17;x++){
+    const data=Uint16Array.from({length:1024},(_,i)=>(y*32+Math.floor(i/32))*100+x*32+i%32);
+    files.set(`0/${format===3?'c/':''}0/0/0/${y}/${x}`,new Uint8Array(data.buffer));
+  }
+  const result=await loadOmeZarrFromStore({get:async(key:string)=>files.get(key.replace(/^\//,''))} as any);
+  const [source]=withImageReadCache(result.data,{isHttp:false,readIdentity:'odd'} as any);
+  expect(source.tileSize).toBe(256);
+  expect(source.statisticsSource.tileSize).toBe(32);
+  const sample=await source.statisticsSource.getTile({x:16,y:8,selection:{t:0,c:0,z:0}});
+  expect(Array.from(sample.data)).toEqual(Array.from({length:7},(_,x)=>25600+512+x));
+  const edge=await source.getTile({x:2,y:1,selection:{t:0,c:0,z:0}});
+  expect(edge.width).toBe(7);expect(edge.height).toBe(1);
+  expect(Array.from(edge.data)).toEqual(Array.from({length:7},(_,x)=>25600+512+x));
+});

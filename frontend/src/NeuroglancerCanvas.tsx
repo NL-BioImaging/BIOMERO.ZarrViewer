@@ -8,6 +8,7 @@ import { viewerContextId } from "./viewer-context";
 import type { ClippingBounds } from './clipping';
 
 interface Props {
+  active?: boolean;
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
   brightness: number; gain: number; height: number;
@@ -20,7 +21,18 @@ interface Props {
   onError: (message: string) => void; onReady: () => void; onCancel: () => void;
 }
 
+/** Preserve the worker and its CPU/GPU caches while the 2D canvas is visible.
+ * Freeze source/time/quality until reactivated; changing fields unmounts it. */
+export function RetainedNeuroglancerCanvas(props: Props) {
+  const retained = useRef<Props | undefined>(undefined);
+  if (props.active !== false) retained.current = props;
+  return retained.current ? <div style={{display:props.active === false ? 'none' : 'contents'}} aria-hidden={props.active === false}>
+    <NeuroglancerCanvas {...(props.active === false ? retained.current : props)} active={props.active}/>
+  </div> : null;
+}
+
 export function NeuroglancerCanvas(props: Props) {
+  const active=props.active !== false;
   const view = props.view || "3d";
   const plane = props.plane || "xy";
   const [positionCommand, setPositionCommand] = useState<{ position: number[]; id: number }>();
@@ -103,6 +115,8 @@ export function NeuroglancerCanvas(props: Props) {
     const receive = (event: MessageEvent) => {
       if (event.source !== iframe.current?.contentWindow || event.origin !== window.location.origin) return;
       if (event.data?.type === "biomero-ng-initialized") setInitialized(value => value + 1);
+      if(latest.current.active === false)return;
+      if(event.data?.type === "biomero-ng-progress")setProgress(event.data.pending ? `${event.data.ready ? "View ready; loading more detail" : "Loading visible chunks"}: ${event.data.pending} queued/downloading; ${Math.ceil(event.data.gpuBytes/1048576)} MiB GPU chunk cache` : "");
       if (event.data?.type === "biomero-ng-ready" && !meshesPending.current) { setProgress(""); latest.current.onReady(); }
       if (event.data?.type === "biomero-ng-loading") setProgress("Loading image and segmentation surfaces…");
       if (event.data?.type === "biomero-ng-panels") setPanelScales(event.data.panels.map((panel: PanelScale) => ({...panel,unitsPerPixel:panel.unitsPerPixel / (latest.current.unit === "pixel" ? 1 : 1000)})));
@@ -125,6 +139,11 @@ export function NeuroglancerCanvas(props: Props) {
       voxelSizeNm: prepared && Object.values(prepared.sources)[0]?.resolution,
       voxelDepthNm: prepared && Object.values(prepared.sources)[0]?.resolution[2] }, window.location.origin);
   }, [initialized, state, props.resetKey, props.field, positionCommand]);
+  useEffect(()=>{
+    if(!initialized)return;
+    iframe.current?.contentWindow?.postMessage({type:'biomero-ng-active',active,camera:latest.current.camera},window.location.origin);
+    if(active)setProgress('Restoring cached 3D view…');
+  },[active,initialized]);
   const source = prepared && Object.values(prepared.sources)[0];
   return <div className="volume-stage">
     {source && <SliceControls view={view} plane={plane} onPlane={value => props.onPlane?.(value)} source={source}
@@ -144,7 +163,7 @@ export function NeuroglancerCanvas(props: Props) {
     </div>}
     {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
     {props.showScale && !error && <PanelScaleBars panels={panelScales} unit={props.unit || "micrometer"} />}
-    {error && <div className="volume-error" role="alert"><strong>Unable to load 3D labels</strong><p>{error}</p>
+    {error && <div className="volume-error" role="alert"><strong>Unable to load 3D data</strong><p>{error}</p>
       <button onClick={() => { setError(undefined); setRetry(value => value + 1); }}>Retry</button>
       <button onClick={props.onCancel}>Return to 2D</button></div>}
   </div>;

@@ -41,3 +41,22 @@ test('only virtual numeric chunks are shared; metadata and physical stores stay 
     await physical.store.get('/0/0/0');await physical.store.get('/0/0/0');expect(fetchMock).toHaveBeenCalledTimes(6);
   }finally{vi.unstubAllGlobals();}
 });
+
+
+test('partial responses are keyed by range and never share Chrome disk cache',async()=>{
+  const cap:any={image:{id:1},store:{url:'https://example.test/data/',context:'signed',binding_digest:'a'}};
+  const fetchMock=vi.fn(async(request:Request)=>{
+    expect(request.cache).toBe('no-store');expect(request.method).toBe('GET');
+    const range=request.headers.get('Range');
+    return new Response(new Uint8Array(range==='bytes=-2'?[8,9]:[1,2]),{status:206});
+  });
+  vi.stubGlobal('fetch',fetchMock);
+  try{
+    const auth=new AuthenticatedZarrStore(cap,async()=>cap);
+    expect(await auth.store.getRange('/shard',{suffixLength:2})).toEqual(new Uint8Array([8,9]));
+    expect(await auth.store.getRange('/shard',{offset:0,length:2})).toEqual(new Uint8Array([1,2]));
+    await auth.store.getRange('/shard',{suffixLength:2});expect(fetchMock).toHaveBeenCalledTimes(2);
+    auth.update({...cap,store:{...cap.store,binding_digest:'b'}});
+    await auth.store.getRange('/shard',{suffixLength:2});expect(fetchMock).toHaveBeenCalledTimes(3);
+  }finally{vi.unstubAllGlobals();}
+});
