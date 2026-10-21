@@ -1,20 +1,31 @@
 # Installation
 
-The recommended installation is the integrated
-[`NL-BIOMERO`](https://github.com/NL-BioImaging/NL-BIOMERO) deployment. Its
-local HTTP and Ubuntu HTTPS configurations install the viewer, register it
-when explicitly enabled, mount the OME-Zarr store read-only in Nginx, and keep
-Nginx as the single browser-facing OMERO.web endpoint. See the
-[`NL-BIOMERO` deployment guide](deployment-nl-biomero.md).
+## Stable package and deployment options
+
+Install 0.8.1 into the Python environment used by OMERO.web:
+
+```bash
+python -m pip install --upgrade biomero-zarr-viewer==0.8.1
+```
+
+The wheel includes the compiled browser assets. Standalone OMERO deployments
+can use the [reproducible Docker recipe](http-zarr.md#reproduce-the-standalone-docker-installation),
+with an optional pinned omero-web-zarr provider for ordinary OMERO images.
+BIOMERO, Slurm and OMERO.Analysis are not required.
+
+For existing BIOMERO installations, use the integrated
+[`NL-BIOMERO` deployment guide](deployment-nl-biomero.md). Its local HTTP and
+Ubuntu HTTPS configurations install and register the viewer when explicitly
+enabled, preserve the other web plugins and provide the shared storage route.
 
 Maintainers of another OMERO deployment can follow the
-[`omero-deployment-kit` guide](deployment-omero-deployment-kit.md) to add
-the same application, storage mapping, and authenticated Nginx route.
-
-The viewer requires Nginx to process authenticated `X-Accel-Redirect`
-responses. Both deployment paths install the same wheel and
-[`docker/90-biomero-zarr-viewer.omero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.0-beta1/docker/90-biomero-zarr-viewer.omero)
-configuration; they differ in how Nginx and the storage mount are managed.
+[`omero-deployment-kit` guide](deployment-omero-deployment-kit.md).
+Physical store metadata and native chunks require Nginx to process authenticated
+`X-Accel-Redirect` responses. The bounded pixel/preview/3D APIs return computed
+bytes through their authenticated routes. Deployment recipes provide the shared
+mount, proxy and
+[`docker/90-biomero-zarr-viewer.omero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/90-biomero-zarr-viewer.omero)
+configuration.
 
 The complete documentation is published at
 [nl-bioimaging.github.io/BIOMERO.ZarrViewer](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/).
@@ -32,7 +43,8 @@ for limits, recipes, and Chrome acceptance.
 ### Prerequisites
 
 - OMERO.web 5.6 or newer, running on Python 3.10–3.12;
-- a BIOMERO in-place OME-Zarr import, or an equivalent OMERO-to-store link;
+- a standard ExternalInfo/OMERO CLI Zarr registration, BIOMERO registration, or equivalent OMERO-to-store link for physical stores;
+- the optional HTTP-Zarr provider when opening conventional OMERO images;
 - the OME-Zarr storage visible to OMERO.web and read-only to Nginx;
 - one of the supported Nginx-fronted deployment paths above.
 
@@ -40,9 +52,10 @@ Use Python 3.12 with Zarr-Python 3 for OME-Zarr 0.5/Zarr v3 data, including
 server-side previews, exports and 3D preparation. Python 3.10 resolves to the
 older Zarr-Python 2 reader and supports those operations on Zarr v2 stores.
 
-The current data backend requires Nginx to process `X-Accel-Redirect`.
-Connecting directly to Gunicorn can load capabilities but cannot deliver
-metadata or chunks because Django deliberately does not stream file bodies.
+Physical metadata/native-chunk routes require Nginx to process `X-Accel-Redirect`.
+Connecting directly to Gunicorn cannot deliver those physical files. The optional
+HTTP provider and bounded pixel APIs return their response bodies through Django;
+see [HTTP-Zarr setup](http-zarr.md) and [large-volume loading](large-volumes.md).
 
 ### Build the wheel
 
@@ -117,7 +130,7 @@ omero config set omero.web.zarr_viewer.internal_prefix /_biomero_zarr_internal/
 ```
 
 When the recorded and mounted paths are both under `/data`, the defaults in
-[`docker/90-biomero-zarr-viewer.omero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.0-beta1/docker/90-biomero-zarr-viewer.omero)
+[`docker/90-biomero-zarr-viewer.omero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/90-biomero-zarr-viewer.omero)
 are already correct.
 
 The roots may differ, but the relative suffix

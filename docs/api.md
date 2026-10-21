@@ -13,6 +13,8 @@ GET /api/images/<id>/eligibility/
 GET /api/plates/<id>/eligibility/
 GET /api/wells/<id>/eligibility/
 GET /api/images/<id>/capabilities/
+GET /api/images/<id>/tile/?array=...&axes=...&x=...&y=...&size=256&z=...&t=...&c=...
+GET /api/images/<id>/neuroglancer/
 GET /api/plates/<id>/capabilities/
 GET /api/images/<id>/roi.png?field=...&roi=x0,y0,x1,y1
 POST /api/images/<id>/render.png
@@ -25,9 +27,9 @@ X-OMERO-Zarr-Context: <signed-context>
 ```
 
 The Open With integration calls the eligibility routes first. They validate
-the OMERO Fileset or official `biomero.import` /
-`biomero.zarr.plate-source` registration metadata without reading the Zarr
-store. This keeps menu feedback quick while preserving a truthful first gate.
+the OMERO Fileset, standard ExternalInfo registration, official `biomero.import` /
+`biomero.zarr.plate-source` registration, or optional HTTP provider eligibility
+without reading a complete Zarr pixel store. This keeps menu feedback quick while preserving a truthful first gate.
 The capability routes perform full path, shallow-manifest, and NGFF metadata
 validation when the viewer opens.
 
@@ -38,7 +40,15 @@ their existing behavior.
 
 Unreadable OMERO objects return 404 from full capabilities. Unsupported or
 malformed stores return a stable JSON error code. Successful data responses
-have an empty Django body and contain an `X-Accel-Redirect` for Nginx.
+for physical native files have an empty Django body and contain an `X-Accel-Redirect`
+for Nginx. Virtual HTTP-Zarr and bounded pixel endpoints return authenticated bytes.
+
+The optional `store.raster_url` capability identifies the physical pixel-tile API.
+It accepts an array path relative to the signed store, named axes and bounded tile
+coordinates (at most 512 by 512 pixels for one C/T/Z selection). It returns exact
+little-endian typed XY pixels with `X-Zarr-Width` and `X-Zarr-Height` headers; it
+does not apply contrast or convert to RGB. Signed contexts, mount/routes and
+symlink validation remain mandatory. See [large volumes](large-volumes.md).
 
 The ROI endpoint uses the focused-link parameters documented below and returns
 an 8-bit RGB PNG at native crop resolution. It composes intensity channels

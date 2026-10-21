@@ -1,5 +1,5 @@
 site_name: BIOMERO OME-Zarr Viewer
-site_description: Authenticated viewing of BIOMERO-managed OME-Zarr data in OMERO.web
+site_description: Authenticated OME-Zarr viewing for standalone OMERO and BIOMERO, with optional HTTP-Zarr sources
 site_url: https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/
 repo_url: https://github.com/NL-BioImaging/BIOMERO.ZarrViewer
 repo_name: NL-BioImaging/BIOMERO.ZarrViewer
@@ -35,6 +35,7 @@ nav:
   - Home: index.md
   - Viewer guide: viewer-guide.md
   - Movies: movies.md
+  - Large volumes and memory: large-volumes.md
   - Data and registration: data-and-registration.md
   - Deployment:
       - Installation: installation.md
@@ -42,9 +43,11 @@ nav:
       - Optional HTTP Zarr sources: http-zarr.md
       - NL-BIOMERO: deployment-nl-biomero.md
       - OMERO deployment kit: deployment-omero-deployment-kit.md
+  - Releases:
+      - "0.8.1": release-0.8.1.md
+      - "0.8.0 readiness": release-0.8.0.md
   - Development:
       - Build and test: development.md
-      - Release 0.8.0: release-0.8.0.md
       - API and integrations: api.md
       - Compatibility matrix: compatibility-spike.md
       - Open-source provenance: open-source-provenance.md

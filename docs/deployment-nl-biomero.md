@@ -60,7 +60,7 @@ disabled.
 
 ## Optional pinned HTTP-Zarr provider in an existing BIOMERO stack
 
-Use [`docker/Dockerfile.biomero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.biomero)
+Use [`docker/Dockerfile.biomero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/Dockerfile.biomero)
 to extend your **combined BIOMERO OMERO.web image**, including ZarrViewer
 0.8.1b3 or later. This preserves its installed BIOMERO, Analysis, WorkflowSkills,
 viewer wheel, startup scripts and proxy settings. It does not replace that

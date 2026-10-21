@@ -12,8 +12,10 @@
    and read operation.
 5. The frontend attaches that context as `X-OMERO-Zarr-Context`. An expired
    context is refreshed and retried once.
-6. Django validates each key and returns `X-Accel-Redirect`; Nginx reads the
-   file body.
+6. For physical native files, Django validates each key and returns
+   `X-Accel-Redirect`; Nginx reads the file body. Bounded physical-pixel APIs
+   validate requested paths and return exact/derived display bytes. The optional
+   HTTP-Zarr provider checks access and reads conventional pixels through OMERO.
 
 The URL contains viewer state and an OMERO object ID, but no signed storage
 context or filesystem path. Opening the URL still requires a valid OMERO
