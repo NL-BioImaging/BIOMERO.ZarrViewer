@@ -14,10 +14,10 @@
     "smoke:movie": "node scripts/smoke-movie.mjs"
   },
   "dependencies": {
-    "@deck.gl/core": "9.3.7",
-    "@deck.gl/layers": "9.3.7",
-    "@deck.gl/react": "9.3.7",
-    "@hms-dbmi/viv": "0.22.0",
+    "@deck.gl/core": "9.4.0",
+    "@deck.gl/layers": "9.4.0",
+    "@deck.gl/react": "9.4.0",
+    "@hms-dbmi/viv": "0.23.0",
     "@math.gl/core": "4.1.0",
     "mediabunny": "1.61.0",
     "neuroglancer": "2.41.2",
@@ -45,8 +45,9 @@
       "xmldom": "npm:dry-uninstall@0.3.0",
       "pretty": "npm:dry-uninstall@0.3.0"
     },
-    "@loaders.gl/zip": {
-      "fflate": "0.7.5"
+    "fflate@>=0.7.0 <0.7.5": "0.7.5",
+    "@loaders.gl/textures": {
+      "texture-compressor": "npm:dry-uninstall@0.3.0"
     },
     "image-size": "2.0.4",
     "nanoid": "3.3.18"

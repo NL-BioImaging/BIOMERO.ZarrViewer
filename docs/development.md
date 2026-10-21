@@ -49,3 +49,27 @@ Run backend and frontend tests, the strict documentation build, browser acceptan
 `frontend/package.json` is private and identifies this frontend as 0.8.0; the published Python version still comes exclusively from the Git tag. Use **v0.8.0** for the stable release. A locally built wheel with a 0.8.0 version override is a validation artifact, not a published release. Do not create a tag or publish merely to test the workflow.
 
 The README uses an absolute logo URL and absolute repository documentation links so they work on both GitHub and PyPI. Before publishing, update the default branch to the reviewed release candidate: GitHub Pages currently publishes documentation from `main`.
+
+## Frontend dependency security
+
+Use `npm ci` to reproduce `frontend/package-lock.json`, then run
+`npm audit --audit-level=moderate`. CI fails for moderate or higher advisories;
+it does not ignore the `sprintf-js` advisory or downgrade Viv to satisfy audit.
+Viv 0.23.0 and the direct Deck.gl packages are pinned together on Deck.gl 9.4.0.
+Vite is pinned at 7.3.7, which includes the launch-editor security patches.
+
+The scoped `@loaders.gl/textures` override replaces its unused Node-only
+`texture-compressor` CLI dependency with the empty `dry-uninstall` package,
+following the existing browser-only dependency exclusions for Ikonate. The
+viewer does not run this experimental Node texture writer; GPU texture reading,
+image/Zarr decoding and MP4 encoding retain their real implementations.
+Removing that CLI also removes its `argparse`/`sprintf-js` dependency chain.
+There is no patched upstream `sprintf-js` release for
+[GHSA-hp3w-g68c-fv3c](https://github.com/advisories/GHSA-hp3w-g68c-fv3c).
+
+The version-scoped `fflate` override upgrades only the affected 0.7.0–0.7.4
+range to 0.7.5; it leaves newer 0.8.x consumers intact. If an existing npm tree
+retains an old overridden entry, `npm update fflate` refreshes the lockfile;
+confirm the result with a clean `npm ci` and a fresh audit. Overrides and the
+lockfile are reviewed source changes, not audit suppressions. Keep the generated
+third-party license inventory in sync when rebuilding the browser bundle.

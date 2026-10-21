@@ -65,9 +65,9 @@ views, responses, configuration, templates, and cryptographic signing.
 | [Neuroglancer](https://github.com/google/neuroglancer) | Same-origin 3D intensity volumes and segmentation meshes | `2.41.2` | Apache-2.0 |
 | [Mediabunny](https://github.com/Vanilagy/mediabunny) | Browser-local MP4 encoding and muxing | `1.61.0` | MPL-2.0 |
 | [@math.gl/core](https://github.com/visgl/math.gl) | Physical volume transformations | `4.1.0` | MIT |
-| [Viv](https://github.com/hms-dbmi/viv) | GPU-backed multiscale OME-NGFF image layers and loaders | `0.22.0` | MIT |
+| [Viv](https://github.com/hms-dbmi/viv) | GPU-backed multiscale OME-NGFF image layers and loaders | `0.23.0` | MIT |
 | [Zarrita](https://github.com/manzt/zarrita.js) | Zarr v2/v3 hierarchy access with a custom authenticated fetch store | `0.7.3` | MIT |
-| [deck.gl](https://github.com/visgl/deck.gl) | WebGL canvas, views, interaction, and layer composition used by Viv and the custom label extension | `9.3.7` | MIT |
+| [deck.gl](https://github.com/visgl/deck.gl) | WebGL canvas, views, interaction, and layer composition used by Viv and the custom label extension | `9.4.0` | MIT |
 | [React](https://github.com/facebook/react) | Viewer interface and application state | `19.2.8` | MIT |
 
 Vite, TypeScript, Vitest, Testing Library, and jsdom are development and test
