@@ -96,7 +96,7 @@ export function NeuroglancerCanvas(props: Props) {
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
   const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain,props.clipping,props.memoryBudgetBytes]);
   const state = useMemo(() => prepared ? {
-    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain,props.clipping,props.memoryBudgetBytes),
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain,props.clipping,props.memoryBudgetBytes,view==='3d'),
     layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
   } : undefined, [prepared, displayKey, view, plane, props.showScale]);
   useEffect(() => {

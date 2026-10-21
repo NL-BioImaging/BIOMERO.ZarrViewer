@@ -25,6 +25,6 @@ test('clipping composes shape, calibration and origin without changing slice sha
   const bounds=fullClipping();bounds[0]=[.25,.75];
   expect(physicalClipBounds([10,20,40],[2,3,4],[7,8,9],bounds)).toEqual([[27,8,9],[67,68,49]]);
   expect(neuroglancerClipShader([10,20,40])).toContain('vec3(40.00000000,20.00000000,10.00000000)');
-  expect(neuroglancerClipShader([10,20,40])).toContain('#ifdef VOLUME_RENDERING');
+  expect(neuroglancerClipShader([10,20,40])).toContain('if (VOLUME_RENDERING) {');
   expect(physicalClipBounds([1,1,1],[1,1,1],[0,0,0],fullClipping())).toBeUndefined();
 });

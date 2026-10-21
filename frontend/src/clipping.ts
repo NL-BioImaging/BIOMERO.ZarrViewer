@@ -9,11 +9,13 @@ export function physicalClipBounds(shape:number[],resolution:number[],translatio
   return [0,1].map(side=>resolution.map((spacing,axis)=>translation[axis]+bounds![axis][side]*shape[2-axis]*spacing));
 }
 
-/** Volume-only code: never refer to volume uniforms in the slice/histogram shader. */
+/** Neuroglancer defines VOLUME_RENDERING as true OR false in both shader paths.
+ * Test its value: #ifdef is also true for slice shaders and clips their pixels.
+ */
 export const neuroglancerClipControls=['X','Y','Z'].flatMap(axis=>['Min','Max'].map(side=>`#uicontrol float biomeroClip${axis}${side} slider(min=0,max=1,default=${side==='Min'?0:1})`)).join('\n')+'\n';
 export function neuroglancerClipValues(bounds:ClippingBounds=fullClipping()):Record<string,number>{
   return Object.fromEntries(['X','Y','Z'].flatMap((axis,i)=>['Min','Max'].map((side,j)=>[`biomeroClip${axis}${side}`,bounds[i][j]])));
 }
 export function neuroglancerClipShader(shape:number[]):string {
-  return `\n#ifdef VOLUME_RENDERING\nvec3 clipPosition = (curChunkPosition + uTranslation)/vec3(${shape.slice().reverse().map(n=>n.toFixed(8)).join(',')});\nif(any(lessThan(clipPosition,vec3(biomeroClipXMin,biomeroClipYMin,biomeroClipZMin))) || any(greaterThanEqual(clipPosition,vec3(biomeroClipXMax,biomeroClipYMax,biomeroClipZMax)))) return;\n#endif\n`;
+  return `\nif (VOLUME_RENDERING) {\nvec3 clipPosition = (curChunkPosition + uTranslation)/vec3(${shape.slice().reverse().map(n=>n.toFixed(8)).join(',')});\nif(any(lessThan(clipPosition,vec3(biomeroClipXMin,biomeroClipYMin,biomeroClipZMin))) || any(greaterThanEqual(clipPosition,vec3(biomeroClipXMax,biomeroClipYMax,biomeroClipZMax)))) return;\n}\n`;
 }

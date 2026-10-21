@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "smoke:movie": "node scripts/smoke-movie.mjs"
+    "smoke:movie": "node scripts/smoke-movie.mjs",
+    "smoke:sections": "node scripts/smoke-neuroglancer-sections.mjs"
   },
   "dependencies": {
     "@deck.gl/core": "9.4.0",

@@ -17,6 +17,12 @@ npm run typecheck
 npm run build
 ```
 
+With Chrome installed, `npm run smoke:sections` verifies actual Neuroglancer
+section pixels and volume clipping using a tiny synthetic uint16 volume. It
+covers the native Zarr and decoded-chunk transports, including all three
+orthogonal sections. It uses no public datasets or OMERO instance. CI runs it
+alongside `npm run smoke:movie` and saves screenshots in `frontend/test-results`.
+
 Build and validate a release wheel:
 
 ```bash

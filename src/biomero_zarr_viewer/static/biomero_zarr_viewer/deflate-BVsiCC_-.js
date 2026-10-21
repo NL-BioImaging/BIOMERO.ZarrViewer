@@ -1,5 +1,5 @@
 import { i as r } from "./pako.esm-DLNJzcmj.js";
-import { B as a } from "./main-CdVZN7Bb.js";
+import { B as a } from "./main-BRMY34NQ.js";
 class s extends a {
   decodeBlock(e) {
     return r(new Uint8Array(e)).buffer;
