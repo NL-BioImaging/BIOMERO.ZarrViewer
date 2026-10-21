@@ -35,6 +35,17 @@ def test_uncalibrated_intensities_use_explicit_pixel_coordinates_without_inventi
         ng.spatial_transform(multi, dataset, allow_uncalibrated=True)
 
 
+@pytest.mark.parametrize('dtype', ['uint8','uint16','uint32','int16','float64'])
+def test_http_stream_blocks_bound_output_bytes_even_when_converting_to_float32(dtype):
+    from types import SimpleNamespace
+    import math
+    array = SimpleNamespace(shape=(2,3,99,1024,1024), chunks=(1,1,64,1024,1024), dtype=np.dtype(dtype))
+    chunks = ng.http_chunk_size(array, list('tczyx'))
+    output_bytes = np.dtype(dtype).itemsize if np.dtype(dtype).kind == 'u' else 4
+    assert all(0 < n <= limit for n,limit in zip(chunks,[1024,1024,64]))
+    assert math.prod(chunks)*output_bytes <= ng.MAX_HTTP_BLOCK_BYTES
+
+
 def test_label_mesh_preserves_physical_bounds_and_closes_edge_objects():
     data = np.zeros((6, 7, 8), dtype=np.uint32)
     data[0:3, 2:5, 3:7] = 4000000001
@@ -85,6 +96,7 @@ def test_native_chunks_and_meshes_require_the_authorized_session(scene):
     assert segment in [str(2**53 + 17), "61"]
     assert "token" not in prepared and "store" not in prepared
     info = json.loads(get_data(scene, "image-0/info").content)
+    assert info['scales'][0]['chunk_sizes'] == [[64,64,64]]
     assert info["scales"][0]["resolution"] == [100, 200, 500]
     response = get_data(scene, "image-0/0/0-8_0-7_0-6")
     np.testing.assert_array_equal(np.frombuffer(response.content, dtype="<u2").reshape(6, 7, 8), pixels[0])

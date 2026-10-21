@@ -44,10 +44,27 @@ def authorized_http_source(claims, conn, image_id):
 MAX_OBJECTS = 2048
 MAX_SOURCE_CHUNK_BYTES = 64 * 1024 * 1024
 MAX_NATIVE_CHUNK_BYTES = 8 * 1024 * 1024
+MAX_HTTP_BLOCK_BYTES = 8 * 1024 * 1024
 MAX_INTERACTIVE_VOXELS = 64 ** 3
 MAX_MESH_VOXELS = 32 * 1024 * 1024
 MAX_MESH_BYTES = 32 * 1024 * 1024
 NANOMETERS = {unit:factor*1000 for unit,factor in MICROMETERS.items()}
+
+
+def http_chunk_size(array, axes):
+    """Match virtual source chunks instead of repeatedly decoding wide planes.
+
+    Precomputed supports non-cubic, non-power-of-two chunks. Clip edge-only
+    dimensions and bound the decoded response, including conversion to float32.
+    Physical intensities and segmentation retain their existing chunk layout.
+    """
+    shape = [min(int(array.shape[axes.index(a)]), int(array.chunks[axes.index(a)])) for a in "xyz"]
+    dtype = np.dtype(array.dtype)
+    itemsize = dtype.itemsize if dtype.kind == "u" else 4
+    while math.prod(shape) * itemsize > MAX_HTTP_BLOCK_BYTES:
+        largest = max(range(3), key=lambda i: shape[i])
+        shape[largest] = max(1, (shape[largest] + 1) // 2)
+    return shape
 
 
 def spatial_transform(multiscale, dataset, *, allow_uncalibrated=False):
@@ -139,6 +156,10 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     if segmentation and math.prod(shape) > MAX_MESH_VOXELS:
         raise ROILimitExceeded("Choose a lower 3D quality: labels must contain at most 32 million voxels")
     version = hashlib.sha256(group_bytes + array_bytes).hexdigest()
+    chunk_size = http_chunk_size(array, axes) if http is not None else None
+    if chunk_size is not None:
+        # A changed streaming grid must not reuse a previous viewer's identity.
+        version += json.dumps(chunk_size)
     if segmentation:
         version += cache.fingerprint(array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
     # Intensity chunks are never derived/cached here. A new viewer instance reads
@@ -150,6 +171,8 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     source = {"key": key, "shape": shape, "dtype": dtype.str, "resolution": resolution,
               "translation": translation, "coordinate_unit": coordinate_unit, "segmentation": segmentation, "status": "ready", "progress": 1,
               "array": prefix + dataset_path, "axes": axes, "channel": channel, "timepoint": timepoint}
+    if chunk_size is not None:
+        source["chunk_size"] = chunk_size
     source["transport"] = "zarr" if native_metadata(source, claims) is not None else "chunks"
     if source["transport"] == "chunks" and not segmentation and http is None:
         # Python's decoder opens stored chunks itself. Preserve the original
@@ -435,7 +458,7 @@ def data(request, image_id, context_id, data_key, conn=None, **kwargs):
         info = {"@type": "neuroglancer_multiscale_volume", "type": "segmentation" if source["segmentation"] else "image",
                 "data_type": output_dtype.name, "num_channels": 1,
                 "scales": [{"key": "0", "size": source["shape"][::-1], "resolution": source["resolution"],
-                            "voxel_offset": [0, 0, 0], "chunk_sizes": [[64, 64, 64]], "encoding": "raw"}]}
+                            "voxel_offset": [0, 0, 0], "chunk_sizes": [source.get("chunk_size", [64, 64, 64])], "encoding": "raw"}]}
         if source["segmentation"]:
             info["mesh"] = "mesh"
         response = JsonResponse(info)
@@ -457,7 +480,9 @@ def data(request, image_id, context_id, data_key, conn=None, **kwargs):
         response = HttpResponse((cache.cache_root() / (mesh_key + ".bin")).read_bytes(), content_type="application/octet-stream")
     elif re.fullmatch(r"0/\d+-\d+_\d+-\d+_\d+-\d+", key):
         bounds = [tuple(map(int, pair.split("-"))) for pair in key[2:].split("_")]
-        if any(start < 0 or end <= start or end > size or end - start > 64 for (start, end), size in zip(bounds, source["shape"][::-1])):
+        limits = source.get("chunk_size", [64, 64, 64])
+        if any(start < 0 or end <= start or end > size or end - start > limit
+               for (start, end), size, limit in zip(bounds, source["shape"][::-1], limits)):
             raise InvalidROI("Invalid 3D chunk bounds")
         block = read_block(source, claims, bounds[::-1], array=source_array(source, claims, http=http))
         response = HttpResponse(np.ascontiguousarray(block, dtype=output_dtype).tobytes(), content_type="application/octet-stream")

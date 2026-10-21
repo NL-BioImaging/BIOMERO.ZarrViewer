@@ -174,14 +174,76 @@ is invented.
 The virtual source supports image viewing, client-side projections, Viv 3D,
 Neuroglancer 3D (the default), and server-side ROI/PNG/SVG rendering through an
 on-demand read-only Zarr store. Neuroglancer supports both HTTP OME-Zarr 0.4
-and 0.5 without a full-volume export: authenticated requests decode blocks of
-at most 64 × 64 × 64 voxels into its precomputed volume transport. Image access
+and 0.5 without a full-volume export: authenticated requests decode blocks aligned
+with the virtual source chunks into its precomputed volume transport. Decoded
+responses are limited to 8 MiB, including any conversion to float32; oversized
+source blocks are subdivided. Physical sources and labels retain their existing
+streaming layout. Image access
 and the signed source layout are checked on every request. As for physical
 sources, enable the volume cache setting to advertise Neuroglancer; virtual
 intensity blocks themselves are streamed without writing a display cache.
 The plate-preview/volume cache endpoints remain filesystem-only. Physical
 OME-Zarr and BIOMERO label rendering retain their existing paths. This
 integration does not expose OMERO ROIs as NGFF label arrays.
+
+### Neuroglancer startup and source-aligned blocks
+
+Viewer 0.8.1b8 aligns virtual intensity requests with the provider's spatial
+chunk shape. The previous fixed 64³ grid repeatedly decoded the same wide TIFF
+chunks. For the calibrated 370 × 370 × 36, three-channel confocal sample,
+Neuroglancer now requests 370 × 370 × 8 blocks (with a shorter final Z block):
+15 browser requests instead of 108. Neither pixels, resolution quality,
+calibration nor the provider implementation change. The source layout is part
+of the viewer context identity, and older contexts retain the 64³ fallback.
+
+This uses the ordinary, unsharded
+[Neuroglancer precomputed chunk representation](https://github.com/google/neuroglancer/blob/master/src/datasource/precomputed/volume.md#chunked-representation-of-volume-data).
+Responses remain authenticated and private. No full-volume export or shared
+pixel cache is introduced. The 8 MiB decoded-response limit bounds larger
+layouts; source chunks retain the existing input-size limits.
+
+Local Windows/Chrome measurements on 21 October 2026 used three fresh browser
+contexts per case, a 1440 × 1000 viewport, warm server filesystem caches, and
+the same image and container limits before/after. Time runs from viewer
+navigation after login until the application reports **3D image and labels
+ready**, including requests and rendering. The baseline is viewer 0.8.1b7
+(`0241a8c`); the optimized version is 0.8.1b8.
+
+| Stack / virtual format | Median before | Median after | Requests before → after |
+| --- | ---: | ---: | ---: |
+| Standalone / 0.5 | 20.77 s | 3.00 s | 108 → 15 |
+| BIOMERO / 0.4 | 30.84 s | 4.43 s | 108 → 15 |
+
+These are local desktop measurements, not a cross-format comparison: the
+standalone and BIOMERO stacks have different service/container settings.
+An additional comparison on the **same standalone stack**, changing only the
+HTTP format (three trials of 0.4 followed by three of 0.5), gave medians of
+3.10 s for 0.4 and 2.89 s for 0.5; both used 15 requests. The ranges overlap
+(2.90–3.39 s and 2.86–3.12 s). This small desktop sample does not justify a
+default change: 0.4 remains the compatible default, while 0.5 stays opt-in and
+requires the newer provider and Zarr-Python 3. The substantial startup gain is
+available to both formats. [Individual measurements](assets/neuroglancer-startup-20261021.json)
+include the trial values and validation summary.
+
+All three complete decoded channel volumes were separately compared with the
+original OMERO pixels, including edge blocks; calibration was unchanged.
+Physical 0.4/0.5, a physical 3D image and a BIOMERO shallow result with three
+label layers were also checked. Unit tests verify that a non-cubic HTTP grid
+reads each provider chunk once, retains T/C selections and preserves edge
+pixels, as well as bounding converted response sizes.
+
+To repeat the browser timing, install the frontend dependencies and Chrome,
+set `OMERO_PASSWORD` (and optionally `OMERO_USER`, default `root`) in the
+environment, then run from the repository root:
+
+```powershell
+node scripts/benchmark_neuroglancer.mjs http://localhost:4080 20352 3 timing.json
+```
+
+Use an image ID from your own instance. The script creates a fresh browser
+context for each trial, asserts Neuroglancer is selected and has finished
+loading, and fails on JavaScript or Neuroglancer request errors. Its JSON
+report contains timing/request counts, never credentials or session tokens.
 
 ## Standalone comparison of virtual 0.4 and 0.5
 

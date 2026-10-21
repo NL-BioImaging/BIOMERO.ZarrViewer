@@ -320,10 +320,16 @@ def test_neuroglancer_http_streams_exact_pixels_and_revalidates_access(fixture, 
         read.session = preparation.session if session is None else session
         return ng.data(read, 42, identity, "image-0/" + key, conn=source.conn)
 
-    assert data("info").status_code == 200
-    block = data("0/0-4_0-4_0-2")
-    assert block.status_code == 200, block.content
-    np.testing.assert_array_equal(np.frombuffer(block.content, dtype="<u2").reshape(2, 4, 4), source.pixels)
+    info = data("info")
+    assert info.status_code == 200
+    assert json.loads(info.content)["scales"][0]["chunk_sizes"] == [[4, 4, 1]]
+    decoded = []
+    for z in range(2):
+        block = data(f"0/0-4_0-4_{z}-{z+1}")
+        assert block.status_code == 200, block.content
+        decoded.append(np.frombuffer(block.content, dtype="<u2").reshape(4, 4))
+    np.testing.assert_array_equal(decoded, source.pixels)
+    assert data("0/0-4_0-4_0-2").status_code == 400
     assert block["Cache-Control"] == "private, no-store"
     assert data("0/0-65_0-4_0-2").status_code == 400
     assert data("info", {"active_group": 13}).status_code == 401
@@ -342,6 +348,54 @@ def test_neuroglancer_http_streams_exact_pixels_and_revalidates_access(fixture, 
         assert data("info").status_code == 403
     source.conn.image = None
     assert data("info").status_code == 404
+
+
+def test_neuroglancer_http_grid_avoids_duplicate_source_reads_and_preserves_edges_tc(virtual, monkeypatch):
+    from biomero_zarr_viewer import neuroglancer as ng, volume_cache
+    monkeypatch.setattr(volume_cache, "cache_limit", lambda: 1000000)
+    sizes = [2, 2, 10, 80, 96]
+    pixels = (np.arange(np.prod(sizes), dtype=np.uint32).reshape(sizes) % 50000).astype('<u2')
+    for axis, size in zip('TCZYX', sizes):
+        setattr(virtual.conn.image, 'getSize'+axis, lambda size=size: size)
+    meta = {**virtual.metadata, 'shape':sizes, 'chunks':[1, 1, 3, 80, 96]}
+    calls = []
+    def attrs(*args, **kwargs):
+        return JsonResponse({'multiscales':[{'version':'0.4', 'axes':[
+            {'name':a, **({'type':'space','unit':'micrometer'} if a in 'zyx' else {'type':'channel' if a=='c' else 'time'})}
+            for a in 'tczyx'], 'datasets':[{'path':'0'}]}]})
+    def chunk(request, iid, conn, level, chunk):
+        index = list(map(int, chunk.split('/')))
+        calls.append(tuple(index))
+        t,c,z,y,x = index
+        assert y == x == 0
+        block = np.zeros((1, 1, 3, 80, 96), dtype='<u2')
+        values = pixels[t:t+1,c:c+1,z*3:min(z*3+3,10)]
+        block[:,:,:values.shape[2]] = values
+        return HttpResponse(block.tobytes())
+    monkeypatch.setattr(http_source, 'provider_views', lambda:SimpleNamespace(
+        image_zattrs=attrs, image_zarray=lambda *args, **kwargs:JsonResponse(meta), image_chunk=chunk))
+    model = json.loads(views.capabilities(req(),42,conn=virtual.conn).content)
+    preparation = req(model['store']['context'])
+    preparation.GET = RequestFactory().get('/', {'channels':'[1]', 't':'1'}).GET
+    response = ng.prepare(preparation,42,conn=virtual.conn)
+    assert response.status_code == 200, response.content
+    prepared = json.loads(response.content)
+    identity = prepared['url'].strip('/').split('/')[-1]
+    def data(key):
+        read = req(); read.session = preparation.session
+        return ng.data(read,42,identity,'image-1/'+key,conn=virtual.conn)
+    info = json.loads(data('info').content)
+    assert info['scales'][0]['chunk_sizes'] == [[96,80,3]]
+    assert calls == []
+    decoded = []
+    for z in range(0,10,3):
+        end = min(z+3,10)
+        response = data(f'0/0-96_0-80_{z}-{end}')
+        assert response.status_code == 200, response.content
+        decoded.append(np.frombuffer(response.content,dtype='<u2').reshape(end-z,80,96))
+    np.testing.assert_array_equal(np.concatenate(decoded),pixels[1,1])
+    assert calls == [(1,1,z,0,0) for z in range(4)]
+    assert data('0/0-96_0-80_0-4').status_code == 400
 
 
 def test_virtual_context_is_bound_to_selected_ngff_version(virtual_v3,monkeypatch):
