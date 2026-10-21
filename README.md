@@ -65,8 +65,10 @@ It preserves the installed BIOMERO/Analysis components and existing storage conf
   adjust contrast, and inspect intensity histograms.
 - **Labels:** compare segmentation layers with colors, opacity, fills and
   outlines; inspect object IDs in 2D.
-- **3D:** use **Neuroglancer** (default) for images with label surfaces, or
-  **Viv** for intensity volumes. Select resolution quality, display blending,
+- **3D:** use **Neuroglancer** (default) for physical OME-Zarr and virtual
+  HTTP-Zarr 0.4/0.5 images, including ordinary TIFF stacks. Physical stores also
+  support label surfaces. **Viv** remains available for intensity volumes.
+  Select resolution quality, display blending,
   and intensity brightness while keeping physical XYZ proportions. Volume, Slice
   and Orthogonal layouts are available in both engines.
 - **Navigation:** explore fields, wells and plates; use the 2D navigator,

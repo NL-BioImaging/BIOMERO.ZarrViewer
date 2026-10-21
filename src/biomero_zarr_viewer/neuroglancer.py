@@ -23,10 +23,23 @@ from django.views.decorators.http import require_GET, require_http_methods
 from . import volume_cache as cache
 from . import neuroglancer_contexts as contexts
 from .calibration import compose_transforms, MICROMETERS
-from .errors import ContextRequired, DataNotFound, InvalidROI, ROILimitExceeded, UnsupportedStore, UnsafePath
+from .errors import ContextRequired, DataNotFound, InvalidContext, InvalidROI, ROILimitExceeded, UnsupportedStore, UnsafePath
 from .settings import mount_root
-from .tokens import TOKEN_HEADER, validate_read_context, filesystem_context
+from .tokens import TOKEN_HEADER, validate_read_context
 from .views import _safe_data_path, api_errors, login_required, data as physical_data
+
+
+def authorized_http_source(claims, conn, image_id):
+    """Resolve with current OMERO permissions and bind to the signed layout."""
+    if claims.get("backend", "filesystem") == "filesystem":
+        return None
+    if claims.get("backend") != "omero-web-zarr":
+        raise InvalidContext("Unknown Zarr backend")
+    from .resolver import resolve_image_store
+    store = resolve_image_store(conn, image_id)
+    if store.http is None or str(store.relative) != claims.get("store"):
+        raise InvalidContext("The virtual Zarr source has changed")
+    return store.http
 
 MAX_OBJECTS = 2048
 MAX_SOURCE_CHUNK_BYTES = 64 * 1024 * 1024
@@ -64,24 +77,33 @@ def spatial_transform(multiscale, dataset, *, allow_uncalibrated=False):
     return names, resolution, translation
 
 
-def prepare_source(claims, scope, group, level, channel, timepoint, segmentation=False):
+def prepare_source(claims, scope, group, level, channel, timepoint, segmentation=False, http=None):
     if not isinstance(group, str) or group.startswith("/") or "\\" in group or ".." in PurePosixPath(group).parts:
         raise UnsafePath("Invalid 3D source path")
     prefix = "" if group == "." else group.strip("/") + "/"
     group_path = None
-    for filename in ("zarr.json", ".zattrs"):
+    for filename in (() if http is not None else ("zarr.json", ".zattrs")):
         try:
             group_path, _ = _safe_data_path(claims["store"], prefix + filename, claims.get("routes", []))
             break
         except DataNotFound:
             pass
-    if group_path is None:
+    if http is not None:
+        if group != "." or segmentation:
+            raise UnsupportedStore("Virtual images expose only their root intensity group")
+        group_bytes = http.read("zarr.json" if http.zarr_format == 3 else ".zattrs")
+        metadata = json.loads(group_bytes)
+        if http.zarr_format == 3:
+            metadata = metadata.get("attributes", {}).get("ome", {})
+    elif group_path is None:
         raise DataNotFound("3D source metadata is missing")
-    if group_path.stat().st_size > 4 * 1024 * 1024:
+    elif group_path.stat().st_size > 4 * 1024 * 1024:
         raise ROILimitExceeded("3D source metadata is too large")
-    metadata = json.loads(group_path.read_text())
-    if group_path.name == "zarr.json":
-        metadata = metadata.get("attributes", {}).get("ome", {})
+    else:
+        group_bytes = group_path.read_bytes()
+        metadata = json.loads(group_bytes)
+        if group_path.name == "zarr.json":
+            metadata = metadata.get("attributes", {}).get("ome", {})
     multiscale = metadata.get("multiscales", [{}])[0]
     datasets = multiscale.get("datasets", [])
     if not datasets or level < 0:
@@ -99,19 +121,24 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     dataset_path = str(dataset["path"])
     if dataset_path.startswith("/") or "\\" in dataset_path or ".." in PurePosixPath(dataset_path).parts:
         raise UnsafePath("Invalid 3D dataset path")
-    array_metadata, _ = _safe_data_path(claims["store"], prefix + dataset_path + ("/zarr.json" if group_path.name == "zarr.json" else "/.zarray"), claims.get("routes", []))
-    if array_metadata.stat().st_size > 4 * 1024 * 1024:
-        raise ROILimitExceeded("3D array metadata is too large")
-    array = zarr.open_array(str(array_metadata.parent), mode="r")
+    if http is not None:
+        array_bytes = http.read(dataset_path + ("/zarr.json" if http.zarr_format == 3 else "/.zarray"))
+        array = http.open_group()[dataset_path]
+    else:
+        array_metadata, _ = _safe_data_path(claims["store"], prefix + dataset_path + ("/zarr.json" if group_path.name == "zarr.json" else "/.zarray"), claims.get("routes", []))
+        if array_metadata.stat().st_size > 4 * 1024 * 1024:
+            raise ROILimitExceeded("3D array metadata is too large")
+        array_bytes = array_metadata.read_bytes()
+        array = zarr.open_array(str(array_metadata.parent), mode="r")
     if math.prod(array.chunks) * np.dtype(array.dtype).itemsize > MAX_SOURCE_CHUNK_BYTES:
         raise ROILimitExceeded("Source chunks exceed 64 MiB; rechunk or select a coarser level")
-    description = cache.describe_volume(array_metadata.parent, axes, channel, timepoint, allow_integer64=segmentation, bounded=False)
+    description = cache.describe_volume(None, axes, channel, timepoint, allow_integer64=segmentation, bounded=False, array=array)
     shape, dtype, _ = description
     if segmentation and dtype.kind not in "ui":
         raise UnsupportedStore("3D labels require integer label values")
     if segmentation and math.prod(shape) > MAX_MESH_VOXELS:
         raise ROILimitExceeded("Choose a lower 3D quality: labels must contain at most 32 million voxels")
-    version = hashlib.sha256(group_path.read_bytes() + array_metadata.read_bytes()).hexdigest()
+    version = hashlib.sha256(group_bytes + array_bytes).hexdigest()
     if segmentation:
         version += cache.fingerprint(array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
     # Intensity chunks are never derived/cached here. A new viewer instance reads
@@ -124,14 +151,16 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
               "translation": translation, "coordinate_unit": coordinate_unit, "segmentation": segmentation, "status": "ready", "progress": 1,
               "array": prefix + dataset_path, "axes": axes, "channel": channel, "timepoint": timepoint}
     source["transport"] = "zarr" if native_metadata(source, claims) is not None else "chunks"
-    if source["transport"] == "chunks" and not segmentation:
+    if source["transport"] == "chunks" and not segmentation and http is None:
         # Python's decoder opens stored chunks itself. Preserve the original
         # symlink/mount validation for layouts not served through Nginx.
         cache.fingerprint(array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
     return source
 
 
-def source_array(source, claims):
+def source_array(source, claims, http=None):
+    if http is not None:
+        return http.open_group()[source["array"]]
     filename = "/.zarray"
     try:
         metadata, _ = _safe_data_path(claims["store"], source["array"] + filename, claims.get("routes", []))
@@ -156,6 +185,8 @@ def native_metadata(source, claims):
     C/T chunks must be singleton: stripping those dimensions then preserves the
     compressed byte layout. Other layouts/codecs use bounded decoded chunks.
     """
+    if claims.get("backend", "filesystem") != "filesystem":
+        return None  # Virtual v2/v3 sources use bounded decoded blocks.
     try:
         path, _ = _safe_data_path(claims["store"], source["array"] + "/.zarray", claims.get("routes", []))
     except DataNotFound:
@@ -318,7 +349,8 @@ def mesh_bytes(data, label_id, resolution):
 def prepare(request, image_id, conn=None, **kwargs):
     if not cache.cache_limit():
         raise UnsupportedStore("3D label rendering requires the volume cache")
-    claims = filesystem_context(validate_read_context(request, conn, image_id))
+    claims = validate_read_context(request, conn, image_id)
+    http = authorized_http_source(claims, conn, image_id)
     scope = cache.scope_key(claims, image_id)
     try:
         level = int(request.GET.get("level", "0"))
@@ -339,9 +371,9 @@ def prepare(request, image_id, conn=None, **kwargs):
         raise InvalidROI("Invalid 3D view identifier")
     sources = {}
     for channel in channels:
-        sources[f"image-{channel}"] = prepare_source(claims, scope, field, level, channel, timepoint)
+        sources[f"image-{channel}"] = prepare_source(claims, scope, field, level, channel, timepoint, http=http)
     for index, label in enumerate(labels):
-        sources[f"label-{index}"] = prepare_source(claims, scope, label["path"], level, label.get("channel", 0), timepoint, True)
+        sources[f"label-{index}"] = prepare_source(claims, scope, label["path"], level, label.get("channel", 0), timepoint, True, http=http)
     if not sources:
         raise InvalidROI("Select an image or label layer")
     if len({source["coordinate_unit"] for source in sources.values()}) > 1:
@@ -373,7 +405,8 @@ def data(request, image_id, context_id, data_key, conn=None, **kwargs):
     if not context:
         raise ContextRequired("Reopen the 3D view to authorize its data")
     request.META[TOKEN_HEADER] = context["token"]
-    claims = filesystem_context(validate_read_context(request, conn, image_id))
+    claims = validate_read_context(request, conn, image_id)
+    http = authorized_http_source(claims, conn, image_id)
     scope = cache.scope_key(claims, image_id)
     if scope != context["scope"]:
         raise ContextRequired("The 3D context belongs to another image or group")
@@ -426,7 +459,7 @@ def data(request, image_id, context_id, data_key, conn=None, **kwargs):
         bounds = [tuple(map(int, pair.split("-"))) for pair in key[2:].split("_")]
         if any(start < 0 or end <= start or end > size or end - start > 64 for (start, end), size in zip(bounds, source["shape"][::-1])):
             raise InvalidROI("Invalid 3D chunk bounds")
-        block = read_block(source, claims, bounds[::-1])
+        block = read_block(source, claims, bounds[::-1], array=source_array(source, claims, http=http))
         response = HttpResponse(np.ascontiguousarray(block, dtype=output_dtype).tobytes(), content_type="application/octet-stream")
     else:
         raise DataNotFound("3D data not found")

@@ -171,11 +171,17 @@ shapes because upstream relative pyramid scales alone do not express absolute
 physical spacing. Missing calibration remains uncalibrated; no physical value
 is invented.
 
-The virtual source supports image viewing, client-side projections and Viv 3D,
-and server-side ROI/PNG/SVG rendering through an on-demand read-only Zarr store.
-The filesystem-only Neuroglancer and plate-preview/volume cache endpoints are
-not advertised for virtual sources. Their behavior for physical stores is
-unchanged. This integration does not expose OMERO ROIs as NGFF label arrays.
+The virtual source supports image viewing, client-side projections, Viv 3D,
+Neuroglancer 3D (the default), and server-side ROI/PNG/SVG rendering through an
+on-demand read-only Zarr store. Neuroglancer supports both HTTP OME-Zarr 0.4
+and 0.5 without a full-volume export: authenticated requests decode blocks of
+at most 64 × 64 × 64 voxels into its precomputed volume transport. Image access
+and the signed source layout are checked on every request. As for physical
+sources, enable the volume cache setting to advertise Neuroglancer; virtual
+intensity blocks themselves are streamed without writing a display cache.
+The plate-preview/volume cache endpoints remain filesystem-only. Physical
+OME-Zarr and BIOMERO label rendering retain their existing paths. This
+integration does not expose OMERO ROIs as NGFF label arrays.
 
 ## Standalone comparison of virtual 0.4 and 0.5
 

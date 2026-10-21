@@ -165,7 +165,9 @@ def test_missing_optional_python_module_is_unavailable(monkeypatch):
     assert not http_source.available()
 
 
-def test_http_capability_is_lazy_calibrated_and_eligible(virtual):
+def test_http_capability_is_lazy_calibrated_and_eligible(virtual, monkeypatch):
+    from biomero_zarr_viewer import volume_cache
+    monkeypatch.setattr(volume_cache, "cache_limit", lambda: 0)
     response = views.capabilities(req(), 42, conn=virtual.conn)
     assert response.status_code == 200
     model = json.loads(response.content)
@@ -229,11 +231,11 @@ def test_physical_registration_still_wins_with_http_enabled(virtual, configure_s
 
 
 def test_http_tokens_cannot_authorize_filesystem_cache_endpoints(virtual, monkeypatch):
-    from biomero_zarr_viewer import volume_cache, neuroglancer
+    from biomero_zarr_viewer import volume_cache
     monkeypatch.setattr(volume_cache, "cache_limit", lambda: 1024)
     model = json.loads(views.capabilities(req(), 42, conn=virtual.conn).content)
     token = model["store"]["context"]
-    for endpoint in [views.cached_volume, views.cached_previews, neuroglancer.prepare]:
+    for endpoint in [views.cached_volume, views.cached_previews]:
         assert endpoint(req(token), 42, conn=virtual.conn).status_code == 403
 
 
@@ -292,6 +294,54 @@ def test_virtual_05_is_calibrated_signed_and_pixels_decode_for_roi(virtual_v3):
     png=views.roi_png(RequestFactory().get('/',{'roi':'0,0,4,4','z':'1'}),42,conn=virtual_v3.conn)
     assert png.status_code==200 and png.content.startswith(b'\x89PNG')
     assert views.metadata_details(RequestFactory().get('/'),42,conn=virtual_v3.conn).status_code==200
+
+
+@pytest.mark.parametrize("fixture", ["virtual", "virtual_v3"])
+def test_neuroglancer_http_streams_exact_pixels_and_revalidates_access(fixture, request, monkeypatch):
+    from biomero_zarr_viewer import neuroglancer as ng, volume_cache
+    source = request.getfixturevalue(fixture)
+    monkeypatch.setattr(volume_cache, "cache_limit", lambda: 1000000)
+    model = json.loads(views.capabilities(req(), 42, conn=source.conn).content)
+    assert model["store"]["neuroglancer_url"]
+    assert model["store"]["volume_url"] is None
+    token = model["store"]["context"]
+    preparation = req(token)
+    response = ng.prepare(preparation, 42, conn=source.conn)
+    assert response.status_code == 200, response.content
+    prepared = json.loads(response.content)
+    assert prepared["sources"]["image-0"]["transport"] == "chunks"
+    assert prepared["sources"]["image-0"]["resolution"] == [500, 500, 1500]
+    assert "array" not in prepared["sources"]["image-0"]
+    assert all(call == "metadata" for call in source.calls)  # No eager pixel export.
+    identity = prepared["url"].strip("/").split("/")[-1]
+
+    def data(key, session=None):
+        read = req()
+        read.session = preparation.session if session is None else session
+        return ng.data(read, 42, identity, "image-0/" + key, conn=source.conn)
+
+    assert data("info").status_code == 200
+    block = data("0/0-4_0-4_0-2")
+    assert block.status_code == 200, block.content
+    np.testing.assert_array_equal(np.frombuffer(block.content, dtype="<u2").reshape(2, 4, 4), source.pixels)
+    assert block["Cache-Control"] == "private, no-store"
+    assert data("0/0-65_0-4_0-2").status_code == 400
+    assert data("info", {"active_group": 13}).status_code == 401
+    for query, status in [("?field=../outside", 400), ("?field=missing", 422),
+                          ('?channels=[1]', 400), ('?t=1', 400), ('?level=99', 400),
+                          ('?labels=[{"path":"labels/0"}]', 422)]:
+        invalid = req(token)
+        invalid.GET = RequestFactory().get("/" + query).GET
+        assert ng.prepare(invalid, 42, conn=source.conn).status_code == status
+    # Configuration/source changes invalidate even metadata requests.
+    monkeypatch.setattr(http_source, "http_enabled", lambda: False)
+    assert data("info").status_code == 422
+    monkeypatch.setattr(http_source, "http_enabled", lambda: True)
+    if fixture == "virtual_v3":
+        monkeypatch.setattr(http_source, "http_ngff_version", lambda: "0.4")
+        assert data("info").status_code == 403
+    source.conn.image = None
+    assert data("info").status_code == 404
 
 
 def test_virtual_context_is_bound_to_selected_ngff_version(virtual_v3,monkeypatch):
