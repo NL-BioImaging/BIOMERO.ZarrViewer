@@ -47,10 +47,14 @@ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({executablePath:chrome,headless:true,args:['--enable-unsafe-swiftshader']});
 await mkdir(evidence,{recursive:true});
 const report=[];
+let activePage,activeErrors=[];
 try{
  for(const id of [1,2]){
   const page=await browser.newPage({viewport:{width:1200,height:900}}),errors=[];
+  activePage=page;activeErrors=errors;
   page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error'&&!message.text().includes('Failed to load resource'))errors.push(message.text());});
+  await page.addInitScript(()=>window.addEventListener('message',event=>{if(event.data?.type==='biomero-ng-error')console.error('NEUROGLANCER_ERROR: '+event.data.message);}));
   const saved=encodeURIComponent(JSON.stringify([{index:0,visible:true,color:'#FFFFFF',low:0,high:255}]));
   await page.goto(`http://127.0.0.1:${server.address().port}/?image=${id}&v=2&render=3d&channels=${saved}`);
   await page.getByText('3D image and labels ready',{exact:true}).waitFor({timeout:60000});
@@ -78,4 +82,10 @@ try{
  }
  await writeFile(resolve(evidence,'neuroglancer-sections.json'),JSON.stringify(report,null,2));
  console.log('Neuroglancer section pixels and volume clipping passed for native Zarr and decoded chunks.');
+}catch(error){
+ if(activePage&&!activePage.isClosed()){
+  await activePage.screenshot({path:resolve(evidence,'neuroglancer-sections-failure.png')});
+  console.error(JSON.stringify({error:String(error),pageErrors:activeErrors,body:await activePage.locator('body').innerText()}));
+ }
+ throw error;
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
