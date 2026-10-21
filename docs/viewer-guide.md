@@ -113,14 +113,20 @@ Clipping works in **Viv** and **Neuroglancer**. In Neuroglancer it also clips se
 
 ## 3D display and brightness
 
-Immediately above **Quality**, **Estimated VRAM budget** shows a window-based
-estimate and **Max VRAM memory** offers 100 MiB, 200 MiB, 500 MiB, and 75% of
-the estimate rounded down to 10 MiB. The fixed 500 MiB option is omitted when
-the 75% option is at most 500 MiB. The default is 200 MiB; your choice is stored
-locally in this browser. A saved 500 MiB choice temporarily falls back to
-200 MiB if the window becomes too small to offer it. The 75% choice follows
-window size and display pixel ratio. These controls are also available in 2D
-for Z stacks, so you can raise the budget if no 3D quality level fits.
+In 3D mode, immediately above **Quality**, **Max VRAM** offers 100 MiB, 200 MiB,
+500 MiB, and 75% of the GPU VRAM selected in the adjacent dropdown. Choose
+**Estimate (x GiB)** or manually select **2, 4, 8, 12, 16, 24 or 48 GiB**.
+For example, choosing **24 GiB** makes the 75% option **18 GiB**. Manual choices
+do not depend on window size. The default is 200 MiB with Estimate as the GPU
+source; both choices are stored locally in this browser. The controls are hidden
+in 2D. If no quality level fits, 3D keeps the controls available without loading
+a volume, so you can raise the budget.
+
+With Estimate selected, the 75% value is rounded down to 10 MiB. With a manual
+GPU size it is exactly 75% (in whole MiB). The fixed 500 MiB option is omitted
+when the 75% option is at most 500 MiB. A saved 500 MiB choice temporarily falls
+back to 200 MiB when unavailable. Only Estimate follows the window size and
+display pixel ratio.
 
 This follows [MDN's per-pixel VRAM-budget heuristic](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#estimate_a_per-pixel_vram_budget),
 using an application-selected reference of 1 GiB at 1920×1080 device pixels:
@@ -130,8 +136,8 @@ free GPU memory**, and larger windows do not prove that more VRAM is available.
 
 Quality choices account for all visible channels and at least four GPU bytes
 per voxel, because Viv uploads Float32 volume textures. Texture-dimension limits
-still apply. Reducing the budget selects a fitting lower resolution, or returns
-to 2D when none fits. Neuroglancer's chunk-memory limits follow the same choice.
+still apply. Reducing the budget selects a fitting lower resolution, or pauses
+volume loading when none fits. Neuroglancer's chunk-memory limits follow the same choice.
 Framebuffers, temporary CPU copies, driver allocations and other tabs consume
 additional memory; the chosen number is a viewer budget rather than a guarantee
 of total process usage. The physical-store server cache keeps its separate

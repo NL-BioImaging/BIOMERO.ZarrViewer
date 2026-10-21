@@ -23,6 +23,29 @@ beforeEach(()=>{
 });
 afterEach(()=>vi.unstubAllGlobals());
 
+test('VRAM controls are 3D-only and an insufficient budget keeps settings accessible without rendering a volume',async()=>{
+  localStorage.clear();
+  const axes=[{name:'t'},...capability.axes];
+  vi.mocked(loadOmeZarrFromStore).mockResolvedValue({data:[{labels:['t','c','z','y','x'],shape:[2,1,128,512,512],dtype:'Uint16',tileSize:256,
+    getRaster:async()=>({data:new Uint16Array([0,10,20,30,40,1000]),width:3,height:2})}],metadata:{multiscales:[{axes,datasets:[{path:'0',coordinateTransformations:[{type:'scale',scale:[1,1,2,.2,.2]}]}]}]}} as any);
+  render(<App/>);await screen.findByTestId('rendered-contrast');
+  expect(screen.queryByLabelText('GPU VRAM')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'3D'}));
+  expect(await screen.findByLabelText('GPU VRAM')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Max VRAM'),{target:{value:'100'}});
+  await screen.findByText('No quality level fits this memory budget. Increase Max VRAM or choose your GPU VRAM.');
+  expect(screen.queryByTestId('rendered-contrast')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('3D volume quality')).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('GPU VRAM'),{target:{value:'24'}});
+  fireEvent.change(screen.getByLabelText('Max VRAM'),{target:{value:'auto'}});
+  await screen.findByTestId('rendered-contrast');
+  expect(screen.getByLabelText('3D volume quality')).toBeEnabled();
+  fireEvent.click(screen.getByRole('button',{name:'2D'}));
+  expect(screen.queryByLabelText('Max VRAM')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('GPU VRAM')).not.toBeInTheDocument();
+  localStorage.clear();
+});
+
 test("HTTP images render source contrast before native statistics finish",async()=>{
   vi.mocked(fetchCapabilities).mockResolvedValue({...capability,store:{...capability.store,transport:"http"}});
   const pixels=vi.fn(()=>new Promise(()=>{}));

@@ -394,7 +394,7 @@ export default function App() {
   const ngAvailable = Boolean(authStore?.neuroglancerUrl);
   const useNeuroglancer = ngAvailable && volumeRenderer === "neuroglancer";
   const volumeBlend = selectedVolumeBlend ?? defaultVolumeBlend(useNeuroglancer ? "neuroglancer" : "classic");
-  const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && selectedVolumeLevel);
+  const volumeAvailable = Boolean(currentLoaded && currentLoaded.sizeZ > 1 && allVolumeLevels.some(level=>level.reason!=='texture'&&level.reason!=='not-3d'));
   const effectiveRenderMode: RenderMode = renderMode === "3d" && volumeAvailable ? "3d" : "2d";
   const visibleLoadProgress = effectiveRenderMode === "3d" || loadProgress.busy ? loadProgress : projectionProgress;
   const statisticsContext:StatisticsContext={field:field||"",renderMode:effectiveRenderMode,projection,z:zIndex,t:tIndex,level:selectedVolumeLevel?.index,channels:channels.filter(c=>c.visible).map(c=>c.index)};
@@ -592,7 +592,6 @@ export default function App() {
       return;
     }
     if (!selectedVolumeLevel) {
-      setRenderMode("2d");
       setStatus("No multiscale level fits the selected memory budget and GPU texture limits.");
       return;
     }
@@ -680,7 +679,7 @@ export default function App() {
                   ...deepLink, field, z: zIndex, t: tIndex, overlays:labelOverlays(labels,displayCapability,field),
                 }, channels)} download>{projection==="slice"?"Download ROI PNG":"Download ROI slice PNG"}</a>}
           </>}
-          {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && viewMode === "field" && <MovieExport
+          {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && viewMode === "field" && (effectiveRenderMode!=="3d"||selectedVolumeLevel) && <MovieExport
             key={`${effectiveRenderMode}:${volumeRenderer}:${volumeView}`} imageId={imageId} sizeT={currentLoaded.sizeT} exporter={volumeMovieExporter} onBusy={setExportingVolume} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
               ...(effectiveRenderMode==="3d"?{viewCapture:{version:1,space:"screen",renderer:useNeuroglancer?"neuroglancer":"viv",mode:volumeView,quality:selectedVolumeLevel!.index,
                 settings:{brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,clipping:volumeView==='3d'?clipping:undefined,
@@ -743,6 +742,8 @@ export default function App() {
                 setViewMode(viewMode === "plate" ? "well" : "field");
               }}
             />
+          ) : currentLoaded && effectiveRenderMode === "3d" && !selectedVolumeLevel ? (
+            <div className="volume-stage"><div className="volume-loading" role="status">No quality level fits this memory budget. Increase Max VRAM or choose your GPU VRAM.</div></div>
           ) : currentLoaded && authStore && useNeuroglancer && effectiveRenderMode === "3d" && selectedVolumeLevel ? (
             <NeuroglancerCanvas key={`neuroglancer:${currentLoaded.path}`} auth={authStore} field={currentLoaded.path} channels={channels}
               labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
@@ -929,7 +930,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
                 clipping={props.clipping} onClipping={props.onClipping}
               />
-            : <>{props.volumeMemoryControls}<PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} /></>}
+            : <PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
 
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
@@ -1128,7 +1129,7 @@ export function VolumeControls({
     {memoryControls}
     <label className="quality-control">
       <span>Quality</span>
-      <select aria-label="3D volume quality" value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
+      <select aria-label="3D volume quality" disabled={!levels.length} value={level ?? ""} onChange={(event) => onLevel(Number(event.target.value))}>
         {levels.map((item) => <option key={item.index} value={item.index}>
           Level {item.index} · {item.width}×{item.height}×{item.depth} · {formatBytes(item.gpuBytes ?? item.rawBytes)} est. GPU
         </option>)}
