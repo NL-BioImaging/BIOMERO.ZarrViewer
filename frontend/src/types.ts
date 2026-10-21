@@ -56,6 +56,7 @@ export interface Capability {
   features?: string[];
   image: { id: number; name: string };
   store: {
+    transport?: "filesystem" | "http";
     url: string;
     context: string;
     expires_at: string;
@@ -67,6 +68,8 @@ export interface Capability {
     volume_url?: string;
     neuroglancer_url?: string;
     preview_url?: string;
+    raster_url?:string;
+    native_samples_url?:string;
   };
   kind: "image" | "plate";
   ngff_version: "0.4" | "0.5";
@@ -84,7 +87,7 @@ export interface ApiFailure {
   error: { code: string; message: string };
 }
 
-export type ContrastProvenance = "auto" | "restored" | "manual";
+export type ContrastProvenance = "auto" | "restored" | "manual" | "source";
 export interface ChannelState {
   contrastSource?: ContrastProvenance;
   index: number;
@@ -145,6 +148,8 @@ export interface VolumeLevel {
   height: number;
   depth: number;
   rawBytes: number;
+  gpuBytes?: number;
+  streamed?: boolean;
   safe: boolean;
   reason?: "memory" | "texture" | "not-3d";
 }

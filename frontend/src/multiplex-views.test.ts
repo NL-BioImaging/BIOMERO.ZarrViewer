@@ -1,5 +1,13 @@
 import { channelBatches, MultiplexDetailView } from './multiplex-views';
 
+test('progress and contrast changes keep pixel selections stable; frame changes invalidate them',()=>{
+  const props={selections:[{c:0,t:0}],channelsVisible:[true],colors:[[255,0,0]],contrastLimits:[[0,255]]};
+  const [first]=channelBatches(props),[redraw]=channelBatches({...props,contrastLimits:[[10,200]]});
+  expect(redraw.selections).toBe(first.selections);
+  props.selections[0]={c:0,t:1};
+  expect(channelBatches(props)[0].selections).not.toBe(first.selections);
+});
+
 test('27-channel sources bind only visible channels and keep indices aligned',()=>{
   const source=Array.from({length:27},(_,index)=>index),loaded=vi.fn();
   const props={selections:source.map(c=>({c})),colors:source.map(c=>[c,c,c]),contrastLimits:source.map(c=>[c,c+100]),channelsVisible:source.map(i=>i===0||i===26),onBatchViewportLoad:loaded};

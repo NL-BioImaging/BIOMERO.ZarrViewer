@@ -23,6 +23,7 @@ SHALLOW_MANIFEST = ".biomero-shallow.json"
 MAX_SHALLOW_MANIFEST_BYTES = 100 * 1024 * 1024
 MAX_PARENT_DEPTH = 4
 GROUP_STORAGE_ROOT = re.compile(r"^group-(\d+)-data$")
+NGFF_EXTERNAL_INFO_TYPE = "com.glencoesoftware.ngff:multiscales"
 
 
 @dataclass(frozen=True)
@@ -38,7 +39,7 @@ class ResolvedStore:
     image: object
     image_id: int
     image_name: str
-    path: Path
+    path: Path | None
     relative: PurePosixPath
     recorded_root: PurePosixPath
     recorded_files: tuple[str, ...]
@@ -46,6 +47,8 @@ class ResolvedStore:
     shallow: bool = False
     # The analyzed result owns the identity; pixels may live in another store.
     identity_path: Path | None = None
+    # Optional same-origin omero-web-zarr source; physical paths remain unchanged.
+    http: object | None = None
 
 
 def _string_value(obj, method):
@@ -188,14 +191,100 @@ def _has_canonical_annotation(image):
     return False
 
 
-def _has_registered_store(obj):
+def _external_info_path(image, conn):
+    """Read a standard pixel-buffer registration on an already readable Image.
+
+    Gateway Images may contain an unloaded ExternalInfo proxy. Fetch it through
+    the Image in the same permission/group context, rather than reading the
+    ExternalInfo table independently of its owning object.
+    """
+    if not callable(getattr(image, "getFileset", None)):
+        return None
+    model = getattr(image, "_obj", None)
+    get_details = getattr(model, "getDetails", None)
+    if not callable(get_details):
+        return None
+    details = get_details()
+    external = details.getExternalInfo() if details is not None else None
+    if external is None:
+        return None
+    if not external.isLoaded():
+        image_id = int(_string_value(image, "getId"))
+        model = conn.getQueryService().findByQuery(
+            "select i from Image i join fetch i.details.externalInfo "
+            f"where i.id = {image_id}",
+            None,
+            conn.SERVICE_OPTS,
+        )
+        if model is None:
+            return None
+        external = model.getDetails().getExternalInfo()
+        if external is None:
+            return None
+    if (
+        _string_value(external, "getEntityType") != NGFF_EXTERNAL_INFO_TYPE
+        or _string_value(external, "getEntityId") not in ("3", "4")
+    ):
+        return None
+    return _string_value(external, "getLsid") or None
+
+
+def _local_external_path(value):
+    """Accept local server paths only; never fetch a user-supplied URL."""
+    text = value.replace("\\", "/")
+    path = PurePosixPath(text)
+    if not text.startswith("/") or text.startswith("//") or ".." in path.parts or "\x00" in text:
+        raise UnsafePath("ExternalInfo must reference a local path below the source root")
+    try:
+        path.relative_to(PurePosixPath(source_root().replace("\\", "/")))
+    except ValueError as exc:
+        raise UnsafePath("ExternalInfo is outside the configured source root") from exc
+    return path
+
+
+def _external_info_store(image, conn):
+    value = _external_info_path(image, conn)
+    if value is None:
+        from .http_source import available, resolve_http_store
+        if available():
+            return resolve_http_store(image, conn)
+        raise StoreNotFound("The image is not backed by an in-place OME-Zarr store")
+    recorded_root = _local_external_path(value)
+    try:
+        path, relative = _map_recorded_root(recorded_root)
+    except FileNotFoundError as exc:
+        raise StoreNotFound("The ExternalInfo OME-Zarr group is not mounted") from exc
+    # LSID identifies the multiscale group, not necessarily a .zarr directory.
+    # Scope signed reads to this group so sibling images are not exposed.
+    return ResolvedStore(
+        image=image,
+        image_id=int(_string_value(image, "getId")),
+        image_name=_string_value(image, "getName"),
+        path=path,
+        relative=relative,
+        recorded_root=recorded_root,
+        recorded_files=(value,),
+    )
+
+
+def _has_registered_store(obj, conn):
     """Check OMERO registration metadata without reading the Zarr store."""
     recorded = _recorded_paths(obj)
     if any(zarr_ancestor(value) is not None for value in recorded):
         return True
     if any(zarr_ancestor(value) is not None for value in _biomero_annotation_paths(obj)):
         return True
-    return _has_canonical_annotation(obj)
+    if _has_canonical_annotation(obj):
+        return True
+    value = _external_info_path(obj, conn)
+    if value is None:
+        from .http_source import available
+        return callable(getattr(obj, "getFileset", None)) and available()
+    try:
+        _local_external_path(value)
+    except UnsafePath:
+        return False
+    return True
 
 
 def image_store_registered(conn, image_id):
@@ -205,7 +294,7 @@ def image_store_registered(conn, image_id):
     except (TypeError, ValueError):
         return False
     image = conn.getObject("Image", image_id)
-    return image is not None and _has_registered_store(image)
+    return image is not None and _has_registered_store(image, conn)
 
 
 def plate_store_registered(conn, plate_id):
@@ -217,7 +306,7 @@ def plate_store_registered(conn, plate_id):
     plate = conn.getObject("Plate", plate_id)
     if plate is None:
         return False
-    if _has_registered_store(plate):
+    if _has_registered_store(plate, conn):
         return True
 
     # Legacy in-place plate imports may only retain Fileset registration on
@@ -233,7 +322,7 @@ def plate_store_registered(conn, plate_id):
         for sample in samples():
             get_image = getattr(sample, "getImage", None)
             image = get_image() if callable(get_image) else None
-            if image is not None and _has_registered_store(image):
+            if image is not None and _has_registered_store(image, conn):
                 return True
     return False
 
@@ -253,7 +342,7 @@ def well_store_registered(conn, well_id):
     for sample in samples():
         get_image = getattr(sample, "getImage", None)
         image = get_image() if callable(get_image) else None
-        if image is not None and _has_registered_store(image):
+        if image is not None and _has_registered_store(image, conn):
             return True
     return False
 
@@ -559,7 +648,7 @@ def resolve_image_store(conn, image_id):
     if not roots:
         canonical = _canonical_annotation_store(image)
         if canonical is None:
-            raise StoreNotFound("The image is not backed by an in-place OME-Zarr store")
+            return _external_info_store(image, conn)
         path = _contained_directory(canonical)
         image_name = _string_value(image, "getName")
         recorded = [str(canonical / _safe_relative(image_name, allow_dot=True))]

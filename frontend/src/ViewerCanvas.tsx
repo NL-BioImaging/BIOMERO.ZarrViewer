@@ -112,7 +112,8 @@ export function ViewerCanvas({
   }, [labels, labelStates, z, t]);
   const view = useMemo(() => new DetailView({ id: DETAIL_VIEW_ID, width, height }), [width, height]);
   const baseLabels = loader[0]?.labels || [];
-  const baseSelections = channels.map((channel) => selection(baseLabels, channel.index, z, t));
+  const channelIndices = channels.map(channel=>channel.index).join(",");
+  const baseSelections = useMemo(()=>channels.map(channel=>selection(baseLabels,channel.index,z,t)),[baseLabels,channelIndices,z,t]);
   const spacingX=loader[0]?.meta?.physicalSizes?.x?.size||1;
   const aspect=(loader[0]?.meta?.physicalSizes?.y?.size||spacingX)/spacingX;
   const imageMatrix=useMemo(()=>new Matrix4().scale([1,aspect,1]),[aspect]);

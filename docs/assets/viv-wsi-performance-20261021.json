@@ -1,0 +1,585 @@
+{
+  "date": "2026-10-21",
+  "baseline_viewer": "0.8.1b8",
+  "updated_viewer": "0.8.1b9",
+  "provider_commit": "3afc184a9c3dcab090bd4a92effcf5e45ae4c864",
+  "method": "3 sequential fresh Chrome browser contexts per case, 1440x1000, login excluded. HTTP: Ready, completed MIP, and no data requests outstanding for 650 ms. Physical before/after: Ready, completed MIP, and Playwright networkidle (500 ms). Local Docker Desktop; OS/server caches not cleared. Headless Chrome uses SwiftShader; these are local load benchmarks, not GPU frame-rate or cold-disk benchmarks.",
+  "standalone_virtual_ngff": "0.5",
+  "biomero_virtual_ngff": "0.4",
+  "summary": [
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "mip",
+      "median_seconds": 3.9318897999999973,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "svs",
+      "median_seconds": 5.846665400000005,
+      "median_native_seconds": 3.4527427999999927
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "mip",
+      "median_seconds": 2.5459137999999992,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "svs",
+      "median_seconds": 4.180688399999999,
+      "median_native_seconds": 2.6519865000000027
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "mip",
+      "median_seconds": 4.284913500000003,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "svs",
+      "median_seconds": 10.750839500000001,
+      "median_native_seconds": 3.5661600000000035
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "mip",
+      "median_seconds": 2.738545899999999,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "svs",
+      "median_seconds": 6.9846254000000005,
+      "median_native_seconds": 2.562125699999997
+    },
+    {
+      "phase": "physical-after",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "median_seconds": 2.1997998000000005,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "median_seconds": 1.4423175999999993,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "median_seconds": 1.6250596000000006,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "physical-before",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "median_seconds": 2.3832984999999973,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "median_seconds": 1.4282656000000007,
+      "median_native_seconds": null
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "median_seconds": 1.6042934999999998,
+      "median_native_seconds": null
+    }
+  ],
+  "trials": [
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 1,
+      "seconds": 3.1198883000000004,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 2,
+      "seconds": 2.738545899999999,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 3,
+      "seconds": 2.619380000000001,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 1,
+      "seconds": 6.9846254000000005,
+      "nativeSeconds": 2.7910276999999986,
+      "initialChunks": 75,
+      "allChunks": 105,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 2,
+      "seconds": 7.097639699999996,
+      "nativeSeconds": 1.4217554999999993,
+      "initialChunks": 75,
+      "allChunks": 87,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 3,
+      "seconds": 6.425823799999998,
+      "nativeSeconds": 2.562125699999997,
+      "initialChunks": 75,
+      "allChunks": 105,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 1,
+      "seconds": 4.437241200000004,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 2,
+      "seconds": 4.284913500000003,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 3,
+      "seconds": 4.151735999999997,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 1,
+      "seconds": 10.587700899999996,
+      "nativeSeconds": 3.5661600000000035,
+      "initialChunks": 75,
+      "allChunks": 105,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 2,
+      "seconds": 11.983679300000004,
+      "nativeSeconds": 3.4394750000000056,
+      "initialChunks": 75,
+      "allChunks": 105,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "baseline",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 3,
+      "seconds": 10.750839500000001,
+      "nativeSeconds": 3.6232334000000117,
+      "initialChunks": 75,
+      "allChunks": 105,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 1,
+      "seconds": 2.7178199,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 2,
+      "seconds": 2.5459137999999992,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "mip",
+      "trial": 3,
+      "seconds": 2.4077116999999997,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 1,
+      "seconds": 4.332604600000001,
+      "nativeSeconds": 2.6519865000000027,
+      "initialChunks": 27,
+      "allChunks": 57,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 2,
+      "seconds": 4.180688399999999,
+      "nativeSeconds": 1.5014395000000005,
+      "initialChunks": 27,
+      "allChunks": 39,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "standalone",
+      "kind": "svs",
+      "trial": 3,
+      "seconds": 4.071675500000001,
+      "nativeSeconds": 2.7339163999999982,
+      "initialChunks": 27,
+      "allChunks": 57,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 1,
+      "seconds": 4.0895477000000025,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 2,
+      "seconds": 3.9318897999999973,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "mip",
+      "trial": 3,
+      "seconds": 3.7604559999999982,
+      "initialChunks": 15,
+      "allChunks": 15,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 1,
+      "seconds": 6.0863542000000015,
+      "nativeSeconds": 2.130882000000005,
+      "initialChunks": 27,
+      "allChunks": 39,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 2,
+      "seconds": 5.846665400000005,
+      "nativeSeconds": 3.4527427999999927,
+      "initialChunks": 27,
+      "allChunks": 57,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "after",
+      "stack": "biomero",
+      "kind": "svs",
+      "trial": 3,
+      "seconds": 5.705188299999994,
+      "nativeSeconds": 3.567735499999995,
+      "initialChunks": 27,
+      "allChunks": 57,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 1,
+      "seconds": 2.3754299999999993,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 2,
+      "seconds": 1.4077626,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 3,
+      "seconds": 1.4282656000000007,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 1,
+      "seconds": 1.9571676000000007,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 2,
+      "seconds": 1.6042934999999998,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 3,
+      "seconds": 1.6040974000000006,
+      "initialChunks": 40,
+      "allChunks": 40,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 1,
+      "seconds": 2.3832984999999973,
+      "initialChunks": 46,
+      "allChunks": 46,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 2,
+      "seconds": 2.553218399999998,
+      "initialChunks": 46,
+      "allChunks": 46,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-before",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 3,
+      "seconds": 2.312419900000001,
+      "initialChunks": 46,
+      "allChunks": 46,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 1,
+      "seconds": 2.0688383,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 2,
+      "seconds": 1.4423175999999993,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome04-mip",
+      "trial": 3,
+      "seconds": 1.3725212000000002,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 1,
+      "seconds": 1.6250596000000006,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 2,
+      "seconds": 1.5463708000000005,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "standalone",
+      "kind": "ome05-mip",
+      "trial": 3,
+      "seconds": 1.6446077000000006,
+      "initialChunks": 20,
+      "allChunks": 20,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 1,
+      "seconds": 2.1997998000000005,
+      "initialChunks": 29,
+      "allChunks": 29,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 2,
+      "seconds": 2.3194936000000017,
+      "initialChunks": 29,
+      "allChunks": 29,
+      "errors": [],
+      "failures": []
+    },
+    {
+      "phase": "physical-after",
+      "stack": "biomero",
+      "kind": "ome04-large-slice",
+      "trial": 3,
+      "seconds": 2.158133999999998,
+      "initialChunks": 29,
+      "allChunks": 29,
+      "errors": [],
+      "failures": []
+    }
+  ]
+}

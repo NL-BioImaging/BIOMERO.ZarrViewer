@@ -32,7 +32,7 @@ export function imageAction(kind:ImageInteraction,input:CursorInput,lookup?:Bind
   }
   if(input.buttons){
     if(input.buttons&4)return 'none';
-    if(kind==='viv-2d')return !modified&&Boolean(input.buttons&1)?'pan':'none';
+    if(kind==='viv-2d')return Boolean(input.buttons&2)||(!modified&&Boolean(input.buttons&1))?'pan':'none';
     return modified||Boolean(input.buttons&2)?'pan':'rotate';
   }
   return kind==='viv-volume'&&modified?'pan':'zoom';
@@ -74,12 +74,15 @@ export function installImageCursor(host:HTMLElement,resolve:(input:CursorInput)=
   const key=(event:KeyboardEvent)=>{modifiers(event);if(inside)render();};
   const reset=()=>{input={...empty(),target:input.target};active=undefined;render();};
   const doc=host.ownerDocument,win=doc.defaultView!;
+  const contextMenu=(event:Event)=>{if((event.target as Element)?.closest?.('canvas'))event.preventDefault();};
+  host.addEventListener('contextmenu',contextMenu);
   host.addEventListener('pointerenter',pointer);host.addEventListener('pointermove',pointer);host.addEventListener('pointerdown',down,true);host.addEventListener('pointerleave',leave);
   win.addEventListener('pointerup',up,true);win.addEventListener('pointercancel',reset);win.addEventListener('blur',reset);
   win.addEventListener('keydown',key,true);win.addEventListener('keyup',key,true);render();
   return {
     setModifiers(event:Pick<CursorInput,'ctrlKey'|'altKey'|'metaKey'|'shiftKey'>){modifiers(event);if(inside)render();},
     dispose(){
+      host.removeEventListener('contextmenu',contextMenu);
       host.removeEventListener('pointerenter',pointer);host.removeEventListener('pointermove',pointer);host.removeEventListener('pointerdown',down,true);host.removeEventListener('pointerleave',leave);
       win.removeEventListener('pointerup',up,true);win.removeEventListener('pointercancel',reset);win.removeEventListener('blur',reset);
       win.removeEventListener('keydown',key,true);win.removeEventListener('keyup',key,true);

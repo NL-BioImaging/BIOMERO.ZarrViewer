@@ -1,0 +1,3 @@
+# Installed only by an explicit ENABLE_HTTP_ZARR=true build.
+config append -- omero.web.apps '"omero_web_zarr"'
+config set -- omero.web.zarr_viewer.omero_web_zarr_enabled true

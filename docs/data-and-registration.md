@@ -13,7 +13,7 @@ OME-Zarr store and registers where that store belongs in OMERO.
 | BIOMERO OME-Zarr Viewer | Validate access, interpret NGFF metadata, and render the data |
 | Nginx | Serve only the files authorized by the viewer |
 
-The viewer can locate a store in either of these ways:
+The viewer can locate a store through these registrations:
 
 1. the readable OMERO Image has a Fileset/OriginalFile path inside a `.zarr`
    directory; or
@@ -22,6 +22,13 @@ The viewer can locate a store in either of these ways:
    `DestinationType`, and `Files`.
 3. a readable Plate has a BIOMERO schema-2 `biomero.zarr.plate-source`
    annotation that identifies its canonical managed OME-Zarr store.
+4. the readable Image has a standard OMERO Zarr Pixel Buffer `ExternalInfo`
+   registration pointing to a local multiscale group, as described below.
+
+With the optional [omero-web-zarr integration](http-zarr.md) explicitly enabled,
+ordinary readable OMERO Images can also use a virtual HTTP OME-Zarr 0.4 source.
+That fallback needs no source annotation and does not change the precedence
+of these physical registrations. The optional dependency may be absent.
 
 The BIOMERO importer produces the second form for in-place imports, including
 plate imports whose individual OMERO Images are named with NGFF field paths
@@ -50,13 +57,42 @@ declared label route must resolve below `mount_root`; unsafe, missing, invalid,
 or ambiguous routes are rejected. Existing complete OME-Zarr stores continue
 to use the Fileset and `biomero.import` resolution paths unchanged.
 
+### Standard OMERO CLI Zarr imports
+
+Images imported with `omero zarr import /data/sample.ome.zarr` need no
+BIOMERO annotation. The viewer also accepts the standard OMERO Zarr Pixel
+Buffer `Image.details.externalInfo` registration:
+
+- `entityType`: `com.glencoesoftware.ngff:multiscales`;
+- `entityId`: `3` or `4`;
+- `lsid`: the absolute server path of the multiscale image group.
+
+The group may be the store root or a nested image such as
+`/data/plate.ome.zarr/B/2/0`; a `.zarr` filename extension is not required.
+The source/mount root mapping applies to the complete group path. Signed
+reads are restricted to that group, not its parent store or sibling images.
+Image, Plate and Well Open With eligibility recognizes this registration
+without inspecting files on disk. Plate and Well links resolve through a
+readable field image; ExternalInfo alone does not describe a plate overview.
+
+Only local filesystem paths below `source_root` are supported. HTTP, S3 and
+`file:` URLs are not fetched by this viewer. A local registration must be
+visible to OMERO.web and read-only to Nginx below `mount_root`; missing stores,
+path traversal and symlinks escaping that mount are rejected. An unloaded
+ExternalInfo is fetched through its readable Image in the active OMERO group.
+
+Existing Fileset, `biomero.import`, canonical and shallow BIOMERO registrations
+keep their existing precedence and behavior. ExternalInfo is a fallback when
+none of those registrations selects a store, so it does not bypass shallow
+label routing or an invalid BIOMERO manifest.
+
 Another importer can therefore be used, but it must provide one of those
 links. Its recorded store path must be below `source_root`, and the matching
 store must exist below `mount_root`.
 
 ### OME-Zarr metadata requirements
 
-BIOMERO provenance tells the viewer where the store is; the actual image,
+OMERO registration tells the viewer where the store is; the actual image,
 channel, label, and plate descriptions come from standard OME-NGFF metadata
 inside the store.
 

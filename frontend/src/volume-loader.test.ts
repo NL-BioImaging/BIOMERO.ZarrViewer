@@ -1,4 +1,4 @@
-import { withVolumeCache } from "./volume-loader";
+import { withVolumeCache, setVolumeCacheBudget } from "./volume-loader";
 import { projectSource } from "./projection-loader";
 
 test("3D and projections request only the selected time and reuse it without prefetching neighbours", async () => {
@@ -57,4 +57,16 @@ test("an aborted download cannot remove its immediate replacement; failed jobs r
   expect((await replacement).data).toHaveLength(8);
   await source.getVolume({});expect(fetch).toHaveBeenCalledTimes(3);
   expect(fetch.mock.calls[1][0]).toContain("retryFailed=1");
+});
+
+
+test("configured volume cache retains all active channels across 2D/3D switches",async()=>{
+  const auth={volumeUrl:'/volume/',volumeIdentity:'multi',fetch:vi.fn(async (url:string)=>url.includes('download=1')?new Response(new Uint16Array(8).buffer):new Response(JSON.stringify({status:'ready',key:'job',shape:[2,2,2],dtype:'<u2',bytes:16})))};
+  setVolumeCacheBudget(auth as any,48);
+  const raw={labels:['c','z','y','x'],shape:[3,2,2,2],dtype:'Uint16',getRaster:vi.fn(()=>{throw Error('Cache missed');})};
+  const [source]=withVolumeCache([raw],auth as any,'.',()=>{});
+  await Promise.all([0,1,2].map(c=>source.getVolume({c})));
+  for(const c of [0,1,2])await source.getRaster({selection:{c,z:0}});
+  await Promise.all([0,1,2].map(c=>source.getVolume({c})));
+  expect(auth.fetch).toHaveBeenCalledTimes(6);expect(raw.getRaster).not.toHaveBeenCalled();
 });

@@ -1,5 +1,6 @@
 import { IMAGE_BACKGROUND } from "./viewer-appearance";
 import type { ChannelState, LabelState, VolumeBlendMode } from "./types";
+import { neuroglancerClipShader,neuroglancerClipControls,neuroglancerClipValues,physicalClipBounds,type ClippingBounds } from './clipping';
 
 export interface NeuroglancerCamera { position: number[]; orientation: number[]; scale: number; crossSectionScale?: number }
 export interface NeuroglancerSource {
@@ -18,7 +19,7 @@ export function volumeDepthSamples(source: NeuroglancerSource): number {
   return Number.isFinite(samples) && minimumSpacing > 0 ? Math.max(256, Math.min(8192, samples)) : 256;
 }
 
-export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, gain = -3) {
+export function neuroglancerState(prepared: NeuroglancerPrepared, channels: ChannelState[], labels: LabelState[], blend: VolumeBlendMode, showScale: boolean, brightness = 1, gain = -3,clipping?:ClippingBounds,memoryBudgetBytes=512*1024*1024,volumeClipping=true) {
   const dimensions = { x: [1e-9, "m"], y: [1e-9, "m"], z: [1e-9, "m"] };
   const source = (name: string, item: NeuroglancerSource) => ({
     url: item.transport === "zarr" && !item.segmentation
@@ -44,8 +45,8 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
       volumeRenderingGain: gain,
       volumeRenderingDepthSamples: volumeDepthSamples(item),
       // Raw intensity values preserve the same contrast limits as the 2D view.
-      shaderControls: {}, opacity: 1, blend: "additive",
-      shader: `void main() { float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); float alpha = 1.0;\n#ifdef VOLUME_RENDERING\nalpha = ${blend === "additive" ? "v" : "1.0"};\n#endif\nemitRGBA(vec4(vec3(${rgb.join(",")}) * v, alpha)); }`,
+      shaderControls: neuroglancerClipValues(clipping), opacity: 1, blend: "additive",
+      shader: `${neuroglancerClipControls}void main() { ${volumeClipping?neuroglancerClipShader(item.shape):''} float v = clamp((float(toRaw(getInterpolatedDataValue())) - ${low.toExponential(8)}) / ${range.toExponential(8)} * ${brightness.toFixed(8)}, 0.0, 1.0); emitIntensity(v); float alpha = VOLUME_RENDERING ? ${blend === "additive" ? "v" : "1.0"} : 1.0; emitRGBA(vec4(vec3(${rgb.join(",")}) * v, alpha)); }`,
     });
   }
   labels.filter(label => label.visible).forEach((label, index) => {
@@ -63,8 +64,8 @@ export function neuroglancerState(prepared: NeuroglancerPrepared, channels: Chan
   });
   const first = Object.values(prepared.sources)[0];
   const extent = first.shape.slice().reverse().map((size, axis) => size * first.resolution[axis]);
-  return { dimensions, position: extent.map((size, axis) => size / 2 + first.translation[axis]), projectionScale: Math.max(...extent) * 1.5,
+  return { dimensions, biomeroClip:physicalClipBounds(first.shape,first.resolution,first.translation,clipping), position: extent.map((size, axis) => size / 2 + first.translation[axis]), projectionScale: Math.max(...extent) * 1.5,
     crossSectionScale: Math.max(...extent) / 500, crossSectionOrientation: [0, 0, 0, 1],
     projectionOrientation: [0, 0, 0, 1], layers, layout: "3d", showSlices: false, showAxisLines: false,
-    showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: IMAGE_BACKGROUND, crossSectionBackgroundColor: IMAGE_BACKGROUND, gpuMemoryLimit: 512 * 1024 * 1024, systemMemoryLimit: 512 * 1024 * 1024 };
+    showScaleBar: showScale, showDefaultAnnotations: false, projectionBackgroundColor: IMAGE_BACKGROUND, crossSectionBackgroundColor: IMAGE_BACKGROUND, gpuMemoryLimit: memoryBudgetBytes, systemMemoryLimit: memoryBudgetBytes };
 }

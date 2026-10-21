@@ -17,6 +17,15 @@ DEFAULT_RENDER_MAX_OVERLAYS = 8
 DEFAULT_RENDER_MAX_AGGREGATE_PIXELS = 25_000_000
 
 CUSTOM_SETTINGS_MAPPINGS = {
+    "omero.web.zarr_viewer.http_ngff_version": [
+        "BIOMERO_ZARR_HTTP_NGFF_VERSION", "0.4", str,
+        "Virtual HTTP source format: 0.4 (default) or optional unsharded 0.5",
+    ],
+    "omero.web.zarr_viewer.omero_web_zarr_enabled": [
+        "BIOMERO_ZARR_HTTP_ENABLED", False,
+        lambda value: str(value).lower() in ("true", "1", "yes"),
+        "Offer virtual OME-Zarr through the optional installed omero-web-zarr app",
+    ],
     "omero.web.zarr_viewer.source_root": [
         "BIOMERO_ZARR_SOURCE_ROOT",
         DEFAULT_SOURCE_ROOT,
@@ -111,6 +120,14 @@ def _integer(name, default, minimum=1):
 
 def source_root():
     return str(_setting("BIOMERO_ZARR_SOURCE_ROOT", DEFAULT_SOURCE_ROOT))
+
+
+def http_enabled():
+    return str(_setting("BIOMERO_ZARR_HTTP_ENABLED", False)).lower() in ("true", "1", "yes")
+
+
+def http_ngff_version():
+    return str(_setting("BIOMERO_ZARR_HTTP_NGFF_VERSION", "0.4"))
 
 
 def mount_root():

@@ -1,0 +1,184 @@
+{
+    "date":  "2026-10-21",
+    "sample":  {
+                   "channels":  3,
+                   "dtype":  "uint8",
+                   "resolution_xyz_nm":  [
+                                             197.9036070900946,
+                                             197.9036070900946,
+                                             500
+                                         ],
+                   "shape_zyx":  [
+                                     36,
+                                     370,
+                                     370
+                                 ]
+               },
+    "method":  {
+                   "comparison_order":  "Before and after blocks; additional same-stack format comparison ran 0.4 then 0.5",
+                   "baseline_viewer":  "0.8.1b7",
+                   "trials":  3,
+                   "browser_context":  "Fresh for each trial",
+                   "server_filesystem_cache":  "Warm",
+                   "timing":  "Authenticated viewer navigation until 3D image and labels ready",
+                   "optimized_viewer":  "0.8.1b8",
+                   "browser":  "155.0.8059.85",
+                   "limitations":  "Local desktop timings; no claim of a general 0.5 speed advantage",
+                   "baseline_commit":  "0241a8ce31ae658b4f19481e473fe378a4f42be5",
+                   "viewport":  [
+                                    1440,
+                                    1000
+                                ]
+               },
+    "before":  [
+                   {
+                       "stack":  "standalone",
+                       "ngff":  "0.5",
+                       "trial":  1,
+                       "seconds":  22.3352687,
+                       "requests":  108
+                   },
+                   {
+                       "stack":  "standalone",
+                       "ngff":  "0.5",
+                       "trial":  2,
+                       "seconds":  20.7745981,
+                       "requests":  108
+                   },
+                   {
+                       "stack":  "standalone",
+                       "ngff":  "0.5",
+                       "trial":  3,
+                       "seconds":  18.7345026,
+                       "requests":  108
+                   },
+                   {
+                       "stack":  "biomero",
+                       "ngff":  "0.4",
+                       "trial":  1,
+                       "seconds":  31.452926999999995,
+                       "requests":  108
+                   },
+                   {
+                       "stack":  "biomero",
+                       "ngff":  "0.4",
+                       "trial":  2,
+                       "seconds":  29.339696200000006,
+                       "requests":  108
+                   },
+                   {
+                       "stack":  "biomero",
+                       "ngff":  "0.4",
+                       "trial":  3,
+                       "seconds":  30.843991500000005,
+                       "requests":  108
+                   }
+               ],
+    "after":  [
+                  {
+                      "stack":  "standalone",
+                      "ngff":  "0.5",
+                      "trial":  1,
+                      "seconds":  3.3469041000000006,
+                      "requests":  15
+                  },
+                  {
+                      "stack":  "standalone",
+                      "ngff":  "0.5",
+                      "trial":  2,
+                      "seconds":  3.0025802999999995,
+                      "requests":  15
+                  },
+                  {
+                      "stack":  "standalone",
+                      "ngff":  "0.5",
+                      "trial":  3,
+                      "seconds":  2.9234736000000012,
+                      "requests":  15
+                  },
+                  {
+                      "stack":  "biomero",
+                      "ngff":  "0.4",
+                      "trial":  1,
+                      "seconds":  6.608486300000001,
+                      "requests":  15
+                  },
+                  {
+                      "stack":  "biomero",
+                      "ngff":  "0.4",
+                      "trial":  2,
+                      "seconds":  4.264710999999999,
+                      "requests":  15
+                  },
+                  {
+                      "stack":  "biomero",
+                      "ngff":  "0.4",
+                      "trial":  3,
+                      "seconds":  4.431415000000001,
+                      "requests":  15
+                  }
+              ],
+    "same_standalone_format_comparison":  {
+                                              "0.4":  [
+                                                          {
+                                                              "trial":  1,
+                                                              "seconds":  3.0987421,
+                                                              "requests":  15
+                                                          },
+                                                          {
+                                                              "trial":  2,
+                                                              "seconds":  3.3903415000000003,
+                                                              "requests":  15
+                                                          },
+                                                          {
+                                                              "trial":  3,
+                                                              "seconds":  2.8999565,
+                                                              "requests":  15
+                                                          }
+                                                      ],
+                                              "0.5":  [
+                                                          {
+                                                              "trial":  1,
+                                                              "seconds":  3.1188174,
+                                                              "requests":  15
+                                                          },
+                                                          {
+                                                              "trial":  2,
+                                                              "seconds":  2.860095200000001,
+                                                              "requests":  15
+                                                          },
+                                                          {
+                                                              "trial":  3,
+                                                              "seconds":  2.8918008999999985,
+                                                              "requests":  15
+                                                          }
+                                                      ]
+                                          },
+    "validation":  {
+                       "complete_confocal_channels_equal_original_omero":  true,
+                       "physical_3d":  true,
+                       "decoded_channel_sha256":  [
+                                                      "f5d1d5db609f286624067ba5954a71091addb10a7de802068aa5a937f96f7bbf",
+                                                      "5ce3256ab29662b5514cefd06cd355e37e131622ccf99ca9b08a9079dcf9a555",
+                                                      "cecc089aa76ac22b52b3b51dd966265568a12dc3319be33708c72e05612fb23e"
+                                                  ],
+                       "python_skipped":  2,
+                       "physical_ngff":  [
+                                             "0.4",
+                                             "0.5"
+                                         ],
+                       "python_passed":  235,
+                       "failed_neuroglancer_requests":  0,
+                       "browser_errors":  0,
+                       "biomero_shallow_roi_and_three_label_metadata_routes":  true,
+                       "python_zarr2":  {
+                                            "skipped":  36,
+                                            "passed":  201
+                                        },
+                       "python_zarr3":  {
+                                            "skipped":  2,
+                                            "passed":  235
+                                        }
+                   },
+    "provider_commit_unchanged":  "3afc184a9c3dcab090bd4a92effcf5e45ae4c864"
+}

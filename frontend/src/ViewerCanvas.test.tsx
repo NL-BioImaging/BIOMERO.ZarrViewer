@@ -3,7 +3,7 @@ import { ViewerCanvas } from "./ViewerCanvas";
 const state=vi.hoisted(()=>({props:undefined as any}));
 vi.mock("@hms-dbmi/viv",()=>({
   DETAIL_VIEW_ID:"detail",OVERVIEW_VIEW_ID:"overview",MAX_CHANNELS:10,
-  DetailView:class{},OverviewView:class{},ColorPaletteExtension:class{},
+  DetailView:class{},VolumeView:class{},OverviewView:class{},OverviewLayer:class{},MultiscaleImageLayer:class{},ColorPaletteExtension:class{},
   getDefaultInitialViewState:()=>({target:[2,2,0],zoom:0}),
   VivViewer:(props:any)=>{state.props=props;return null;},
 }));
@@ -34,4 +34,14 @@ test("2D playback waits for every multiplex batch, including the highest channel
   render(<ViewerCanvas width={800} height={600} loader={[source]} labels={[]} channels={channels} labelStates={[]} z={0} t={0} showMinimap={false} showScale={false} onViewportChange={()=>{}} onTileError={()=>{}} onTilesLoaded={ready}/>);
   act(()=>state.props.layerProps[0].onBatchViewportLoad(0));act(()=>state.props.layerProps[0].onBatchViewportLoad(1));expect(ready).not.toHaveBeenCalled();
   act(()=>state.props.layerProps[0].onBatchViewportLoad(2));expect(ready).toHaveBeenCalledOnce();
+});
+
+test("ordinary redraws preserve selections so Viv does not reload unchanged pixels",()=>{
+  const source={labels:["c","y","x"],shape:[1,4,4],dtype:"Uint16"};
+  const props={width:800,height:600,loader:[source],labels:[],channels:[{index:0,label:"DNA",visible:true,color:"#FFFFFF",low:0,high:100,domainMin:0,domainMax:100}],labelStates:[],z:0,t:0,showMinimap:false,showScale:false,onViewportChange:()=>{},onTileError:()=>{},onTilesLoaded:()=>{}};
+  const {rerender}=render(<ViewerCanvas {...props}/>),first=state.props.layerProps[0].selections;
+  rerender(<ViewerCanvas {...props}/>);
+  expect(state.props.layerProps[0].selections).toBe(first);
+  rerender(<ViewerCanvas {...props} t={1}/>);
+  expect(state.props.layerProps[0].selections).not.toBe(first);
 });

@@ -88,3 +88,21 @@ test("only small explicitly selected browser meshes use the worker provider", ()
   expect(state.layers[1].source[0].subsources).toEqual({default:true,mesh:false});
   expect(state.layers[1].source[1].url).toContain("biomeromesh://");
 });
+
+test('clipping updates shader uniforms without recompiling the image shader or changing source URLs',()=>{
+  const full=neuroglancerState(prepared,channels,labels,'maximum',true);
+  const clip=neuroglancerState(prepared,channels,labels,'maximum',true,1,-3,[[.25,.75],[0,1],[0,1]]);
+  expect(clip.layers[0].shader).toBe(full.layers[0].shader);
+  expect(clip.layers[0].shaderControls).toMatchObject({biomeroClipXMin:.25,biomeroClipXMax:.75});
+  expect(clip.layers[0].source).toEqual(full.layers[0].source);
+  expect(clip.biomeroClip).toEqual([[24220,200,300],[72460,98120,118300]]);
+});
+
+test('selected memory budget reaches Neuroglancer without changing its data source',()=>{
+  const low=neuroglancerState(prepared,channels,labels,'maximum',true,1,-3,undefined,100*1024*1024);
+  const high=neuroglancerState(prepared,channels,labels,'maximum',true,1,-3,undefined,500*1024*1024);
+  expect(low.gpuMemoryLimit).toBe(100*1024*1024);
+  expect(high.gpuMemoryLimit).toBe(500*1024*1024);
+  expect(high.systemMemoryLimit).toBe(high.gpuMemoryLimit);
+  expect(high.layers[0].source).toEqual(low.layers[0].source);
+});

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { NeuroglancerCanvas } from "./NeuroglancerCanvas";
+import { NeuroglancerCanvas, RetainedNeuroglancerCanvas } from "./NeuroglancerCanvas";
 
 test("layout and slice position changes use the existing authorized scene without preparing a new volume", async () => {
   const original = window.BIOMERO_ZARR_VIEWER;
@@ -12,26 +12,31 @@ test("layout and slice position changes use the existing authorized scene withou
     blendMode:"maximum" as const,showScale:true,resetKey:0,brightness:1,gain:-3,height:600,
     onCameraChange:vi.fn(),onPlane:vi.fn(),onError:vi.fn(),onReady:vi.fn(),onCancel:vi.fn() };
   try {
-    const rendered = render(<NeuroglancerCanvas {...props} view="3d" />);
+    const rendered = render(<RetainedNeuroglancerCanvas {...props} active view="3d" />);
     const frame = await screen.findByTitle("Volume image and segmentation") as HTMLIFrameElement;
     const post = vi.spyOn(frame.contentWindow!, "postMessage");
     window.dispatchEvent(new MessageEvent("message", { source:frame.contentWindow,origin:window.location.origin,data:{type:"biomero-ng-initialized"} }));
     await waitFor(() => expect(post).toHaveBeenCalled());
-    expect(post.mock.calls.at(-1)![0].state.layout).toBe("3d");
-    rendered.rerender(<NeuroglancerCanvas {...props} view="slice" plane="yz" />);
-    await waitFor(() => expect(post.mock.calls.at(-1)![0].state.layout).toBe("yz"));
+    expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].state.layout).toBe("3d");
+    rendered.rerender(<RetainedNeuroglancerCanvas {...props} view="slice" plane="yz" />);
+    await waitFor(() => expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].state.layout).toBe("yz"));
     fireEvent.change(screen.getByRole("slider", {name:"X slice position"}), {target:{value:"4"}});
-    await waitFor(() => expect(post.mock.calls.at(-1)![0].positionCommand.position[0]).toBe(1450));
-    rendered.rerender(<NeuroglancerCanvas {...props} view="orthogonal" />);
-    await waitFor(() => expect(post.mock.calls.at(-1)![0].state.layout).toBe("4panel"));
-    expect(post.mock.calls.at(-1)![0].state.showSlices).toBe(true);
-    expect(post.mock.calls.at(-1)![0].state.showScaleBar).toBe(false);
+    await waitFor(() => expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].positionCommand.position[0]).toBe(1450));
+    rendered.rerender(<RetainedNeuroglancerCanvas {...props} view="orthogonal" />);
+    await waitFor(() => expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].state.layout).toBe("4panel"));
+    expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].state.showSlices).toBe(true);
+    expect(post.mock.calls.filter(call=>call[0].type==="biomero-ng-state").at(-1)![0].state.showScaleBar).toBe(false);
     fireEvent(window, new MessageEvent("message", {source:frame.contentWindow,origin:window.location.origin,data:{type:"biomero-ng-panels",
       panels:[0,1,2,3].map(index=>({left:index%2*400,top:Math.floor(index/2)*300,width:400,height:300,unitsPerPixel:100,perspective:index===2}))}}));
     expect(document.querySelectorAll(".physical-scale")).toHaveLength(4);
     expect(screen.getAllByText("10 µm")).toHaveLength(4);
-    rendered.rerender(<NeuroglancerCanvas {...props} view="orthogonal" showScale={false} />);
+    rendered.rerender(<RetainedNeuroglancerCanvas {...props} view="orthogonal" showScale={false} />);
     expect(document.querySelectorAll(".physical-scale")).toHaveLength(0);
+    rendered.rerender(<RetainedNeuroglancerCanvas {...props} active={false} resolution={3} />);
+    expect(screen.getByTitle("Volume image and segmentation")).toBe(frame);
+    await waitFor(()=>expect(post.mock.calls.some(call=>call[0].type==='biomero-ng-active'&&call[0].active===false)).toBe(true));
+    rendered.rerender(<RetainedNeuroglancerCanvas {...props} active />);
+    expect(screen.getByTitle("Volume image and segmentation")).toBe(frame);
     expect(fetch).toHaveBeenCalledTimes(1);
     rendered.unmount();
   } finally { window.BIOMERO_ZARR_VIEWER = original; vi.unstubAllGlobals(); }

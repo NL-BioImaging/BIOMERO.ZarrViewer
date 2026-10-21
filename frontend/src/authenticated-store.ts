@@ -2,6 +2,8 @@ import * as zarr from "zarrita";
 import type { Capability, ChannelState } from "./types";
 import { requestPreview } from "./preview-client";
 import { abortableDelay } from "./shared-request";
+import { VirtualChunkCache } from "./virtual-chunk-cache";
+import { StoreReadGate } from './store-read-gate';
 
 type RefreshCapability = () => Promise<Capability>;
 
@@ -31,6 +33,12 @@ export class AuthenticatedZarrStore {
   private capability: Capability;
   private refreshCapability: RefreshCapability;
   private refreshing: Promise<Capability> | null = null;
+  private activeHttpRequests = 0;
+  private httpQueue: Array<() => void> = [];
+  private virtualChunks = new VirtualChunkCache();
+  private ranges = new VirtualChunkCache();
+  private storeReads = new StoreReadGate();
+  private readRevision = 0;
   readonly store: zarr.FetchStore;
 
   constructor(capability: Capability, refreshCapability: RefreshCapability) {
@@ -38,12 +46,25 @@ export class AuthenticatedZarrStore {
     this.refreshCapability = refreshCapability;
     const storeUrl = new URL(capability.store.url, window.location.href).href;
     this.store = new zarr.FetchStore(storeUrl, {
-      fetch: async (request) => this.authorizedFetch(request),
+      useSuffixRequest:true,
+      fetch: async (request) => {
+        const base = new URL(this.capability.store.url,window.location.href);
+        const url = new URL(request.url);
+        const key = url.pathname.startsWith(base.pathname) ? url.pathname.slice(base.pathname.length) : "";
+        const load=(signal:AbortSignal)=>{const next=new Request(request,{signal,cache:request.headers.has('Range')?'no-store':request.cache});return this.storeReads.fetch(next,()=>this.authorizedFetch(next));};
+        if(request.headers.has('Range'))return this.ranges.fetch(request,load);
+        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && /^\d+\/(?:c\/)?(?:\d+\/)*\d+$/.test(key)) {
+          return this.virtualChunks.fetch(request,load);
+        }
+        return load(request.signal);
+      },
     });
     if (capability.store.preview_url) Object.assign(this.store, { getPreview: (field: string, size: number, channels: ChannelState[], z: number, t: number, signal: AbortSignal) => requestPreview(this, field, size, channels, z, t, signal) });
   }
 
   update(capability: Capability): void {
+    if(capability.image.id!==this.capability.image.id || capability.store.url!==this.capability.store.url || capability.store.binding_digest!==this.capability.store.binding_digest || capability.store.uuid!==this.capability.store.uuid || capability.store.context!==this.capability.store.context){this.readRevision++;this.ranges.clear();}
+    if (capability.image.id !== this.capability.image.id || capability.store.binding_digest !== this.capability.store.binding_digest || capability.store.url !== this.capability.store.url) this.virtualChunks.clear();
     this.capability = capability;
   }
 
@@ -52,6 +73,10 @@ export class AuthenticatedZarrStore {
   }
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
+  get isHttp(): boolean { return this.capability.store.transport === 'http'; }
+  get rasterUrl():string|undefined { return this.capability.store.raster_url; }
+  get nativeSamplesUrl():string|undefined { return this.capability.store.native_samples_url; }
+  get readIdentity(): string { return String(this.readRevision); }
   get neuroglancerUrl(): string | undefined { return this.capability.store.neuroglancer_url; }
   get previewUrl(): string | undefined { return this.capability.store.preview_url; }
   get volumeIdentity(): string { return `${this.capability.store.binding_digest || ""}:${this.capability.store.uuid || ""}`; }
@@ -75,6 +100,36 @@ export class AuthenticatedZarrStore {
     });
   }
 
+  private async fetchRequest(request: Request): Promise<Response> {
+    if (this.capability.store.transport !== "http") return fetch(request);
+    // Virtual chunks occupy an OMERO.web worker and an OMERO pixel reader.
+    // A large tiled overview can otherwise dispatch hundreds simultaneously.
+    await new Promise<void>((resolve, reject) => {
+      const start = () => {
+        request.signal.removeEventListener("abort", abort);
+        this.activeHttpRequests++;
+        resolve();
+      };
+      const abort = () => {
+        this.httpQueue = this.httpQueue.filter(item => item !== start);
+        reject(request.signal.reason);
+      };
+      request.signal.throwIfAborted();
+      if (this.activeHttpRequests < 6) start();
+      else {
+        this.httpQueue.push(start);
+        request.signal.addEventListener("abort", abort, {once: true});
+      }
+    });
+    try {
+      request.signal.throwIfAborted();
+      return await fetch(request);
+    } finally {
+      this.activeHttpRequests--;
+      this.httpQueue.shift()?.();
+    }
+  }
+
   private async authorizedFetch(request: Request): Promise<Response> {
     let refreshed = false;
     let serverRetries = 0;
@@ -84,7 +139,14 @@ export class AuthenticatedZarrStore {
       // A browser may reuse an error response for an identical request. Force
       // attempts after the first 5xx back to Nginx so each retry can recover
       // from a transient shared-filesystem read error.
-      const response = await fetch(this.requestWithContext(request, serverRetries > 0));
+      let response:Response;
+      try {response=await this.fetchRequest(this.requestWithContext(request, serverRetries > 0));}
+      catch(error){
+        if(!request.signal.aborted&&error instanceof TypeError&&serverRetries<SERVER_RETRY_DELAYS_MS.length){
+          await waitBeforeRetry(SERVER_RETRY_DELAYS_MS[serverRetries++],request.signal);continue;
+        }
+        throw error;
+      }
       if ((response.status === 401 || response.status === 403) && !refreshed) {
         await discard(response);
         await this.refresh();
@@ -130,6 +192,9 @@ export class PrefixStore {
   }
 
   getRange(key: string, range: Parameters<zarr.FetchStore["getRange"]>[1], options?: Parameters<zarr.FetchStore["getRange"]>[2]) {
-    return this.inner.getRange(this.key(key), range, {...options, signal: options?.signal || this.signal});
+    // Zarrita shares an index promise between chunks. A cancelled tile must
+    // not abort that tiny shared index while other tiles still need it.
+    const index='suffixLength' in range&&range.suffixLength<=65536;
+    return this.inner.getRange(this.key(key), range, {...options, signal: index?this.signal:(options?.signal || this.signal)});
   }
 }

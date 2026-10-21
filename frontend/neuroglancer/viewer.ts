@@ -8,12 +8,16 @@ import { registerActionListener } from "neuroglancer/unstable/util/event_action_
 import { PerspectivePanel } from "neuroglancer/unstable/perspective_view/panel.js";
 import { SliceViewPanel } from "neuroglancer/unstable/sliceview/panel.js";
 import { vec3 } from "neuroglancer/unstable/util/geom.js";
+import { installMeshClipping } from './mesh-clipping';
 import { configureVolumeWheel, depthWheelStep, wheelZoomFactor, sliceWheelStep, configureSliceWheel, linkOrthogonalZoom, orthogonalFitScale } from "../src/neuroglancer-controls";
 
 const origin = window.parent.location.origin;
 const send = (message: object) => window.parent.postMessage(message, origin);
 try {
+  let clipBounds:number[][]|undefined;
+  installMeshClipping(()=>clipBounds);
   const viewer = makeDefaultViewer({ showUIControls: false, showLayerDialog: false, resetStateWhenEmpty: false });
+  viewer.element.addEventListener('contextmenu',event=>event.preventDefault());
   setDefaultInputEventBindings(viewer.inputEventBindings);
 
   // Ordinary wheel movement zooms in every panel; modified wheel moves slices.
@@ -53,6 +57,9 @@ try {
   let scene = "";
   let updating = false;
   let wasReady = false;
+  let active = true;
+  const queue = viewer.dataContext.chunkQueueManager;
+  const downloadLimit = queue.capacities.download.itemLimit.value;
   let lastError = "";
   let lastPanels = "";
   let fitPending = false;
@@ -91,10 +98,22 @@ try {
       }catch(error){send({type:'biomero-ng-capture',id:event.data.id,error:String(error)});}
       return;
     }
+    if(event.source===window.parent && event.origin===origin && event.data?.type==='biomero-ng-active'){
+      active=event.data.active;
+      queue.enablePrefetch.value=active;
+      queue.capacities.download.itemLimit.value=active?downloadLimit:0;
+      if(active){
+        const camera=event.data.camera;
+        if(camera){viewer.position.restoreState(camera.position);viewer.projectionOrientation.restoreState(camera.orientation);viewer.projectionScale.restoreState(camera.scale);if(camera.crossSectionScale)viewer.crossSectionScale.restoreState(camera.crossSectionScale);}
+        wasReady=false;viewer.display.scheduleRedraw();
+      }
+      return;
+    }
     if (event.source !== window.parent || event.origin !== origin || event.data?.type !== "biomero-ng-state") return;
     try {
       updating = true;
       const { state, resetKey, sceneKey } = event.data;
+      clipBounds=state.biomeroClip;
       physicalExtent = event.data.physicalExtentNm || physicalExtent;
       if ((!initialized || layout !== state.layout || resetKey !== reset || sceneKey !== scene) && state.layout === "4panel")
         fitPending = !event.data.camera?.crossSectionScale;
@@ -113,6 +132,8 @@ try {
         viewer.showPerspectiveSliceViews.value = state.showSlices;
         viewer.showAxisLines.value = state.showAxisLines;
         viewer.showScaleBar.value = state.showScaleBar;
+        viewer.dataContext.chunkQueueManager.capacities.gpuMemory.sizeLimit.restoreState(state.gpuMemoryLimit);
+        viewer.dataContext.chunkQueueManager.capacities.systemMemory.sizeLimit.restoreState(state.systemMemoryLimit);
         viewer.crossSectionBackgroundColor.restoreState(state.crossSectionBackgroundColor);
         viewer.perspectiveViewBackgroundColor.restoreState(state.projectionBackgroundColor);
         for (const spec of state.layers) {
@@ -127,6 +148,7 @@ try {
           }
           if (spec.type === "image") {
             layer.fragmentMain.value = spec.shader;
+            layer.shaderControlState.restoreState(spec.shaderControls);
             layer.volumeRenderingMode.restoreState(spec.volumeRendering);
             layer.volumeRenderingGain.value = spec.volumeRenderingGain;
             layer.volumeRenderingDepthSamplesTarget.value = spec.volumeRenderingDepthSamples;
@@ -163,12 +185,14 @@ try {
       reset = resetKey;
       scene = sceneKey;
       send({ type: "biomero-ng-loading" });
+      viewer.display.scheduleRedraw();
     } catch (error) {
       send({ type: "biomero-ng-error", message: String(error) });
     } finally { updating = false; }
   });
   window.setInterval(() => {
     if (!initialized) { send({ type: "biomero-ng-initialized" }); return; }
+    if(!active)return;
     if (layout === "4panel") {
       const section = [...viewer.display.panels].find(panel => panel instanceof SliceViewPanel);
       if (fitPending && section && perspectiveHeight() > 0) {
@@ -201,6 +225,23 @@ try {
     if (ready && !wasReady) send({ type: "biomero-ng-ready" });
     wasReady = ready;
   }, 300);
+  let statisticsBusy=false;
+  window.setInterval(async()=>{
+    if(!active||!initialized||statisticsBusy)return;
+    statisticsBusy=true;
+    try{
+      const statistics=await queue.getStatistics();
+      let pending=0,gpuBytes=0;
+      // Eight chunk states, three priority tiers, three statistics per tier:
+      // count, system bytes, GPU bytes. GPU_MEMORY=0, DOWNLOADING=3, QUEUED=4.
+      for(const values of statistics.values())for(let tier=0;tier<3;tier++){
+        gpuBytes+=values[tier*3+2]||0;
+        pending+=(values[(3*3+tier)*3]||0)+(values[(4*3+tier)*3]||0);
+      }
+      send({type:'biomero-ng-progress',pending,gpuBytes,ready:viewer.isReady()});
+    }catch{/* Rendering remains usable if optional statistics fail. */}
+    finally{statisticsBusy=false;}
+  },1000);
   window.addEventListener("error", event => send({ type: "biomero-ng-error", message: event.message }));
   send({ type: "biomero-ng-initialized" });
 } catch (error) { send({ type: "biomero-ng-error", message: String(error) }); }

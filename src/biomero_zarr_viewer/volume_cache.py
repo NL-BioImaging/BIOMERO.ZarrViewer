@@ -270,8 +270,9 @@ def _reserve(key, scope, size, metadata, *, queue_limit=None):
     return True
 
 
-def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=False, bounded=True):
-    array = zarr.open_array(str(array_path), mode="r")
+def describe_volume(array_path, axes, channel, timepoint, *, allow_integer64=False, bounded=True, array=None):
+    if array is None:
+        array = zarr.open_array(str(array_path), mode="r")
     if len(axes) != array.ndim or len(set(axes)) != len(axes) or "x" not in axes or "y" not in axes:
         raise InvalidROI("Invalid volume axes")
     for axis, value in (("c", channel), ("t", timepoint)):

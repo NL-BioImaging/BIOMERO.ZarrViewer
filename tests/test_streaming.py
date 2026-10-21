@@ -184,3 +184,23 @@ def test_too_many_objects_are_rejected_before_allocating_bounding_boxes(streamin
     response=ng.prepare(req,42,conn=conn)
     assert response.status_code==400
     assert b"2048 objects" in response.content
+
+
+def test_large_v3_streaming_grid_skips_store_walk_and_bounds_block_size(configure_storage,tmp_path,monkeypatch):
+    import zarr
+    if int(zarr.__version__.split('.')[0])<3:pytest.skip('v3 requires Zarr-Python 3')
+    _,mount=configure_storage
+    monkeypatch.setenv('BIOMERO_ZARR_CACHE_DIR',str(tmp_path/'cache'))
+    monkeypatch.setenv('BIOMERO_ZARR_CACHE_MAX_BYTES','100000000')
+    attrs={'multiscales':[{'axes':[{'name':a,'unit':'micrometer'} for a in 'zyx'],'datasets':[{'path':'0','coordinateTransformations':[{'type':'scale','scale':[1,1,1]}]}]}]}
+    write_volume_group(mount/'large.zarr',np.ones((130,130,130),dtype=np.uint16),(32,32,32),attrs,3)
+    monkeypatch.setattr(cache,'fingerprint',lambda *a,**k:pytest.fail('must validate requested keys, not walk the store'))
+    conn=FakeConnection();token,_=make_read_context(_request('/'),conn,42,'large.zarr')
+    req=_request('/?channels=[0]',token=token)
+    response=ng.prepare(req,42,conn=conn);assert response.status_code==200,response.content
+    result=json.loads(response.content);context=result['url'].strip('/').split('/')[-1]
+    read=_request('/');read.session=req.session
+    info=json.loads(ng.data(read,42,context,'image-0/info',conn=conn).content)
+    assert info['scales'][0]['chunk_sizes']==[[128,128,128]]
+    block=ng.data(read,42,context,'image-0/0/128-130_128-130_128-130',conn=conn)
+    np.testing.assert_array_equal(np.frombuffer(block.content,dtype='<u2'),np.ones(8,dtype=np.uint16))

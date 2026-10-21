@@ -5,12 +5,18 @@ import { SharedRequest, abortableDelay } from "./shared-request";
 export interface LoadProgress { busy: boolean; fraction: number; phase: string }
 export interface CachedVolume { data: any; width: number; height: number; depth: number }
 const clients = new WeakMap<AuthenticatedZarrStore, VolumeClient>();
+const budgets=new WeakMap<AuthenticatedZarrStore,number>();
+export function setVolumeCacheBudget(auth:AuthenticatedZarrStore,bytes:number){
+  const budget=Math.max(0,Math.min(1024*1024*1024,bytes));budgets.set(auth,budget);
+  const client=clients.get(auth);if(client)client.budget=budget;
+}
 
 class VolumeClient {
   private entries = new Map<string, { task: SharedRequest<CachedVolume>; value?: CachedVolume; bytes: number }>();
   private progress = new Map<string, number>();
   private lastUpdate = 0;
-  constructor(private auth: AuthenticatedZarrStore, public onProgress: (value: LoadProgress) => void) {}
+  budget:number;
+  constructor(private auth: AuthenticatedZarrStore, public onProgress: (value: LoadProgress) => void) {this.budget=budgets.get(auth)??VOLUME_RAW_BUDGET_BYTES;}
 
   key(field: string, level: number, selection: any) {
     return JSON.stringify([this.auth.volumeIdentity, field, level, selection?.c || 0, selection?.t || 0]);
@@ -38,7 +44,7 @@ class VolumeClient {
       entry.value = value; entry.bytes = value.data.byteLength;
       let total = [...this.entries.values()].reduce((sum,e) => sum + e.bytes,0);
       for (const [oldKey, old] of this.entries) {
-        if (total <= VOLUME_RAW_BUDGET_BYTES) break;
+        if (total <= this.budget) break;
         if (oldKey !== key && old.value) { this.entries.delete(oldKey); total -= old.bytes; }
       }
       this.update(key, 1, "Volume ready");

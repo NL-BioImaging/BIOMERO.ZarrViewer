@@ -188,3 +188,17 @@ test("orthogonal playback readiness waits for the volume and all three slice pan
     expect(ready).toHaveBeenCalledOnce();
   } finally {vi.useRealTimers();}
 });
+
+test('calibrated clipping planes retain the center and remove either side of X',()=>{
+  const input=loader();
+  const {rerender}=render(<VolumeCanvas width={800} height={600} loader={input} channels={channels} t={0} resolution={0}
+    clipping={[[.25,.75],[0,1],[0,1]]} onCameraChange={()=>{}} onCancel={()=>{}} onError={()=>{}} onReady={()=>{}} />);
+  const planes=viv.props.layerProps[0].clippingPlanes;
+  expect(planes).toHaveLength(6);
+  expect(planes.every((plane:any)=>plane.getPointDistance([4,4,2])>0)).toBe(true);
+  expect(planes.some((plane:any)=>plane.getPointDistance([1,4,2])<0)).toBe(true);
+  expect(planes.some((plane:any)=>plane.getPointDistance([7,4,2])<0)).toBe(true);
+  rerender(<VolumeCanvas width={800} height={600} loader={input} channels={channels} t={0} resolution={0}
+    onCameraChange={()=>{}} onCancel={()=>{}} onError={()=>{}} onReady={()=>{}} />);
+  expect(viv.props.layerProps[0].clippingPlanes).toEqual([]);
+});

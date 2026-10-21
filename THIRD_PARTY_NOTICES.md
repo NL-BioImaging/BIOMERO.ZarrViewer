@@ -7,91 +7,98 @@ listed below. Each package remains subject to its upstream license. This file
 is generated from `frontend/package-lock.json` and the legal files installed
 with the non-development npm packages.
 
-Generated for frontend version `0.8.0` with 220 production packages.
+Generated for frontend version `0.8.0` with 228 production packages.
 
 ## Package inventory
 
 | Package | Declared license | Copyright/author | Upstream | Included legal text |
 | --- | --- | --- | --- | --- |
-| `@deck.gl/core@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/extensions@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/geo-layers@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/layers@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/mesh-layers@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/react@9.3.7` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
-| `@deck.gl/widgets@9.3.11` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/core@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/extensions@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/geo-layers@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/layers@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/mesh-layers@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/react@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
+| `@deck.gl/widgets@9.4.0` | MIT | — | [source](https://github.com/visgl/deck.gl) | [L001](#l001) |
 | `@floating-ui/core@1.8.0` | MIT | atomiks | [source](https://github.com/floating-ui/floating-ui) | [L002](#l002) |
 | `@floating-ui/dom@1.8.0` | MIT | atomiks | [source](https://github.com/floating-ui/floating-ui) | [L002](#l002) |
 | `@floating-ui/utils@0.2.12` | MIT | atomiks | [source](https://github.com/floating-ui/floating-ui) | [L002](#l002) |
-| `@hms-dbmi/viv@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@loaders.gl/3d-tiles@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/compression@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@hms-dbmi/viv@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@loaders.gl/3d-tiles@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/compression@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/core@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/core@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/core@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/crypto@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/core@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/core@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/core@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/crypto@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/draco@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/draco@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/draco@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/geoarrow@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/gis@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/draco@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/draco@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/geoarrow@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/gis@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/gltf@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/gltf@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/gltf@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/gltf@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/gltf@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/images@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/images@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/images@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/images@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/images@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/images@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/images@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/images@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/images@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/images@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/images@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/images@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/images@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/loader-utils@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/loader-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/loader-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/loader-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/loader-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/loader-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/math@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/math@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/mvt@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/loader-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/loader-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/loader-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/math@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/math@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/mvt@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema-utils@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/schema@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema@4.5.1` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/schema@4.5.1` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/terrain@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/schema@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/terrain@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/textures@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/textures@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/textures@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/tiles@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/wms@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/textures@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/textures@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/tiles@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/wms@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/worker-utils@4.4.3` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/worker-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/worker-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
 | `@loaders.gl/worker-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/worker-utils@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/xml@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@loaders.gl/zip@4.5.2` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
-| `@luma.gl/constants@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
-| `@luma.gl/core@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
-| `@luma.gl/engine@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
-| `@luma.gl/gltf@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
-| `@luma.gl/shadertools@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
-| `@luma.gl/webgl@9.3.6` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@loaders.gl/worker-utils@4.4.5` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/worker-utils@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/xml@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@loaders.gl/zip@4.5.4` | MIT | — | [source](https://github.com/visgl/loaders.gl) | [L004](#l004) |
+| `@luma.gl/constants@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/core@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/engine@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/gltf@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/gpgpu@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/shadertools@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/webgl@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
+| `@luma.gl/webgpu@9.4.2` | MIT | — | [source](https://github.com/visgl/luma.gl) | [L005](#l005) |
 | `@mapbox/martini@0.2.0` | ISC | Vladimir Agafonkin | — | [L006](#l006) |
 | `@mapbox/point-geometry@0.1.0` | ISC | Tom MacWright | [source](git@github.com:mapbox/point-geometry) | [L007](#l007) |
 | `@mapbox/tiny-sdf@2.2.0` | BSD-2-Clause | Vladimir Agafonkin | [source](https://github.com/mapbox/tiny-sdf) | [L008](#l008) |
@@ -104,7 +111,7 @@ Generated for frontend version `0.8.0` with 220 production packages.
 | `@math.gl/types@4.1.0` | MIT | — | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
 | `@math.gl/web-mercator@4.1.0` | MIT | Uber Technologies, Inc. | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
 | `@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr-extract) | [L011](#l011) |
-| `@nodable/entities@3.0.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/nodable/val-parsers) | [L012](#l012) |
+| `@nodable/entities@3.1.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/nodable/val-parsers) | [L012](#l012) |
 | `@petamoriken/float16@3.9.3` | MIT | Kenta Moriuchi <moriken@kimamass.com> (https://moriken.dev) | [source](https://github.com/petamoriken/float16) | [L013](#l013) |
 | `@probe.gl/env@4.1.1` | MIT | — | [source](https://github.com/visgl/probe.gl) | [L001](#l001) |
 | `@probe.gl/log@4.1.1` | MIT | — | [source](https://github.com/visgl/probe.gl) | [L001](#l001) |
@@ -123,19 +130,19 @@ Generated for frontend version `0.8.0` with 220 production packages.
 | `@types/node@25.9.5` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
 | `@types/offscreencanvas@2019.7.3` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
 | `@types/pako@1.0.7` | MIT | — | [source](https://github.com/DefinitelyTyped/DefinitelyTyped) | [L015](#l015) |
-| `@vivjs/constants@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/extensions@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/layers@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/loaders@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/types@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/viewers@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@vivjs/views@0.22.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
-| `@zarrita/storage@0.1.4` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
-| `@zarrita/storage@0.2.0` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
-| `a5-js@0.7.3` | Apache-2.0 | — | [source](https://github.com/felixpalmer/a5) | [L052](#l052) |
-| `anynum@1.0.1` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/anynum) | [L017](#l017) |
-| `apache-arrow@21.2.0` | Apache-2.0 | Apache Software Foundation | [source](https://github.com/apache/arrow-js) | [L052](#l052), [L018](#l018) |
-| `argparse@1.0.10` | MIT | — | [source](nodeca/argparse) | [L019](#l019) |
+| `@vivjs/constants@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/extensions@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/layers@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/loaders@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/types@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/viewers@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@vivjs/views@0.23.0` | MIT | Ilan Gold | [source](https://github.com/hms-dbmi/viv) | [L003](#l003) |
+| `@webgpu/types@0.1.74` | BSD-3-Clause | — | [source](https://github.com/gpuweb/types) | [L016](#l016) |
+| `@zarrita/storage@0.1.4` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L017](#l017) |
+| `@zarrita/storage@0.2.0` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L017](#l017) |
+| `a5-js@0.10.1` | Apache-2.0 | — | [source](https://github.com/felixpalmer/a5) | [L051](#l051) |
+| `anynum@1.0.1` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/anynum) | [L018](#l018) |
+| `apache-arrow@21.2.0` | Apache-2.0 | Apache Software Foundation | [source](https://github.com/apache/arrow-js) | [L051](#l051), [L019](#l019) |
 | `base64-js@1.5.1` | MIT | T. Jameson Little <t.jameson.little@gmail.com> | [source](https://github.com/beatgammit/base64-js) | [L020](#l020) |
 | `brotli@1.3.3` | MIT | Devon Govett <devongovett@gmail.com> | [source](https://github.com/devongovett/brotli.js) | [L021](#l021) |
 | `buf-compare@1.0.1` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/buf-compare) | [L022](#l022) |
@@ -148,97 +155,98 @@ Generated for frontend version `0.8.0` with 220 production packages.
 | `crypt@0.0.2` | BSD-3-Clause | Paul Vorbach <paul@vorb.de> (http://vorb.de) | [source](https://github.com/pvorb/node-crypt) | [L023](#l023) |
 | `deep-strict-equal@0.2.0` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com) | [source](sindresorhus/deep-strict-equal) | [L022](#l022) |
 | `detect-libc@2.1.2` | Apache-2.0 | Lovell Fuller <npm@lovell.info> | [source](https://github.com/lovell/detect-libc) | [L028](#l028) |
-| `draco3d@1.5.7` | Apache-2.0 | Google Draco Team | [source](https://github.com/google/draco) | [L052](#l052) |
+| `draco3d@1.5.7` | Apache-2.0 | Google Draco Team | [source](https://github.com/google/draco) | [L051](#l051) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
+| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `earcut@2.2.4` | ISC | Vladimir Agafonkin | [source](https://github.com/mapbox/earcut) | [L030](#l030) |
 | `fast-deep-equal@3.1.3` | MIT | Evgeny Poberezkin | [source](https://github.com/epoberezkin/fast-deep-equal) | [L031](#l031) |
-| `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L017](#l017) |
-| `fast-xml-parser@5.11.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-parser) | [L032](#l032) |
+| `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L018](#l018) |
+| `fast-xml-parser@5.11.2` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-parser) | [L032](#l032) |
 | `fflate@0.7.5` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L033](#l033) |
 | `fflate@0.8.3` | MIT | Arjun Barrett <arjunbarrett@gmail.com> | [source](https://github.com/101arrowz/fflate) | [L034](#l034) |
-| `flatbuffers@25.9.23` | Apache-2.0 | The FlatBuffers project | [source](https://github.com/google/flatbuffers) | [L052](#l052) |
+| `flatbuffers@25.9.23` | Apache-2.0 | The FlatBuffers project | [source](https://github.com/google/flatbuffers) | [L051](#l051) |
 | `geotiff@2.1.3` | MIT | Fabian Schindler | [source](https://github.com/geotiffjs/geotiff.js) | [L035](#l035) |
 | `gl-matrix@3.1.0` | MIT | — | [source](https://github.com/toji/gl-matrix) | [L036](#l036) |
 | `gl-matrix@3.4.4` | MIT | — | [source](https://github.com/toji/gl-matrix) | [L037](#l037) |
-| `h3-js@4.5.0` | Apache-2.0 | Nick Rabinowitz <nickr@uber.com> | [source](https://github.com/uber/h3-js) | [L052](#l052), [L038](#l038) |
+| `h3-js@4.5.0` | Apache-2.0 | Nick Rabinowitz <nickr@uber.com> | [source](https://github.com/uber/h3-js) | [L051](#l051), [L038](#l038) |
 | `ieee754@1.2.1` | BSD-3-Clause | Feross Aboukhadijeh <feross@feross.org> (https://feross.org) | [source](https://github.com/feross/ieee754) | [L039](#l039) |
 | `ikonate@1.1.1` | MIT | Mikolaj Dobrucki <tease@mikolajdobrucki.com> | [source](https://github.com/eucalyptuss/ikonate) | [L040](#l040) |
-| `image-size@2.0.4` | MIT | netroy <aditya@netroy.in> (http://netroy.in/) | [source](https://codeberg.org/image-size/image-size) | [L041](#l041) |
-| `immediate@3.0.6` | MIT | — | [source](https://github.com/calvinmetcalf/immediate) | [L042](#l042) |
-| `inherits@2.0.4` | ISC | — | [source](https://github.com/isaacs/inherits) | [L043](#l043) |
-| `is-buffer@1.1.6` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org/) | [source](https://github.com/feross/is-buffer) | [L044](#l044) |
-| `is-error@2.2.2` | MIT | Raynos <raynos2@gmail.com> | [source](https://github.com/mk-pmb/is-error-js) | [L045](#l045) |
-| `is-unsafe@2.0.2` | MIT | Amit Gupta (https://solothought.com/) | [source](https://github.com/NaturalIntelligence/is-unsafe) | [L017](#l017) |
-| `isarray@1.0.0` | MIT | Julian Gruber <mail@juliangruber.com> (http://juliangruber.com) | [source](https://github.com/juliangruber/isarray) | [L046](#l046) |
-| `json-with-bigint@3.5.10` | MIT | Ivan Korolenko <iam@ivankorolenko.com> | [source](https://github.com/Ivan-Korolenko/json-with-bigint) | [L047](#l047) |
-| `jszip@3.10.2` | (MIT OR GPL-3.0-or-later) | Stuart Knightley <stuart@stuartk.com> | [source](https://github.com/Stuk/jszip) | [L048](#l048) |
-| `ktx-parse@0.7.1` | MIT | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/ktx-parse) | [L049](#l049) |
-| `lerc@3.0.0` | Apache-2.0 | Esri <dev_tools@esri.com> (http://developers.arcgis.com) | [source](https://github.com/Esri/lerc) | [L052](#l052) |
-| `lie@3.3.0` | MIT | — | [source](https://github.com/calvinmetcalf/lie) | [L050](#l050) |
-| `lodash-es@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L051](#l051) |
-| `lodash@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L051](#l051) |
-| `long@3.2.0` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L052](#l052) |
-| `long@5.3.2` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L052](#l052) |
-| `lz4js@0.2.0` | ISC | John Chadwick | [source](ssh://git@github.com/Benzinga/lz4js) | [L053](#l053) |
-| `lzw-tiff-decoder@0.1.1` | MIT | Trevor James Manz | — | [L054](#l054) |
+| `immediate@3.0.6` | MIT | — | [source](https://github.com/calvinmetcalf/immediate) | [L041](#l041) |
+| `inherits@2.0.4` | ISC | — | [source](https://github.com/isaacs/inherits) | [L042](#l042) |
+| `is-buffer@1.1.6` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org/) | [source](https://github.com/feross/is-buffer) | [L043](#l043) |
+| `is-error@2.2.2` | MIT | Raynos <raynos2@gmail.com> | [source](https://github.com/mk-pmb/is-error-js) | [L044](#l044) |
+| `is-unsafe@2.0.2` | MIT | Amit Gupta (https://solothought.com/) | [source](https://github.com/NaturalIntelligence/is-unsafe) | [L018](#l018) |
+| `isarray@1.0.0` | MIT | Julian Gruber <mail@juliangruber.com> (http://juliangruber.com) | [source](https://github.com/juliangruber/isarray) | [L045](#l045) |
+| `json-with-bigint@3.5.10` | MIT | Ivan Korolenko <iam@ivankorolenko.com> | [source](https://github.com/Ivan-Korolenko/json-with-bigint) | [L046](#l046) |
+| `jszip@3.10.2` | (MIT OR GPL-3.0-or-later) | Stuart Knightley <stuart@stuartk.com> | [source](https://github.com/Stuk/jszip) | [L047](#l047) |
+| `ktx-parse@0.7.1` | MIT | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/ktx-parse) | [L048](#l048) |
+| `lerc@3.0.0` | Apache-2.0 | Esri <dev_tools@esri.com> (http://developers.arcgis.com) | [source](https://github.com/Esri/lerc) | [L051](#l051) |
+| `lie@3.3.0` | MIT | — | [source](https://github.com/calvinmetcalf/lie) | [L049](#l049) |
+| `lodash-es@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L050](#l050) |
+| `lodash@4.18.1` | MIT | John-David Dalton <john.david.dalton@gmail.com> | [source](lodash/lodash) | [L050](#l050) |
+| `long@3.2.0` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L051](#l051) |
+| `long@5.3.2` | Apache-2.0 | Daniel Wirtz <dcode@dcode.io> | [source](https://github.com/dcodeIO/long.js) | [L051](#l051) |
+| `lz4js@0.2.0` | ISC | John Chadwick | [source](ssh://git@github.com/Benzinga/lz4js) | [L052](#l052) |
+| `lzw-tiff-decoder@0.1.1` | MIT | Trevor James Manz | — | [L053](#l053) |
 | `math.gl@4.1.0` | MIT | — | [source](https://github.com/visgl/math.gl) | [L010](#l010) |
-| `md5@2.3.0` | BSD-3-Clause | Paul Vorbach <paul@vorba.ch> (http://paul.vorba.ch) | [source](https://github.com/pvorb/node-md5) | [L055](#l055) |
-| `mediabunny@1.61.0` | MPL-2.0 | Vanilagy | [source](https://github.com/Vanilagy/mediabunny) | [L056](#l056) |
-| `meshoptimizer@1.2.0` | MIT | Arseny Kapoulkine | [source](https://github.com/zeux/meshoptimizer) | [L057](#l057) |
-| `mjolnir.js@3.0.1` | MIT | — | [source](https://github.com/visgl/mjolnir.js) | [L058](#l058) |
-| `msgpackr-extract@3.0.4` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr-extract) | [L059](#l059) |
-| `msgpackr@1.12.1` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr) | [L059](#l059) |
-| `neuroglancer@2.41.2` | Apache-2.0 | — | [source](https://github.com/google/neuroglancer) | [L052](#l052) |
-| `nifti-reader-js@0.6.9` | MIT | Michael Martinez | [source](https://github.com/rii-mango/NIFTI-Reader-JS) | [L060](#l060) |
-| `node-gyp-build-optional-packages@5.2.2` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/prebuild/node-gyp-build) | [L061](#l061) |
-| `numcodecs@0.3.2` | MIT | Trevor Manz | [source](https://github.com/manzt/numcodecs.js) | [L062](#l062) |
-| `pako@1.0.11` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L063](#l063) |
-| `pako@2.2.0` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L063](#l063) |
-| `parse-headers@2.0.6` | MIT | David Björklund <david.bjorklund@gmail.com> | [source](https://github.com/kesla/parse-headers) | [L064](#l064) |
-| `path-expression-matcher@1.6.2` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/path-expression-matcher) | [L065](#l065) |
-| `pbf@3.3.0` | BSD-3-Clause | Konstantin Kaefer | [source](git@github.com:mapbox/pbf) | [L066](#l066) |
-| `preact@10.29.8` | MIT | — | [source](preactjs/preact) | [L067](#l067) |
-| `process-nextick-args@2.0.1` | MIT | — | [source](https://github.com/calvinmetcalf/process-nextick-args) | [L068](#l068) |
-| `protocol-buffers-schema@3.6.1` | MIT | Mathias Buus | [source](https://github.com/mafintosh/protocol-buffers-schema) | [L069](#l069) |
-| `quick-lru@6.1.2` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com) | [source](sindresorhus/quick-lru) | [L070](#l070) |
-| `quickselect@2.0.0` | ISC | Vladimir Agafonkin | — | [L071](#l071) |
-| `react-dom@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L072](#l072) |
-| `react@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L072](#l072) |
-| `readable-stream@2.3.8` | MIT | — | [source](https://github.com/nodejs/readable-stream) | [L073](#l073) |
-| `reference-spec-reader@0.2.0` | MIT | manzt <trevor.j.manz@gmail.com> | — | [L074](#l074) |
-| `resolve-protobuf-schema@2.1.0` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/mafintosh/resolve-protobuf-schema) | [L069](#l069) |
-| `safe-buffer@5.1.2` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org) | [source](https://github.com/feross/safe-buffer) | [L044](#l044) |
-| `scheduler@0.27.0` | MIT | — | [source](https://github.com/facebook/react) | [L072](#l072) |
-| `setimmediate@1.0.5` | MIT | YuzuJS | [source](YuzuJS/setImmediate) | [L075](#l075) |
-| `snappyjs@0.6.1` | MIT | Zhipeng Jia | [source](zhipeng-jia/snappyjs) | [L076](#l076) |
-| `sprintf-js@1.0.3` | BSD-3-Clause | Alexandru Marasteanu <hello@alexei.ro> (http://alexei.ro/) | [source](https://github.com/alexei/sprintf.js) | [L077](#l077) |
-| `string_decoder@1.1.1` | MIT | — | [source](https://github.com/nodejs/string_decoder) | [L073](#l073) |
-| `strnum@2.4.2` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/strnum) | [L078](#l078) |
-| `texture-compressor@1.0.2` | MIT | Tim van Scherpenzeel | — | [L079](#l079) |
-| `tslib@2.8.1` | 0BSD | Microsoft Corp. | [source](https://github.com/Microsoft/tslib) | [L080](#l080) |
-| `undici-types@7.24.6` | MIT | — | [source](https://github.com/nodejs/undici) | [L081](#l081) |
-| `unzipit@1.4.3` | MIT | — | [source](https://github.com/greggman/unzipit) | [L082](#l082) |
-| `unzipit@2.0.0` | MIT | — | [source](https://github.com/greggman/unzipit) | [L082](#l082) |
-| `util-deprecate@1.0.2` | MIT | Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/) | [source](https://github.com/TooTallNate/util-deprecate) | [L083](#l083) |
-| `uzip-module@1.0.3` | MIT | — | [source](https://github.com/greggman/uzip-module) | [L084](#l084) |
-| `valibot@1.5.0` | MIT | Fabian Hiller | [source](https://github.com/open-circle/valibot) | [L085](#l085) |
-| `web-worker@1.5.0` | Apache-2.0 | — | [source](developit/web-worker) | [L052](#l052) |
-| `xml-naming@0.3.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/xml-naming) | [L017](#l017) |
-| `xml-utils@1.10.2` | CC0-1.0 | Daniel J. Dufour | [source](https://github.com/DanielJDufour/xml-utils) | [L086](#l086) |
-| `zarrita@0.5.4` | MIT | — | — | [L016](#l016) |
-| `zarrita@0.7.3` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L016](#l016) |
-| `zod@3.25.76` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L087](#l087) |
-| `zod@4.6.5` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L087](#l087) |
-| `zstd-codec@0.1.5` | MIT | yoshihitoh | [source](https://github.com/yoshihitoh/zstd-codec) | [L088](#l088) |
-| `zstddec@0.1.0` | MIT AND BSD-3-Clause | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/zstddec) | [L089](#l089) |
+| `md5@2.3.0` | BSD-3-Clause | Paul Vorbach <paul@vorba.ch> (http://paul.vorba.ch) | [source](https://github.com/pvorb/node-md5) | [L054](#l054) |
+| `mediabunny@1.61.0` | MPL-2.0 | Vanilagy | [source](https://github.com/Vanilagy/mediabunny) | [L055](#l055) |
+| `meshoptimizer@1.3.0` | MIT | Arseny Kapoulkine | [source](https://github.com/zeux/meshoptimizer) | [L056](#l056) |
+| `mjolnir.js@3.1.1` | MIT | — | [source](https://github.com/visgl/mjolnir.js) | [L057](#l057) |
+| `msgpackr-extract@3.0.4` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr-extract) | [L058](#l058) |
+| `msgpackr@1.12.1` | MIT | Kris Zyp | [source](http://github.com/kriszyp/msgpackr) | [L058](#l058) |
+| `neuroglancer@2.41.2` | Apache-2.0 | — | [source](https://github.com/google/neuroglancer) | [L051](#l051) |
+| `nifti-reader-js@0.6.9` | MIT | Michael Martinez | [source](https://github.com/rii-mango/NIFTI-Reader-JS) | [L059](#l059) |
+| `node-gyp-build-optional-packages@5.2.2` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/prebuild/node-gyp-build) | [L060](#l060) |
+| `numcodecs@0.3.2` | MIT | Trevor Manz | [source](https://github.com/manzt/numcodecs.js) | [L061](#l061) |
+| `pako@1.0.11` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L062](#l062) |
+| `pako@1.0.11` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L062](#l062) |
+| `pako@2.2.0` | (MIT AND Zlib) | — | [source](nodeca/pako) | [L062](#l062) |
+| `parse-headers@2.0.6` | MIT | David Björklund <david.bjorklund@gmail.com> | [source](https://github.com/kesla/parse-headers) | [L063](#l063) |
+| `path-expression-matcher@1.6.2` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/path-expression-matcher) | [L064](#l064) |
+| `pbf@3.3.0` | BSD-3-Clause | Konstantin Kaefer | [source](git@github.com:mapbox/pbf) | [L065](#l065) |
+| `preact@10.29.8` | MIT | — | [source](preactjs/preact) | [L066](#l066) |
+| `process-nextick-args@2.0.1` | MIT | — | [source](https://github.com/calvinmetcalf/process-nextick-args) | [L067](#l067) |
+| `protocol-buffers-schema@3.6.1` | MIT | Mathias Buus | [source](https://github.com/mafintosh/protocol-buffers-schema) | [L068](#l068) |
+| `quick-lru@6.1.2` | MIT | Sindre Sorhus <sindresorhus@gmail.com> (https://sindresorhus.com) | [source](sindresorhus/quick-lru) | [L069](#l069) |
+| `quickselect@2.0.0` | ISC | Vladimir Agafonkin | — | [L070](#l070) |
+| `react-dom@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L071](#l071) |
+| `react@19.2.8` | MIT | — | [source](https://github.com/react/react) | [L071](#l071) |
+| `readable-stream@2.3.8` | MIT | — | [source](https://github.com/nodejs/readable-stream) | [L072](#l072) |
+| `reference-spec-reader@0.2.0` | MIT | manzt <trevor.j.manz@gmail.com> | — | [L073](#l073) |
+| `resolve-protobuf-schema@2.1.0` | MIT | Mathias Buus (@mafintosh) | [source](https://github.com/mafintosh/resolve-protobuf-schema) | [L068](#l068) |
+| `safe-buffer@5.1.2` | MIT | Feross Aboukhadijeh <feross@feross.org> (http://feross.org) | [source](https://github.com/feross/safe-buffer) | [L043](#l043) |
+| `scheduler@0.27.0` | MIT | — | [source](https://github.com/facebook/react) | [L071](#l071) |
+| `setimmediate@1.0.5` | MIT | YuzuJS | [source](YuzuJS/setImmediate) | [L074](#l074) |
+| `snappyjs@0.6.1` | MIT | Zhipeng Jia | [source](zhipeng-jia/snappyjs) | [L075](#l075) |
+| `string_decoder@1.1.1` | MIT | — | [source](https://github.com/nodejs/string_decoder) | [L072](#l072) |
+| `strnum@2.5.1` | MIT | Amit Gupta (https://solothought.work/) | [source](https://github.com/NaturalIntelligence/strnum) | [L076](#l076) |
+| `tslib@2.8.1` | 0BSD | Microsoft Corp. | [source](https://github.com/Microsoft/tslib) | [L077](#l077) |
+| `undici-types@7.24.6` | MIT | — | [source](https://github.com/nodejs/undici) | [L078](#l078) |
+| `unzipit@1.4.3` | MIT | — | [source](https://github.com/greggman/unzipit) | [L079](#l079) |
+| `unzipit@2.0.0` | MIT | — | [source](https://github.com/greggman/unzipit) | [L079](#l079) |
+| `util-deprecate@1.0.2` | MIT | Nathan Rajlich <nathan@tootallnate.net> (http://n8.io/) | [source](https://github.com/TooTallNate/util-deprecate) | [L080](#l080) |
+| `uzip-module@1.0.3` | MIT | — | [source](https://github.com/greggman/uzip-module) | [L081](#l081) |
+| `valibot@1.5.0` | MIT | Fabian Hiller | [source](https://github.com/open-circle/valibot) | [L082](#l082) |
+| `web-worker@1.5.0` | Apache-2.0 | — | [source](developit/web-worker) | [L051](#l051) |
+| `xml-naming@0.3.0` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/xml-naming) | [L018](#l018) |
+| `xml-utils@1.10.2` | CC0-1.0 | Daniel J. Dufour | [source](https://github.com/DanielJDufour/xml-utils) | [L083](#l083) |
+| `zarrita@0.5.4` | MIT | — | — | [L017](#l017) |
+| `zarrita@0.7.3` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L017](#l017) |
+| `zod@3.25.76` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L084](#l084) |
+| `zod@4.6.7` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L084](#l084) |
+| `zstd-codec@0.1.5` | MIT | yoshihitoh | [source](https://github.com/yoshihitoh/zstd-codec) | [L085](#l085) |
+| `zstddec@0.1.0` | MIT AND BSD-3-Clause | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/zstddec) | [L086](#l086) |
 
 ## Included license and notice texts
 
 ### L001
 
-Packages: `@deck.gl/core@9.3.7 (LICENSE)`, `@deck.gl/extensions@9.3.11 (LICENSE)`, `@deck.gl/geo-layers@9.3.11 (LICENSE)`, `@deck.gl/layers@9.3.7 (LICENSE)`, `@deck.gl/mesh-layers@9.3.11 (LICENSE)`, `@deck.gl/react@9.3.7 (LICENSE)`, `@deck.gl/widgets@9.3.11 (LICENSE)`, `@probe.gl/env@4.1.1 (LICENSE)`, `@probe.gl/log@4.1.1 (LICENSE)`, `@probe.gl/stats@4.1.1 (LICENSE)`
+Packages: `@deck.gl/core@9.4.0 (LICENSE)`, `@deck.gl/extensions@9.4.0 (LICENSE)`, `@deck.gl/geo-layers@9.4.0 (LICENSE)`, `@deck.gl/layers@9.4.0 (LICENSE)`, `@deck.gl/mesh-layers@9.4.0 (LICENSE)`, `@deck.gl/react@9.4.0 (LICENSE)`, `@deck.gl/widgets@9.4.0 (LICENSE)`, `@probe.gl/env@4.1.1 (LICENSE)`, `@probe.gl/log@4.1.1 (LICENSE)`, `@probe.gl/stats@4.1.1 (LICENSE)`
 
 ````text
 Copyright Vis.gl contributors.
@@ -291,7 +299,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### L003
 
-Packages: `@hms-dbmi/viv@0.22.0 (LICENSE)`, `@vivjs/constants@0.22.0 (LICENSE)`, `@vivjs/extensions@0.22.0 (LICENSE)`, `@vivjs/layers@0.22.0 (LICENSE)`, `@vivjs/loaders@0.22.0 (LICENSE)`, `@vivjs/types@0.22.0 (LICENSE)`, `@vivjs/viewers@0.22.0 (LICENSE)`, `@vivjs/views@0.22.0 (LICENSE)`
+Packages: `@hms-dbmi/viv@0.23.0 (LICENSE)`, `@vivjs/constants@0.23.0 (LICENSE)`, `@vivjs/extensions@0.23.0 (LICENSE)`, `@vivjs/layers@0.23.0 (LICENSE)`, `@vivjs/loaders@0.23.0 (LICENSE)`, `@vivjs/types@0.23.0 (LICENSE)`, `@vivjs/viewers@0.23.0 (LICENSE)`, `@vivjs/views@0.23.0 (LICENSE)`
 
 ````text
 MIT License
@@ -319,7 +327,7 @@ SOFTWARE.
 
 ### L004
 
-Packages: `@loaders.gl/3d-tiles@4.5.2 (LICENSE)`, `@loaders.gl/compression@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/crypto@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/draco@4.5.2 (LICENSE)`, `@loaders.gl/schema-utils@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/gltf@4.5.2 (LICENSE)`, `@loaders.gl/textures@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/images@4.5.2 (LICENSE)`, `@loaders.gl/math@4.5.2 (LICENSE)`, `@loaders.gl/zip@4.5.2 (LICENSE)`, `@loaders.gl/gis@4.5.2 (LICENSE)`, `@loaders.gl/geoarrow@4.5.2 (LICENSE)`, `@loaders.gl/schema-utils@4.5.2 (LICENSE)`, `@loaders.gl/loader-utils@4.5.2 (LICENSE)`, `@loaders.gl/core@4.5.2 (LICENSE)`, `@loaders.gl/schema-utils@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/mvt@4.5.2 (LICENSE)`, `@loaders.gl/images@4.5.2 (LICENSE)`, `@loaders.gl/schema-utils@4.5.2 (LICENSE)`, `@loaders.gl/schema@4.5.1 (LICENSE)`, `@loaders.gl/terrain@4.5.2 (LICENSE)`, `@loaders.gl/images@4.5.2 (LICENSE)`, `@loaders.gl/tiles@4.5.2 (LICENSE)`, `@loaders.gl/math@4.5.2 (LICENSE)`, `@loaders.gl/wms@4.5.2 (LICENSE)`, `@loaders.gl/images@4.5.2 (LICENSE)`, `@loaders.gl/xml@4.5.2 (LICENSE)`, `@loaders.gl/core@4.5.2 (LICENSE)`, `@loaders.gl/draco@4.5.2 (LICENSE)`, `@loaders.gl/gltf@4.5.2 (LICENSE)`, `@loaders.gl/images@4.5.2 (LICENSE)`, `@loaders.gl/loader-utils@4.5.2 (LICENSE)`, `@loaders.gl/schema@4.5.1 (LICENSE)`, `@loaders.gl/schema-utils@4.5.2 (LICENSE)`, `@loaders.gl/textures@4.5.2 (LICENSE)`, `@loaders.gl/worker-utils@4.5.2 (LICENSE)`, `@loaders.gl/core@4.4.3 (LICENSE)`, `@loaders.gl/draco@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/schema-utils@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/gltf@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.3 (LICENSE)`, `@loaders.gl/loader-utils@4.4.3 (LICENSE)`, `@loaders.gl/schema@4.4.3 (LICENSE)`, `@loaders.gl/schema-utils@4.4.3 (LICENSE)`, `@loaders.gl/textures@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.3 (LICENSE)`
+Packages: `@loaders.gl/3d-tiles@4.5.4 (LICENSE)`, `@loaders.gl/compression@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/crypto@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/draco@4.5.4 (LICENSE)`, `@loaders.gl/schema-utils@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/gltf@4.5.4 (LICENSE)`, `@loaders.gl/textures@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/images@4.5.4 (LICENSE)`, `@loaders.gl/math@4.5.4 (LICENSE)`, `@loaders.gl/zip@4.5.4 (LICENSE)`, `@loaders.gl/gis@4.5.4 (LICENSE)`, `@loaders.gl/geoarrow@4.5.4 (LICENSE)`, `@loaders.gl/schema-utils@4.5.4 (LICENSE)`, `@loaders.gl/loader-utils@4.5.4 (LICENSE)`, `@loaders.gl/core@4.5.4 (LICENSE)`, `@loaders.gl/schema-utils@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/mvt@4.5.4 (LICENSE)`, `@loaders.gl/images@4.5.4 (LICENSE)`, `@loaders.gl/schema-utils@4.5.4 (LICENSE)`, `@loaders.gl/schema@4.5.4 (LICENSE)`, `@loaders.gl/terrain@4.5.4 (LICENSE)`, `@loaders.gl/images@4.5.4 (LICENSE)`, `@loaders.gl/tiles@4.5.4 (LICENSE)`, `@loaders.gl/math@4.5.4 (LICENSE)`, `@loaders.gl/wms@4.5.4 (LICENSE)`, `@loaders.gl/images@4.5.4 (LICENSE)`, `@loaders.gl/xml@4.5.4 (LICENSE)`, `@loaders.gl/core@4.5.4 (LICENSE)`, `@loaders.gl/draco@4.5.4 (LICENSE)`, `@loaders.gl/gltf@4.5.4 (LICENSE)`, `@loaders.gl/images@4.5.4 (LICENSE)`, `@loaders.gl/loader-utils@4.5.4 (LICENSE)`, `@loaders.gl/schema@4.5.4 (LICENSE)`, `@loaders.gl/schema-utils@4.5.4 (LICENSE)`, `@loaders.gl/textures@4.5.4 (LICENSE)`, `@loaders.gl/worker-utils@4.5.4 (LICENSE)`, `@loaders.gl/core@4.4.3 (LICENSE)`, `@loaders.gl/draco@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/schema-utils@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/gltf@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.3 (LICENSE)`, `@loaders.gl/loader-utils@4.4.3 (LICENSE)`, `@loaders.gl/schema@4.4.3 (LICENSE)`, `@loaders.gl/schema-utils@4.4.3 (LICENSE)`, `@loaders.gl/textures@4.4.5 (LICENSE)`, `@loaders.gl/images@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.3 (LICENSE)`, `@loaders.gl/core@4.4.5 (LICENSE)`, `@loaders.gl/loader-utils@4.4.5 (LICENSE)`, `@loaders.gl/schema@4.4.5 (LICENSE)`, `@loaders.gl/schema-utils@4.4.5 (LICENSE)`, `@loaders.gl/worker-utils@4.4.5 (LICENSE)`
 
 ````text
 loaders.gl is licensed under the MIT license
@@ -366,7 +374,7 @@ See the License for the specific language governing permissions and limitations 
 
 ### L005
 
-Packages: `@luma.gl/constants@9.3.6 (LICENSE)`, `@luma.gl/core@9.3.6 (LICENSE)`, `@luma.gl/engine@9.3.6 (LICENSE)`, `@luma.gl/gltf@9.3.6 (LICENSE)`, `@luma.gl/shadertools@9.3.6 (LICENSE)`, `@luma.gl/webgl@9.3.6 (LICENSE)`
+Packages: `@luma.gl/constants@9.4.2 (LICENSE)`, `@luma.gl/core@9.4.2 (LICENSE)`, `@luma.gl/engine@9.4.2 (LICENSE)`, `@luma.gl/gltf@9.4.2 (LICENSE)`, `@luma.gl/gpgpu@9.4.2 (LICENSE)`, `@luma.gl/shadertools@9.4.2 (LICENSE)`, `@luma.gl/webgl@9.4.2 (LICENSE)`, `@luma.gl/webgpu@9.4.2 (LICENSE)`
 
 ````text
 luma.gl is provided under the MIT license
@@ -382,6 +390,11 @@ under MIT license. PhiloGL parts Copyright © 2013 Sencha Labs.
 This software includes adaptations of some postprocessing code from 
 THREE.js (https://github.com/mrdoob/three.js/) under MIT license. 
 THREE.js parts Copyright © 2010-2018 three.js authors. 
+
+This software includes adaptations of Gaussian-splat rendering and
+level-of-detail behavior from Spark (https://github.com/sparkjsdev/spark)
+under MIT license.
+Spark parts Copyright © 2025 WORLD LABS TECHNOLOGIES, INC.
 
 Additional attribution given in specific source files. 
 
@@ -621,7 +634,7 @@ SOFTWARE.
 
 ### L012
 
-Packages: `@nodable/entities@3.0.0 (generated from package metadata)`
+Packages: `@nodable/entities@3.1.0 (generated from package metadata)`
 
 ````text
 Copyright Amit Gupta (https://solothought.com)
@@ -730,6 +743,39 @@ MIT License
 
 ### L016
 
+Packages: `@webgpu/types@0.1.74 (LICENSE)`
+
+````text
+Copyright 2022 WebGPU Developers
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+   3. Neither the name of the copyright holder nor the names of its
+      contributors may be used to endorse or promote products derived from this
+      software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+````
+
+### L017
+
 Packages: `@zarrita/storage@0.1.4 (LICENSE)`, `zarrita@0.5.4 (LICENSE)`, `@zarrita/storage@0.2.0 (LICENSE)`, `zarrita@0.7.3 (LICENSE)`
 
 ````text
@@ -756,7 +802,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L017
+### L018
 
 Packages: `anynum@1.0.1 (LICENSE)`, `fast-xml-builder@1.3.1 (LICENSE)`, `is-unsafe@2.0.2 (LICENSE)`, `xml-naming@0.3.0 (LICENSE)`
 
@@ -784,7 +830,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L018
+### L019
 
 Packages: `apache-arrow@21.2.0 (NOTICE.txt)`
 
@@ -794,34 +840,6 @@ Copyright 2017-2025 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
-````
-
-### L019
-
-Packages: `argparse@1.0.10 (LICENSE)`
-
-````text
-(The MIT License)
-
-Copyright (C) 2012 by Vitaly Puzrin
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 ````
 
 ### L020
@@ -1439,7 +1457,7 @@ Apache License
 
 ### L029
 
-Packages: `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`
+Packages: `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`
 
 ````text
 MIT License
@@ -1517,7 +1535,7 @@ SOFTWARE.
 
 ### L032
 
-Packages: `fast-xml-parser@5.11.1 (LICENSE)`
+Packages: `fast-xml-parser@5.11.2 (LICENSE)`
 
 ````text
 MIT License
@@ -1747,22 +1765,6 @@ SOFTWARE.
 
 ### L041
 
-Packages: `image-size@2.0.4 (LICENSE)`
-
-````text
-The MIT License (MIT)
-
-Copyright © 2013-Present Aditya Yadav, http://netroy.in
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-````
-
-### L042
-
 Packages: `immediate@3.0.6 (LICENSE.txt)`
 
 ````text
@@ -1788,7 +1790,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L043
+### L042
 
 Packages: `inherits@2.0.4 (LICENSE)`
 
@@ -1810,7 +1812,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L044
+### L043
 
 Packages: `is-buffer@1.1.6 (LICENSE)`, `safe-buffer@5.1.2 (LICENSE)`
 
@@ -1838,7 +1840,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L045
+### L044
 
 Packages: `is-error@2.2.2 (LICENSE)`
 
@@ -1864,7 +1866,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L046
+### L045
 
 Packages: `isarray@1.0.0 (generated from package metadata)`
 
@@ -1890,7 +1892,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L047
+### L046
 
 Packages: `json-with-bigint@3.5.10 (LICENSE)`
 
@@ -1918,7 +1920,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L048
+### L047
 
 Packages: `jszip@3.10.2 (LICENSE.markdown)`
 
@@ -2576,7 +2578,7 @@ copy of the Program in return for a fee.
                      END OF TERMS AND CONDITIONS
 ````
 
-### L049
+### L048
 
 Packages: `ktx-parse@0.7.1 (LICENSE)`
 
@@ -2604,7 +2606,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L050
+### L049
 
 Packages: `lie@3.3.0 (license.md)`
 
@@ -2618,7 +2620,7 @@ The above copyright notice and this permission notice shall be included in all c
 **THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.**
 ````
 
-### L051
+### L050
 
 Packages: `lodash@4.18.1 (LICENSE)`, `lodash-es@4.18.1 (LICENSE)`
 
@@ -2672,9 +2674,9 @@ licenses; we recommend you read them, as their terms may differ from the
 terms above.
 ````
 
-### L052
+### L051
 
-Packages: `long@5.3.2 (LICENSE)`, `a5-js@0.7.3 (LICENSE)`, `apache-arrow@21.2.0 (LICENSE.txt)`, `flatbuffers@25.9.23 (LICENSE)`, `h3-js@4.5.0 (LICENSE)`, `long@3.2.0 (LICENSE)`, `neuroglancer@2.41.2 (LICENSE)`, `web-worker@1.5.0 (LICENSE)`, `draco3d@1.5.7 (generated from package metadata)`, `lerc@3.0.0 (generated from package metadata)`
+Packages: `long@5.3.2 (LICENSE)`, `a5-js@0.10.1 (LICENSE)`, `apache-arrow@21.2.0 (LICENSE.txt)`, `flatbuffers@25.9.23 (LICENSE)`, `h3-js@4.5.0 (LICENSE)`, `long@3.2.0 (LICENSE)`, `neuroglancer@2.41.2 (LICENSE)`, `web-worker@1.5.0 (LICENSE)`, `draco3d@1.5.7 (generated from package metadata)`, `lerc@3.0.0 (generated from package metadata)`
 
 ````text
 Apache License
@@ -2880,7 +2882,7 @@ Apache License
    limitations under the License.
 ````
 
-### L053
+### L052
 
 Packages: `lz4js@0.2.0 (generated from package metadata)`
 
@@ -2900,7 +2902,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L054
+### L053
 
 Packages: `lzw-tiff-decoder@0.1.1 (generated from package metadata)`
 
@@ -2926,7 +2928,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L055
+### L054
 
 Packages: `md5@2.3.0 (LICENSE)`
 
@@ -2960,7 +2962,7 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L056
+### L055
 
 Packages: `mediabunny@1.61.0 (LICENSE)`
 
@@ -3340,9 +3342,9 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ````
 
-### L057
+### L056
 
-Packages: `meshoptimizer@1.2.0 (LICENSE.md)`
+Packages: `meshoptimizer@1.3.0 (LICENSE.md)`
 
 ````text
 MIT License
@@ -3368,9 +3370,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L058
+### L057
 
-Packages: `mjolnir.js@3.0.1 (LICENSE)`
+Packages: `mjolnir.js@3.1.1 (LICENSE)`
 
 ````text
 MIT License
@@ -3396,7 +3398,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L059
+### L058
 
 Packages: `msgpackr@1.12.1 (LICENSE)`, `msgpackr-extract@3.0.4 (LICENSE)`
 
@@ -3424,7 +3426,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L060
+### L059
 
 Packages: `nifti-reader-js@0.6.9 (LICENSE)`
 
@@ -3450,7 +3452,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L061
+### L060
 
 Packages: `node-gyp-build-optional-packages@5.2.2 (LICENSE)`
 
@@ -3478,7 +3480,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L062
+### L061
 
 Packages: `numcodecs@0.3.2 (LICENSE)`
 
@@ -3506,9 +3508,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L063
+### L062
 
-Packages: `pako@2.2.0 (LICENSE)`, `pako@1.0.11 (LICENSE)`
+Packages: `pako@1.0.11 (LICENSE)`, `pako@1.0.11 (LICENSE)`, `pako@2.2.0 (LICENSE)`
 
 ````text
 (The MIT License)
@@ -3534,7 +3536,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L064
+### L063
 
 Packages: `parse-headers@2.0.6 (LICENCE)`
 
@@ -3562,7 +3564,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L065
+### L064
 
 Packages: `path-expression-matcher@1.6.2 (LICENSE)`
 
@@ -3590,7 +3592,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L066
+### L065
 
 Packages: `pbf@3.3.0 (LICENSE)`
 
@@ -3624,7 +3626,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### L067
+### L066
 
 Packages: `preact@10.29.8 (LICENSE)`
 
@@ -3652,7 +3654,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L068
+### L067
 
 Packages: `process-nextick-args@2.0.1 (license.md)`
 
@@ -3678,7 +3680,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.**
 ````
 
-### L069
+### L068
 
 Packages: `protocol-buffers-schema@3.6.1 (LICENSE)`, `resolve-protobuf-schema@2.1.0 (LICENSE)`
 
@@ -3706,7 +3708,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### L070
+### L069
 
 Packages: `quick-lru@6.1.2 (license)`
 
@@ -3722,7 +3724,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L071
+### L070
 
 Packages: `quickselect@2.0.0 (LICENSE)`
 
@@ -3744,7 +3746,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ````
 
-### L072
+### L071
 
 Packages: `react@19.2.8 (LICENSE)`, `react-dom@19.2.8 (LICENSE)`, `scheduler@0.27.0 (LICENSE)`
 
@@ -3772,7 +3774,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L073
+### L072
 
 Packages: `readable-stream@2.3.8 (LICENSE)`, `string_decoder@1.1.1 (LICENSE)`
 
@@ -3826,7 +3828,7 @@ IN THE SOFTWARE.
 """
 ````
 
-### L074
+### L073
 
 Packages: `reference-spec-reader@0.2.0 (LICENSE)`
 
@@ -3854,7 +3856,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L075
+### L074
 
 Packages: `setimmediate@1.0.5 (LICENSE.txt)`
 
@@ -3881,7 +3883,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L076
+### L075
 
 Packages: `snappyjs@0.6.1 (LICENSE)`
 
@@ -3909,40 +3911,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L077
+### L076
 
-Packages: `sprintf-js@1.0.3 (LICENSE)`
-
-````text
-Copyright (c) 2007-2014, Alexandru Marasteanu <hello [at) alexei (dot] ro>
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-* Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer in the
-  documentation and/or other materials provided with the distribution.
-* Neither the name of this software nor the names of its contributors may be
-  used to endorse or promote products derived from this software without
-  specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-````
-
-### L078
-
-Packages: `strnum@2.4.2 (LICENSE)`
+Packages: `strnum@2.5.1 (LICENSE)`
 
 ````text
 MIT License
@@ -3968,35 +3939,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L079
-
-Packages: `texture-compressor@1.0.2 (LICENSE)`
-
-````text
-MIT License
-
-Copyright (c) 2019 Tim van Scherpenzeel
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-````
-
-### L080
+### L077
 
 Packages: `tslib@2.8.1 (LICENSE.txt)`
 
@@ -4015,7 +3958,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### L081
+### L078
 
 Packages: `undici-types@7.24.6 (LICENSE)`
 
@@ -4043,7 +3986,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L082
+### L079
 
 Packages: `unzipit@1.4.3 (LICENSE.md)`, `unzipit@2.0.0 (LICENSE.md)`
 
@@ -4093,7 +4036,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L083
+### L080
 
 Packages: `util-deprecate@1.0.2 (LICENSE)`
 
@@ -4124,7 +4067,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L084
+### L081
 
 Packages: `uzip-module@1.0.3 (LICENSE)`
 
@@ -4152,7 +4095,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L085
+### L082
 
 Packages: `valibot@1.5.0 (LICENSE.md)`
 
@@ -4168,7 +4111,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### L086
+### L083
 
 Packages: `xml-utils@1.10.2 (LICENSE)`
 
@@ -4296,9 +4239,9 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ````
 
-### L087
+### L084
 
-Packages: `zod@4.6.5 (LICENSE)`, `zod@3.25.76 (LICENSE)`
+Packages: `zod@4.6.7 (LICENSE)`, `zod@3.25.76 (LICENSE)`
 
 ````text
 MIT License
@@ -4324,7 +4267,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L088
+### L085
 
 Packages: `zstd-codec@0.1.5 (generated from package metadata)`
 
@@ -4350,7 +4293,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### L089
+### L086
 
 Packages: `zstddec@0.1.0 (LICENSE)`
 

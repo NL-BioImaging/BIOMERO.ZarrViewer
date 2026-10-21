@@ -65,9 +65,9 @@ views, responses, configuration, templates, and cryptographic signing.
 | [Neuroglancer](https://github.com/google/neuroglancer) | Same-origin 3D intensity volumes and segmentation meshes | `2.41.2` | Apache-2.0 |
 | [Mediabunny](https://github.com/Vanilagy/mediabunny) | Browser-local MP4 encoding and muxing | `1.61.0` | MPL-2.0 |
 | [@math.gl/core](https://github.com/visgl/math.gl) | Physical volume transformations | `4.1.0` | MIT |
-| [Viv](https://github.com/hms-dbmi/viv) | GPU-backed multiscale OME-NGFF image layers and loaders | `0.22.0` | MIT |
+| [Viv](https://github.com/hms-dbmi/viv) | GPU-backed multiscale OME-NGFF image layers and loaders | `0.23.0` | MIT |
 | [Zarrita](https://github.com/manzt/zarrita.js) | Zarr v2/v3 hierarchy access with a custom authenticated fetch store | `0.7.3` | MIT |
-| [deck.gl](https://github.com/visgl/deck.gl) | WebGL canvas, views, interaction, and layer composition used by Viv and the custom label extension | `9.3.7` | MIT |
+| [deck.gl](https://github.com/visgl/deck.gl) | WebGL canvas, views, interaction, and layer composition used by Viv and the custom label extension | `9.4.0` | MIT |
 | [React](https://github.com/facebook/react) | Viewer interface and application state | `19.2.8` | MIT |
 
 Vite, TypeScript, Vitest, Testing Library, and jsdom are development and test
@@ -79,6 +79,18 @@ Nginx is deployment infrastructure rather than a packaged application
 dependency. An existing deployment Nginx instance processes the viewer's
 authenticated `X-Accel-Redirect` responses and serves chunk bytes from the
 read-only OME-Zarr mount.
+
+### Optional virtual-image provider
+
+The [`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
+performance fork of [`ome/omero-web-zarr`](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
+is an optional runtime provider when the [HTTP integration](http-zarr.md) is
+explicitly enabled. The standalone recipe pins fork commit
+`3afc184a9c3dcab090bd4a92effcf5e45ae4c864`, derived from upstream
+`4e1e685dff22136abfd2626f6fd6eaf985aba368`. Its source is installed separately,
+not copied into the viewer. The adapter imports the provider's Django response
+implementations for authenticated metadata and chunk generation. Ordinary
+physical-store and BIOMERO deployments do not require or import this provider.
 
 ## Specifications implemented
 
@@ -114,21 +126,6 @@ bitmask-based label rendering. The findings are recorded in
 Vitessce is not a production dependency, and no OMERO-Vitessce source file is
 included in the viewer. Production rendering uses Neuroglancer, Viv, Zarrita, deck.gl, and a
 viewer-specific 2D label shader.
-
-### ome/omero-web-zarr
-
-Source:
-[ome/omero-web-zarr](https://github.com/ome/omero-web-zarr) (AGPL-3.0)
-
-This project was reviewed as an example of exposing OMERO data through a
-Zarr-compatible web interface. It was an architectural comparison only:
-
-- `ome/omero-web-zarr` virtualizes conventional OMERO pixels as Zarr data;
-- BIOMERO OME-Zarr Viewer resolves already-existing BIOMERO OME-Zarr stores
-  and authorizes their bytes through an Nginx internal location.
-
-The viewer neither imports nor copies `ome/omero-web-zarr` code. The two
-projects solve complementary problems.
 
 ### Find Nuclei Viewer
 

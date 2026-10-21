@@ -41,7 +41,7 @@ class RenderedROI:
     filename: str
 
 
-def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None) -> RenderedROI:
+def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None, *, array_root=None) -> RenderedROI:
     """Render the legacy single-overlay GET contract."""
     overlay = {}
     for source, target in (
@@ -81,7 +81,7 @@ def render_roi_png(store_path, model: dict[str, Any], query, label_roots=None) -
         ],
     }
     return render_recipe_png(
-        store_path, model, recipe, decorate=False, label_roots=label_roots
+        store_path, model, recipe, decorate=False, label_roots=label_roots, array_root=array_root
     )
 
 
@@ -92,6 +92,7 @@ def render_recipe_png(
     *,
     decorate: bool = True,
     label_roots=None,
+    array_root=None,
 ) -> RenderedROI:
     if not isinstance(recipe, dict):
         raise InvalidROI("The render recipe must be a JSON object")
@@ -118,7 +119,7 @@ def render_recipe_png(
             "The render recipe exceeds the aggregate native-pixel budget"
         )
 
-    root = zarr.open_group(str(store_path), mode="r")
+    root = array_root if array_root is not None else zarr.open_group(str(store_path), mode="r")
     arrays: dict[str, Any] = {}
     planes: dict[tuple[Any, ...], np.ndarray] = {}
     rendered = [
@@ -162,7 +163,7 @@ def _field_model(store_path, model, panel, label_roots):
     return selected
 
 
-def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any], *, label_roots=None) -> RenderedROI:
+def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any], *, label_roots=None, array_root=None) -> RenderedROI:
     """Export one bounded crop with a raster image and editable vector annotations."""
     if not isinstance(recipe, dict):
         raise InvalidROI("The render recipe must be a JSON object")
@@ -177,7 +178,7 @@ def render_recipe_svg(store_path, model: dict[str, Any], recipe: dict[str, Any],
                    if panel["time_projection"] else 1)
     if (x1 - x0) * (y1 - y0) * frame_count > render_max_aggregate_pixels():
         raise ROILimitExceeded("The render recipe exceeds the aggregate native-pixel budget")
-    root = zarr.open_group(str(store_path), mode="r")
+    root = array_root if array_root is not None else zarr.open_group(str(store_path), mode="r")
     arrays, planes = {}, {}
     background = _render_panel(root, model, {**panel, "overlays": [], "vectors": [], "scale_bar": False}, arrays, planes, label_roots or {})
     encoded = base64.b64encode(_encode_png(background)).decode("ascii")

@@ -1,0 +1,1186 @@
+{
+  "date": "2026-10-21",
+  "viewer_version": "0.8.1b4",
+  "provider_version": "0.1.2.dev0+nlbi.2",
+  "provider_commit": "3afc184a9c3dcab090bd4a92effcf5e45ae4c864",
+  "viewer_implementation_commit": "96c938426d10200c25afffaa13fe0b229b38fa5b",
+  "method": "Same standalone server and web build; three HTTP readers; one warmup plus five measured trials per image/format; warm source filesystem cache; 0.4 followed by 0.5; timings cover pixel downloads, not browser rendering or projection calculation. No sharding.",
+  "summary": [
+    {
+      "case": "SVS overview (all coarse-level pixels)",
+      "image_id": 5,
+      "level": "2",
+      "requests": 27,
+      "encoded_bytes": 3958511,
+      "median_pixel_seconds": {
+        "0.4": 1.517817962000663,
+        "0.5": 1.511112721000245
+      },
+      "range_pixel_seconds": {
+        "0.4": [
+          1.4608254289996694,
+          1.716631383999811
+        ],
+        "0.5": [
+          1.3905513479994625,
+          1.6056168139994043
+        ]
+      },
+      "pixels_identical": true
+    },
+    {
+      "case": "SVS native resolution (six sampled tiles)",
+      "image_id": 5,
+      "level": "0",
+      "requests": 6,
+      "encoded_bytes": 2856330,
+      "median_pixel_seconds": {
+        "0.4": 0.3373090420000153,
+        "0.5": 0.30515038700013974
+      },
+      "range_pixel_seconds": {
+        "0.4": [
+          0.2742939899999328,
+          0.4412659749996237
+        ],
+        "0.5": [
+          0.27612691600006656,
+          0.31455803599965293
+        ]
+      },
+      "pixels_identical": true
+    },
+    {
+      "case": "Confocal stack pixels for the MIP",
+      "image_id": 4,
+      "level": "0",
+      "requests": 15,
+      "encoded_bytes": 4481841,
+      "median_pixel_seconds": {
+        "0.4": 0.8028017890001138,
+        "0.5": 0.7619056559997262
+      },
+      "range_pixel_seconds": {
+        "0.4": [
+          0.7377277330006109,
+          0.9330851739996433
+        ],
+        "0.5": [
+          0.7461384389998784,
+          0.8387674330006121
+        ]
+      },
+      "pixels_identical": true
+    }
+  ],
+  "raw_trials": {
+    "0.4": [
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 0,
+        "warmup": true,
+        "capabilities_seconds": 0.8241467710004144,
+        "metadata_seconds": 0.3486095340003885,
+        "pixel_seconds": {
+          "0": 1.9369947060004051,
+          "2": 1.7664376210004775
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 1,
+        "warmup": false,
+        "capabilities_seconds": 0.1503907039996193,
+        "metadata_seconds": 0.4069611020004231,
+        "pixel_seconds": {
+          "0": 0.3373090420000153,
+          "2": 1.5485093449997294
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 2,
+        "warmup": false,
+        "capabilities_seconds": 0.12504604799960362,
+        "metadata_seconds": 0.34307989999979327,
+        "pixel_seconds": {
+          "0": 0.4412659749996237,
+          "2": 1.4627098359997035
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 3,
+        "warmup": false,
+        "capabilities_seconds": 0.15387829399969633,
+        "metadata_seconds": 0.31872121400010656,
+        "pixel_seconds": {
+          "0": 0.31300886899953184,
+          "2": 1.716631383999811
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 4,
+        "warmup": false,
+        "capabilities_seconds": 0.08893333199921472,
+        "metadata_seconds": 0.34374355299951276,
+        "pixel_seconds": {
+          "0": 0.2742939899999328,
+          "2": 1.517817962000663
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 5,
+        "trial": 5,
+        "warmup": false,
+        "capabilities_seconds": 0.07995256800040806,
+        "metadata_seconds": 0.3383132819999446,
+        "pixel_seconds": {
+          "0": 0.38841832600064663,
+          "2": 1.4608254289996694
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 0,
+        "warmup": true,
+        "capabilities_seconds": 0.15922782699999516,
+        "metadata_seconds": 0.3310992289998467,
+        "pixel_seconds": {
+          "0": 1.003415399000005
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 1,
+        "warmup": false,
+        "capabilities_seconds": 0.0841901379999399,
+        "metadata_seconds": 0.236301592000018,
+        "pixel_seconds": {
+          "0": 0.9330851739996433
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 2,
+        "warmup": false,
+        "capabilities_seconds": 0.08413160700001754,
+        "metadata_seconds": 0.24706036899988248,
+        "pixel_seconds": {
+          "0": 0.7577814019996367
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 3,
+        "warmup": false,
+        "capabilities_seconds": 0.0874888029993599,
+        "metadata_seconds": 0.24488418900000397,
+        "pixel_seconds": {
+          "0": 0.8028017890001138
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 4,
+        "warmup": false,
+        "capabilities_seconds": 0.135144310999749,
+        "metadata_seconds": 0.24085007299981953,
+        "pixel_seconds": {
+          "0": 0.7377277330006109
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.4",
+        "image_id": 4,
+        "trial": 5,
+        "warmup": false,
+        "capabilities_seconds": 0.07770165500005533,
+        "metadata_seconds": 0.25151841699971555,
+        "pixel_seconds": {
+          "0": 0.85962412400022
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      }
+    ],
+    "0.5": [
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 0,
+        "warmup": true,
+        "capabilities_seconds": 0.28520823000053497,
+        "metadata_seconds": 0.252768940000351,
+        "pixel_seconds": {
+          "0": 1.3097359769999457,
+          "2": 2.1259323210006187
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 1,
+        "warmup": false,
+        "capabilities_seconds": 0.08001526499992906,
+        "metadata_seconds": 0.24443613399944297,
+        "pixel_seconds": {
+          "0": 0.30515038700013974,
+          "2": 1.511112721000245
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 2,
+        "warmup": false,
+        "capabilities_seconds": 0.14556592099961563,
+        "metadata_seconds": 0.24008314099955896,
+        "pixel_seconds": {
+          "0": 0.30748863900043943,
+          "2": 1.5237414809998882
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 3,
+        "warmup": false,
+        "capabilities_seconds": 0.07996091900076863,
+        "metadata_seconds": 0.24091007599963632,
+        "pixel_seconds": {
+          "0": 0.31455803599965293,
+          "2": 1.397567510999579
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 4,
+        "warmup": false,
+        "capabilities_seconds": 0.13816458400015108,
+        "metadata_seconds": 0.26101610800014896,
+        "pixel_seconds": {
+          "0": 0.27612691600006656,
+          "2": 1.3905513479994625
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 5,
+        "trial": 5,
+        "warmup": false,
+        "capabilities_seconds": 0.07940897600019525,
+        "metadata_seconds": 0.2625451609992524,
+        "pixel_seconds": {
+          "0": 0.2762186100007966,
+          "2": 1.6056168139994043
+        },
+        "requests": {
+          "2": 27,
+          "0": 6
+        },
+        "encoded_bytes": {
+          "0": 2856330,
+          "2": 3958511
+        },
+        "hashes": {
+          "overview": "3d8fe4a98e3236c8d3851830af181cad7bf055e27a5ca4707efad957a6361eed",
+          "native_samples": [
+            "47ca5b413c293634fd63dad8e0ee759c26b38a75b0f9342689b65e96088573d9",
+            "b645930a5e7802a3626e161b3904a5430f5033e79d8d1947893d45a7c7b6c8ee",
+            "249bc05924ea27aae3f31125e17199e80e98c914424bc2f4e2b85b94319a7272",
+            "5cc4b154db0b58dcf7c9e9e235db8a092c4c3640f4d07424f31e31982828e473",
+            "9c6a6ebce0d182f0da614e2c0e69dcbd880ad2639a2e6ad27dd02ca335925317",
+            "46d9746ad9e3accb6b8e9f157420c466a924e0d075f677aea3d50fd31ba2ab93"
+          ]
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            1024,
+            1024
+          ],
+          "2": [
+            1,
+            1024,
+            1024
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.499,
+              0.499
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 0,
+        "warmup": true,
+        "capabilities_seconds": 0.16475448700020934,
+        "metadata_seconds": 0.24795381700005237,
+        "pixel_seconds": {
+          "0": 0.8757099690001269
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 1,
+        "warmup": false,
+        "capabilities_seconds": 0.1010431079994305,
+        "metadata_seconds": 0.16127372400023887,
+        "pixel_seconds": {
+          "0": 0.794752965999578
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 2,
+        "warmup": false,
+        "capabilities_seconds": 0.08228065999992396,
+        "metadata_seconds": 0.16272152500005177,
+        "pixel_seconds": {
+          "0": 0.8387674330006121
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 3,
+        "warmup": false,
+        "capabilities_seconds": 0.1268335009999646,
+        "metadata_seconds": 0.17989799699989817,
+        "pixel_seconds": {
+          "0": 0.7461384389998784
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 4,
+        "warmup": false,
+        "capabilities_seconds": 0.08097871800055145,
+        "metadata_seconds": 0.15835358500044094,
+        "pixel_seconds": {
+          "0": 0.7619056559997262
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5",
+        "image_id": 4,
+        "trial": 5,
+        "warmup": false,
+        "capabilities_seconds": 0.12268133099951228,
+        "metadata_seconds": 0.1524187349996282,
+        "pixel_seconds": {
+          "0": 0.7500968899994405
+        },
+        "requests": {
+          "0": 15
+        },
+        "encoded_bytes": {
+          "0": 4481841
+        },
+        "hashes": {
+          "mip": "f2f51aa8c556325e70619c558dd90055272a4d40976853a50076aee9b66c86e7"
+        },
+        "chunk_shapes": {
+          "0": [
+            1,
+            8,
+            370,
+            370
+          ]
+        },
+        "calibration": [
+          {
+            "type": "scale",
+            "scale": [
+              1.0,
+              0.5,
+              0.1979036070900946,
+              0.1979036070900946
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
