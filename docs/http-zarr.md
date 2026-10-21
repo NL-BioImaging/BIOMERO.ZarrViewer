@@ -59,7 +59,7 @@ the old PyPI wheel works with a current OMERO.web environment.
 
 ## Reproduce the standalone Docker installation
 
-[`docker/Dockerfile.standalone`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.standalone)
+[`docker/Dockerfile.standalone`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/Dockerfile.standalone)
 starts from the official OMERO.web 5.33.2 image pinned by digest. It installs
 a supplied viewer wheel with the tested runtime additions pinned in
 `docker/standalone-constraints.txt`. It needs neither a pre-existing local image
@@ -110,7 +110,7 @@ downloading a fresh, unpinned build environment.
 
 The installer installs the checksum-verified fork source directly, including
 its performance improvements. Its upstream provenance and exact changes are described in
-[`docker/provider-README.md`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/provider-README.md).
+[`docker/provider-README.md`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/provider-README.md).
 The provider source and its own regression workflow live in the separate
 [fork repository](https://github.com/NL-BioImaging/omero-web-zarr).
 This is not a newly published upstream or PyPI release.

@@ -10,7 +10,7 @@ and with BIOMERO deployments.
 ## Open your data
 
 In OMERO.web, select a registered OME-Zarr **Image**, **Plate** or **Well**, then
-choose **Open With â†’ OME-Zarr Viewer**. Your existing OMERO permissions apply.
+choose **Open With ? OME-Zarr Viewer**. Your existing OMERO permissions apply.
 Physical OME-Zarr 0.4/0.5 stores can be registered with standard
 `omero zarr import` / `ExternalInfo`, without extra BIOMERO annotations.
 With the optional `omero-web-zarr` integration enabled, ordinary OMERO images
@@ -18,15 +18,26 @@ such as TIFFs can also be opened as virtual OME-Zarr 0.4, without a full export.
 
 ## Installation options
 
+Install the stable package in your OMERO.web Python environment:
+
+```bash
+python -m pip install biomero-zarr-viewer==0.8.1
+```
+
+Configure the shared storage and authenticated Nginx route using the deployment
+instructions below. The wheel includes the browser assets; Node.js is not needed
+in the running OMERO.web environment.
+
+
 ### Standalone OMERO
 
 BIOMERO, Slurm and OMERO.Analysis are not required. The
-[standalone Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docker/Dockerfile.standalone)
+[standalone Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/Dockerfile.standalone)
 uses an official OMERO.web image pinned by digest and tested runtime constraints.
 The default build installs the viewer for physical OME-Zarr 0.4/0.5, with the
 shared data mount and authenticated Nginx route described in the
-[build and installation instructions](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md#reproduce-the-standalone-docker-installation).
-See [OMERO source registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/data-and-registration.md#standard-omero-cli-zarr-imports)
+[build and installation instructions](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/http-zarr.md#reproduce-the-standalone-docker-installation).
+See [OMERO source registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/data-and-registration.md#standard-omero-cli-zarr-imports)
 for linking the physical store to its OMERO Image.
 
 ### Optional omero-web-zarr
@@ -36,15 +47,15 @@ provider from the [NL-BioImaging performance fork](https://github.com/NL-BioImag
 The recipe pins a fork commit and verifies its archive checksum.
 Ordinary OMERO images are then served on demand as virtual OME-Zarr 0.4,
 using the existing OMERO permissions. Virtual sources support Neuroglancer and Viv for 3D viewing.
-See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md).
+See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/http-zarr.md).
 
 The provider is disabled by default and is not a required viewer dependency.
 Physical OME-Zarr and BIOMERO continue working when it is absent.
 
-Virtual HTTP images use OME-Zarr 0.4 by default. Viewer 0.8.1b4+ can also
+Virtual HTTP images use OME-Zarr 0.4 by default. Viewer 0.8.1 can also
 select optional unsharded OME-Zarr 0.5 with
 `omero.web.zarr_viewer.http_ngff_version=0.5`; see the
-[format selection guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md#optional-virtual-ome-zarr-05-without-sharding).
+[format selection guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/http-zarr.md#optional-virtual-ome-zarr-05-without-sharding).
 
 ### Existing BIOMERO deployments
 
@@ -55,7 +66,7 @@ provider. Follow the
 for integrated installation.
 
 To add the optional pinned HTTP provider to an existing combined web image,
-use the [BIOMERO Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/deployment-nl-biomero.md#optional-pinned-http-zarr-provider-in-an-existing-biomero-stack).
+use the [BIOMERO Docker recipe](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/deployment-nl-biomero.md#optional-pinned-http-zarr-provider-in-an-existing-biomero-stack).
 It preserves the installed BIOMERO/Analysis components and existing storage configuration.
 
 ## Explore the image
