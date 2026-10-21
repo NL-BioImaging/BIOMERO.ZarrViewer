@@ -26,7 +26,7 @@ from django.apps import apps
 from django.http import Http404, HttpRequest
 
 from .errors import DataNotFound, InvalidMetadata, ROILimitExceeded, UnsafePath
-from .settings import http_enabled, max_metadata_bytes
+from .settings import http_enabled, http_ngff_version, max_metadata_bytes
 
 BACKEND = "omero-web-zarr"
 MAX_CHUNK_BYTES = 32 * 1024 * 1024
@@ -38,7 +38,8 @@ _metadata_lock = RLock()
 
 def _layout():
     value = getattr(provider_views(), "OPTIMIZED_LAYOUT", "legacy")
-    return value if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", value) else "legacy"
+    value = value if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", value) else "legacy"
+    return value if http_ngff_version() == "0.4" else f"ngff05-{value[:56]}"
 
 
 class _ProviderConnection:
@@ -89,6 +90,16 @@ def resolve_http_store(image, conn):
 
 class HttpZarrSource:
     def __init__(self, image, conn):
+        self.version = http_ngff_version()
+        if self.version not in ("0.4", "0.5"):
+            raise InvalidMetadata("HTTP NGFF version must be 0.4 or 0.5")
+        self.zarr_format = 3 if self.version == "0.5" else 2
+        if self.version == "0.5":
+            import zarr
+            if int(zarr.__version__.split(".")[0]) < 3:
+                raise InvalidMetadata("Virtual OME-Zarr 0.5 requires Zarr-Python 3")
+            if "0.5" not in getattr(provider_views(), "SUPPORTED_NGFF_VERSIONS", ()):
+                raise InvalidMetadata("The optional provider does not support OME-Zarr 0.5")
         self.image, self.conn = image, conn
         self.image_id = int(image.getId())
         self.documents = {}
@@ -153,12 +164,23 @@ class HttpZarrSource:
         try:
             return (hashlib.sha256(session.encode()).digest(), self.image_id,
                     self.image.getPixelsId(), tuple(getattr(self.image, f"getSize{axis}")() for axis in "TCZYX"),
-                    str(self.conn.SERVICE_OPTS.getOmeroGroup()), _layout(), document)
+                    str(self.conn.SERVICE_OPTS.getOmeroGroup()), _layout(), self.version, document)
         except AttributeError:
             return None
 
+    def _raw_attributes(self):
+        if self.version == "0.4":
+            return self._json("raw-attrs", "image_zattrs", version="0.4")
+        root = self._json("raw-v3-root", "image_zarr_json")
+        if root.get("zarr_format") != 3 or root.get("node_type") != "group":
+            raise InvalidMetadata("The virtual source must be a Zarr v3 group")
+        attrs = root.get("attributes", {}).get("ome", {})
+        if not isinstance(attrs, dict) or attrs.get("version") != "0.5":
+            raise InvalidMetadata("The virtual source must contain OME-Zarr 0.5 metadata")
+        return attrs
+
     def levels(self):
-        attrs = self._json("raw-attrs", "image_zattrs", version="0.4")
+        attrs = self._raw_attributes()
         multiscales = attrs.get("multiscales", [])
         if not isinstance(multiscales, list) or len(multiscales) != 1:
             raise InvalidMetadata("The virtual image must contain one multiscale")
@@ -173,26 +195,43 @@ class HttpZarrSource:
     def array_metadata(self, level):
         if level not in self.levels():
             raise DataNotFound("The virtual pyramid level does not exist")
-        meta = self._json(f"{level}/.zarray", "image_zarray", level=level)
-        shape, chunks = meta.get("shape"), meta.get("chunks")
+        if self.version == "0.4":
+            meta = self._json(f"{level}/.zarray", "image_zarray", level=level)
+        else:
+            meta = self._json(f"{level}/zarr.json", "image_zarr_json", level=level)
+            if (meta.get("zarr_format") != 3 or meta.get("node_type") != "array"
+                    or meta.get("chunk_grid", {}).get("name") != "regular"
+                    or meta.get("chunk_key_encoding") != {"name": "default", "configuration": {"separator": "/"}}
+                    or meta.get("codecs") != [
+                        {"name": "bytes", "configuration": {"endian": "little"}},
+                        {"name": "zstd", "configuration": {"level": 1, "checksum": False}},
+                    ]):
+                raise InvalidMetadata("The provider must supply unsharded Zarr v3 with bytes/Zstd codecs")
+            axes = [axis.get("name") for axis in self._raw_attributes()["multiscales"][0].get("axes", [])]
+            if meta.get("dimension_names") != axes:
+                raise InvalidMetadata("Virtual Zarr dimension names must match the OME axes")
+        shape, chunks = meta.get("shape"), self.chunk_shape(meta)
         if not isinstance(shape, list) or not isinstance(chunks, list) or not 2 <= len(shape) <= 5 or len(shape) != len(chunks):
             raise InvalidMetadata("Virtual array dimensions are invalid")
         if any(type(n) is not int or n < 1 for n in [*shape, *chunks]):
             raise InvalidMetadata("Virtual array dimensions must be positive integers")
         try:
-            dtype = np.dtype(meta["dtype"])
+            dtype = np.dtype(meta["dtype"] if self.version == "0.4" else meta["data_type"])
         except (KeyError, TypeError) as exc:
             raise InvalidMetadata("The virtual image pixel type is invalid") from exc
         if dtype.kind not in "biuf" or dtype.itemsize > 8:
             raise InvalidMetadata("The virtual image pixel type is unsupported")
         if math.prod(chunks) * dtype.itemsize > MAX_CHUNK_BYTES:
             raise ROILimitExceeded("The virtual Zarr chunk exceeds 32 MiB")
-        if meta.get("zarr_format") != 2 or meta.get("dimension_separator") != "/":
+        if self.version == "0.4" and (meta.get("zarr_format") != 2 or meta.get("dimension_separator") != "/"):
             raise InvalidMetadata("The provider must supply Zarr v2 with nested chunk keys")
         return meta
 
+    def chunk_shape(self, meta):
+        return meta.get("chunks") if self.version == "0.4" else meta.get("chunk_grid", {}).get("configuration", {}).get("chunk_shape")
+
     def attributes(self):
-        attrs = json.loads(json.dumps(self._json("raw-attrs", "image_zattrs", version="0.4")))
+        attrs = json.loads(json.dumps(self._raw_attributes()))
         multiscale = attrs["multiscales"][0]
         axes = multiscale.get("axes", [])
         # The provider historically emits relative pyramid scales even when its
@@ -219,6 +258,22 @@ class HttpZarrSource:
     def read(self, key):
         if not isinstance(key, str) or len(key) > 256 or "\\" in key or "\x00" in key or any(part in ("", ".", "..") for part in key.split("/")):
             raise UnsafePath("The virtual Zarr key is unsafe")
+        if self.version == "0.5":
+            if key == "zarr.json":
+                return json.dumps({"zarr_format": 3, "node_type": "group", "attributes": {"ome": self.attributes()}}).encode()
+            match = re.fullmatch(r"(\d+)/(zarr\.json|c/\d+(?:/\d+)*)", key)
+            if not match:
+                raise DataNotFound("The virtual Zarr key does not exist")
+            level, suffix = match.groups()
+            meta = self.array_metadata(level)
+            if suffix == "zarr.json":
+                return json.dumps(meta).encode()
+            suffix = suffix[2:]
+        else:
+            return self._read_v2(key)
+        return self._read_chunk(level, suffix, meta)
+
+    def _read_v2(self, key):
         if key == ".zgroup":
             return b'{"zarr_format":2}'
         if key == ".zattrs":
@@ -232,12 +287,17 @@ class HttpZarrSource:
             return json.dumps(meta).encode()
         if suffix == ".zattrs":
             return b"{}"
+        return self._read_chunk(level, suffix, meta)
+
+    def _read_chunk(self, level, suffix, meta):
         index = [int(value) for value in suffix.split("/")]
-        if len(index) != len(meta["shape"]) or any(i >= (n + c - 1) // c for i, n, c in zip(index, meta["shape"], meta["chunks"])):
+        if len(index) != len(meta["shape"]) or any(i >= (n + c - 1) // c for i, n, c in zip(index, meta["shape"], self.chunk_shape(meta))):
             raise DataNotFound("The virtual Zarr chunk is outside the image")
         options = {}
         if getattr(provider_views(), "CHUNK_METADATA_API", 0) == 1:
             options = {"array_metadata": meta, "resolution_level": len(self.levels()) - 1 - int(level)}
+        if self.version == "0.5":
+            options["version"] = "0.5"
         return self._call("image_chunk", level=level, chunk=suffix, **options)
 
     def model(self):
@@ -246,7 +306,9 @@ class HttpZarrSource:
         # only JSON, never exported image chunks, and is removed immediately.
         with tempfile.TemporaryDirectory(prefix="zarr-http-metadata-") as directory:
             root = Path(directory)
-            for key in [".zgroup", ".zattrs", *[f"{level}/.zarray" for level in self.levels()]]:
+            keys = ([".zgroup", ".zattrs", *[f"{level}/.zarray" for level in self.levels()]] if self.version == "0.4"
+                    else ["zarr.json", *[f"{level}/zarr.json" for level in self.levels()]])
+            for key in keys:
                 target = root / key
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(self.read(key))
@@ -284,7 +346,7 @@ class HttpZarrSource:
                     except DataNotFound:
                         return False
 
-            return zarr.open_group(store=SourceStore(read_only=True), mode="r", zarr_format=2, use_consolidated=False)
+            return zarr.open_group(store=SourceStore(read_only=True), mode="r", zarr_format=self.zarr_format, use_consolidated=False)
 
         source = self
 

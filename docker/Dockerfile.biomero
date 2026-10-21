@@ -14,6 +14,6 @@ RUN /opt/omero/web/venv3/bin/python -c "import biomero_zarr_viewer" \
     && rm -f /tmp/omero-web-zarr-source.tar.gz
 
 LABEL org.nlbioimaging.zarrviewer.provider-requested="${ENABLE_HTTP_ZARR}" \
-      org.nlbioimaging.zarrviewer.provider-commit="91d7f97abaeab5abe9b64e0db4343b7a7e12ca59" \
+      org.nlbioimaging.zarrviewer.provider-commit="3afc184a9c3dcab090bd4a92effcf5e45ae4c864" \
       org.nlbioimaging.zarrviewer.provider-repository="https://github.com/NL-BioImaging/omero-web-zarr"
 USER omero-web

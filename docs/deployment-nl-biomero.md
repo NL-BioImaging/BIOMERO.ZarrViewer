@@ -71,8 +71,8 @@ OMERO.web 5.33.2, Zarr-Python 3.4.1, NumPy, Numcodecs and Requests.
 
 The shared installer downloads
 [`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
-at commit `91d7f97abaeab5abe9b64e0db4343b7a7e12ca59`, verifies archive SHA-256
-`2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`,
+at commit `3afc184a9c3dcab090bd4a92effcf5e45ae4c864`, verifies archive SHA-256
+`e2d36c36376c44e11312325efa6865d8b58571b9f6cea67c8559abcd0288fd96`,
 then installs it with `--no-deps --no-build-isolation`. The build fails if
 the checksum or existing dependency requirements do not match. No package is
 downloaded from an unpinned provider release. See [provider changes](http-zarr.md).
@@ -168,7 +168,9 @@ docker @compose exec -T omeroweb /opt/omero/web/venv3/bin/python -m pip show bio
 docker @compose exec -T omeroweb /opt/omero/web/venv3/bin/python -m pip check
 ```
 
-The provider version is `0.1.2.dev0+nlbi.1`. Sign in through Nginx and test an
+The provider version is `0.1.2.dev0+nlbi.2`. It keeps virtual 0.4 as the viewer
+default; optional [virtual 0.5](http-zarr.md#optional-virtual-ome-zarr-05-without-sharding)
+requires viewer 0.8.1b4+ and explicit format selection. Sign in through Nginx and test an
 ordinary SVS at overview/native resolution, a confocal MIP including its
 progress display, and existing physical OME-Zarr images/HCS plates with their
 segmentation layers. Verify Analysis, DataQueryWorker and WorkflowSkills
@@ -176,13 +178,14 @@ through their normal authenticated routes. The physical images must still
 report `store.transport=filesystem`; ordinary TIFF/SVS images use `http`.
 The [deployment checks below](#verify-the-deployment) still apply.
 
-This recipe's installation was validated in the local combined stack with
+The earlier virtual-0.4 installation was validated in the local combined stack with
 OMERO.biomero 1.7.0b9, Analysis 1.0.1, WorkflowSkills 0.4.0 and viewer 0.8.1b3.
 SVS pixels and the complete confocal MIP matched their source data; three
 existing physical image registrations also matched sampled original pixels,
 including a shallow plate with three segmentation layers. Only OMERO.web was
 recreated; the server, workers, data services and separate standalone stack
-were unchanged. These are representative regression checks, not a scan of
+were unchanged. The optional-0.5 comparison is performed in the separate
+standalone stack, without updating the running BIOMERO stack. These are representative regression checks, not a scan of
 every image in the deployment.
 
 ## Ubuntu HTTPS deployment

@@ -28651,19 +28651,19 @@ const Bc = {
 function ms(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((i) => cj.set(i, e));
 }
-ms([void 0, 1], () => import("./raw-BJn4ddcI.js").then((t) => t.default));
-ms(5, () => import("./lzw-BUnYB-ro.js").then((t) => t.default));
+ms([void 0, 1], () => import("./raw-CPruR4Hs.js").then((t) => t.default));
+ms(5, () => import("./lzw-B-eTHU8N.js").then((t) => t.default));
 ms(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-ms(7, () => import("./jpeg-C6yM_jnr.js").then((t) => t.default));
-ms([8, 32946], () => import("./deflate-LITGotpr.js").then((t) => t.default));
-ms(32773, () => import("./packbits-HJRsC0dn.js").then((t) => t.default));
+ms(7, () => import("./jpeg-DIJozBxU.js").then((t) => t.default));
+ms([8, 32946], () => import("./deflate-DuDSXwL4.js").then((t) => t.default));
+ms(32773, () => import("./packbits-D-2x8_iM.js").then((t) => t.default));
 ms(
   34887,
-  () => import("./lerc-yHPGPCBO.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-C3Qc_m84.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-ms(50001, () => import("./webimage-Cydt-9Q5.js").then((t) => t.default));
+ms(50001, () => import("./webimage-B2YFiZFX.js").then((t) => t.default));
 function uj(t, e) {
   let i = t.length - e, n = 0;
   do {
@@ -43864,7 +43864,7 @@ class Tw {
     this.store = new yX(n, {
       fetch: async (s) => {
         const r = new URL(this.capability.store.url, window.location.href), a = new URL(s.url), c = a.pathname.startsWith(r.pathname) ? a.pathname.slice(r.pathname.length) : "";
-        return this.capability.store.transport === "http" && a.origin === r.origin && s.method === "GET" && !s.headers.has("Range") && /^\d+\/(?:\d+\/)*\d+$/.test(c) ? this.virtualChunks.fetch(s, (f) => this.authorizedFetch(new Request(s, { signal: f }))) : this.authorizedFetch(s);
+        return this.capability.store.transport === "http" && a.origin === r.origin && s.method === "GET" && !s.headers.has("Range") && /^\d+\/(?:c\/)?(?:\d+\/)*\d+$/.test(c) ? this.virtualChunks.fetch(s, (f) => this.authorizedFetch(new Request(s, { signal: f }))) : this.authorizedFetch(s);
       }
     }), e.store.preview_url && Object.assign(this.store, { getPreview: (s, r, a, c, f, h) => CK(this, s, r, a, c, f, h) });
   }

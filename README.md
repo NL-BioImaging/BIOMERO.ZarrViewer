@@ -41,6 +41,11 @@ See the [HTTP Zarr guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/bl
 The provider is disabled by default and is not a required viewer dependency.
 Physical OME-Zarr and BIOMERO continue working when it is absent.
 
+Virtual HTTP images use OME-Zarr 0.4 by default. Viewer 0.8.1b4+ can also
+select optional unsharded OME-Zarr 0.5 with
+`omero.web.zarr_viewer.http_ngff_version=0.5`; see the
+[format selection guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/0.8.1-beta-standalone/docs/http-zarr.md#optional-virtual-ome-zarr-05-without-sharding).
+
 ### Existing BIOMERO deployments
 
 Existing imports, HCS plates and shallow segmentation results remain supported.

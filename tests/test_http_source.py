@@ -9,7 +9,7 @@ from django.http import JsonResponse, HttpResponse
 from django.test import RequestFactory
 
 from biomero_zarr_viewer import http_source, resolver, views
-from biomero_zarr_viewer.errors import DataNotFound, ROILimitExceeded, StoreNotFound, UnsafePath
+from biomero_zarr_viewer.errors import DataNotFound, InvalidMetadata, ROILimitExceeded, StoreNotFound, UnsafePath
 from .fakes import FakeConnection, FakeImage, Value
 
 
@@ -235,3 +235,91 @@ def test_http_tokens_cannot_authorize_filesystem_cache_endpoints(virtual, monkey
     token = model["store"]["context"]
     for endpoint in [views.cached_volume, views.cached_previews, neuroglancer.prepare]:
         assert endpoint(req(token), 42, conn=virtual.conn).status_code == 403
+
+
+@pytest.fixture
+def virtual_v3(virtual, monkeypatch):
+    import zarr
+    if int(zarr.__version__.split('.')[0]) < 3:
+        pytest.skip('Virtual OME-Zarr 0.5 requires Zarr-Python 3')
+    original = http_source.provider_views()
+    meta = {'zarr_format': 3, 'node_type': 'array', 'shape': [2,4,4],
+            'data_type': 'uint16', 'dimension_names': ['z','y','x'], 'fill_value': 0,
+            'chunk_grid': {'name': 'regular', 'configuration': {'chunk_shape': [1,4,4]}},
+            'chunk_key_encoding': {'name': 'default', 'configuration': {'separator': '/'}},
+            'codecs': [{'name': 'bytes', 'configuration': {'endian': 'little'}},
+                       {'name': 'zstd', 'configuration': {'level': 1, 'checksum': False}}], 'attributes': {}}
+    def attrs(*args, _image=None, **kwargs):return original.image_zattrs(*args, **kwargs)
+    def array(*args, _image=None, **kwargs):return original.image_zarray(*args, **kwargs)
+    def document(request, iid, conn, level=None, **kwargs):
+        if level is not None:return JsonResponse(meta)
+        attributes=json.loads(original.image_zattrs(request,iid,conn,'0.4').content)
+        attributes['version']='0.5'
+        attributes['multiscales'][0].pop('version')
+        return JsonResponse({'zarr_format':3,'node_type':'group','attributes':{'ome':attributes}})
+    def chunk(request,iid,conn,level,chunk,version='0.4',**kwargs):
+        if version=='0.4':return original.image_chunk(request,iid,conn,level,chunk)
+        import numcodecs
+        assert kwargs['array_metadata']==meta
+        assert kwargs['_image'] is virtual.conn.image and kwargs['resolution_level']==0
+        virtual.calls.append(chunk)
+        data=virtual.pixels[int(chunk.split('/')[0])].astype('<u2')
+        return HttpResponse(bytes(numcodecs.Zstd(level=1,checksum=False).encode(data)))
+    monkeypatch.setattr(http_source,'http_ngff_version',lambda:'0.5')
+    monkeypatch.setattr(http_source,'provider_views',lambda:SimpleNamespace(
+        SUPPORTED_NGFF_VERSIONS=('0.4','0.5'),CHUNK_METADATA_API=1,
+        image_zattrs=attrs,image_zarray=array,image_zarr_json=document,image_chunk=chunk))
+    virtual.v3_metadata=meta
+    return virtual
+
+
+def test_virtual_05_is_calibrated_signed_and_pixels_decode_for_roi(virtual_v3):
+    model=json.loads(views.capabilities(req(),42,conn=virtual_v3.conn).content)
+    assert model['ngff_version']=='0.5' and model['zarr_format']==3
+    assert model['datasets'][0]['coordinate_transformations'][0]['scale']==[1.5,.5,.5]
+    token=model['store']['context']
+    root=views.data(req(token),42,'zarr.json',conn=virtual_v3.conn)
+    assert root['Content-Type']=='application/json'
+    assert json.loads(root.content)['attributes']['ome']['version']=='0.5'
+    response=views.data(req(token),42,'0/c/1/0/0',conn=virtual_v3.conn)
+    assert response.status_code==200 and 'X-Accel-Redirect' not in response
+    source=resolver.resolve_image_store(virtual_v3.conn,42).http
+    assert np.array_equal(source.open_group()['0'][:],virtual_v3.pixels)
+    assert views.data(req(),42,'0/c/0/0/0',conn=virtual_v3.conn).status_code==401
+    assert views.data(req(token),43,'0/c/0/0/0',conn=virtual_v3.conn).status_code==403
+    assert views.data(req(token),42,'0/c/9/0/0',conn=virtual_v3.conn).status_code==404
+    assert views.data(req(token),42,'0/.zarray',conn=virtual_v3.conn).status_code==404
+    png=views.roi_png(RequestFactory().get('/',{'roi':'0,0,4,4','z':'1'}),42,conn=virtual_v3.conn)
+    assert png.status_code==200 and png.content.startswith(b'\x89PNG')
+    assert views.metadata_details(RequestFactory().get('/'),42,conn=virtual_v3.conn).status_code==200
+
+
+def test_virtual_context_is_bound_to_selected_ngff_version(virtual_v3,monkeypatch):
+    model=json.loads(views.capabilities(req(),42,conn=virtual_v3.conn).content)
+    token=model['store']['context']
+    monkeypatch.setattr(http_source,'http_ngff_version',lambda:'0.4')
+    assert views.data(req(token),42,'0/0/0/0',conn=virtual_v3.conn).status_code==403
+    old=json.loads(views.capabilities(req(),42,conn=virtual_v3.conn).content)
+    monkeypatch.setattr(http_source,'http_ngff_version',lambda:'0.5')
+    assert views.data(req(old['store']['context']),42,'0/c/0/0/0',conn=virtual_v3.conn).status_code==403
+
+
+def test_virtual_05_rejects_sharding_and_axis_mismatch(virtual_v3):
+    source=resolver.resolve_image_store(virtual_v3.conn,42).http
+    virtual_v3.v3_metadata['dimension_names']=['x','y','z']
+    with pytest.raises(InvalidMetadata,match='dimension names'):source.array_metadata('0')
+    virtual_v3.v3_metadata['dimension_names']=['z','y','x']
+    virtual_v3.v3_metadata['codecs']=[{'name':'sharding_indexed','configuration':{}}]
+    source=resolver.resolve_image_store(virtual_v3.conn,42).http
+    with pytest.raises(InvalidMetadata,match='unsharded'):source.array_metadata('0')
+
+
+def test_virtual_05_requires_compatible_provider_but_physical_still_wins(virtual,monkeypatch,configure_storage):
+    from .fakes import FakeExternalInfo
+    monkeypatch.setattr(http_source,'http_ngff_version',lambda:'0.5')
+    with pytest.raises(InvalidMetadata,match='Zarr-Python 3|does not support'):
+        resolver.resolve_image_store(virtual.conn,42)
+    _,mount=configure_storage
+    (mount/'source.zarr').mkdir()
+    virtual.conn.image._obj.external_info=FakeExternalInfo('/recorded/source.zarr')
+    assert resolver.resolve_image_store(virtual.conn,42).http is None

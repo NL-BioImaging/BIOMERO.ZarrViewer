@@ -5,6 +5,35 @@ virtual OME-Zarr 0.4 hierarchy. Enable it when the viewer should also open
 TIFFs and other conventional OMERO images without first exporting a Zarr store.
 Physical OME-Zarr 0.4/0.5 and BIOMERO registrations keep their normal paths.
 
+## Optional virtual OME-Zarr 0.5 (without sharding)
+
+The provider also exposes `/zarr/v0.5/image/<ID>.zarr/zarr.json`, array
+`<level>/zarr.json` documents and `<level>/c/<chunk-coordinates>` keys.
+The existing 0.3/0.4 routes are retained. Version 0.5 uses Zarr v3, an
+`attributes.ome` namespace, dimension names and a bytes/little-endian + Zstd
+level-1 codec chain. It does not use sharding. Both formats share the same
+pixel reader, native resolution levels and chunk shapes.
+
+ZarrViewer 0.8.1b4 or later still defaults to virtual **0.4**. With the optional
+provider installed/enabled and Zarr-Python 3, opt into virtual **0.5** with:
+
+```text
+omero config set -- omero.web.zarr_viewer.http_ngff_version 0.5
+```
+
+Restart OMERO.web after changing the setting. Use `0.4` to restore the default.
+The setting changes only ordinary virtual HTTP images, not physical OME-Zarr
+stores, BIOMERO registrations or their priority. A provider without 0.5 support
+produces a clear error for virtual 0.5 rather than silently changing its format;
+physical stores and deployments without the optional provider still work.
+
+Metadata caches and signed source identities distinguish the two formats.
+The browser shares unsharded 0.5 chunks using the same bounded cache and request
+queue as 0.4. The server-side Python reader supports both for ROI rendering and
+metadata inspection. A format change alone does not imply faster loading:
+compare the same pixels/chunks/compression on the same host and distinguish
+pixel-transfer timing from complete browser rendering.
+
 ## Enable the optional provider
 
 Install the performance fork [`NL-BioImaging/omero-web-zarr`](https://github.com/NL-BioImaging/omero-web-zarr)
@@ -70,8 +99,8 @@ repository. Use a directory containing the exact desired wheel when multiple
 releases are present, and record its SHA-256 alongside the source revision.
 
 The opt-in build downloads NL-BioImaging fork commit
-`91d7f97abaeab5abe9b64e0db4343b7a7e12ca59` directly from GitHub and checks archive
-SHA-256 `2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`
+`3afc184a9c3dcab090bd4a92effcf5e45ae4c864` directly from GitHub and checks archive
+SHA-256 `e2d36c36376c44e11312325efa6865d8b58571b9f6cea67c8559abcd0288fd96`
 before installation. A changed archive fails the build. Only that build copies
 `docker/91-omero-web-zarr.omero` into the startup configuration and enables the
 feature. The default build neither downloads nor registers `omero-web-zarr`;

@@ -533,7 +533,7 @@ def data(request, image_id, zarr_key, conn=None, **kwargs):
             raise InvalidContext("The virtual Zarr source has changed")
         content = store.http.read(zarr_key)
         response = HttpResponse(b"" if request.method == "HEAD" else content,
-                                content_type="application/json" if zarr_key.rsplit("/", 1)[-1] in (".zattrs", ".zarray", ".zgroup") else "application/octet-stream")
+                                content_type="application/json" if zarr_key.rsplit("/", 1)[-1] in (".zattrs", ".zarray", ".zgroup", "zarr.json") else "application/octet-stream")
         response["Content-Length"] = str(len(content))
         response["Cache-Control"] = "private, no-store"
         response["X-Content-Type-Options"] = "nosniff"

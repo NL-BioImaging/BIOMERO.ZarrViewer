@@ -47,6 +47,20 @@ function capability(context: string): Capability {
   };
 }
 
+test.each(["0/0/0/0", "0/c/0/0/0"])("virtual chunks share cached reads for %s", async key => {
+  const model=capability("context");model.store.transport="http";
+  const fetchMock=vi.fn(async()=>new Response(new Uint8Array([1,2])));
+  vi.stubGlobal("fetch",fetchMock);
+  try {
+    const auth=new AuthenticatedZarrStore(model,async()=>model);
+    await Promise.all([auth.store.get(`/${key}`),auth.store.get(`/${key}`)]);
+    await auth.store.get(`/${key}`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await auth.store.get('/zarr.json');await auth.store.get('/zarr.json');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  } finally {vi.unstubAllGlobals();}
+});
+
 test("a rejected data request refreshes its context exactly once", async () => {
   const seen: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {

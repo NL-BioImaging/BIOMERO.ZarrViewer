@@ -46,7 +46,7 @@ export class AuthenticatedZarrStore {
         const base = new URL(this.capability.store.url,window.location.href);
         const url = new URL(request.url);
         const key = url.pathname.startsWith(base.pathname) ? url.pathname.slice(base.pathname.length) : "";
-        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && !request.headers.has("Range") && /^\d+\/(?:\d+\/)*\d+$/.test(key)) {
+        if (this.capability.store.transport === "http" && url.origin === base.origin && request.method === "GET" && !request.headers.has("Range") && /^\d+\/(?:c\/)?(?:\d+\/)*\d+$/.test(key)) {
           return this.virtualChunks.fetch(request,signal=>this.authorizedFetch(new Request(request,{signal})));
         }
         return this.authorizedFetch(request);

@@ -5,12 +5,19 @@ The provider source is maintained in the separate
 fork, derived from upstream commit `4e1e685dff22136abfd2626f6fd6eaf985aba368`.
 It retains the upstream AGPL-3.0 copyright and license notice.
 
-The installer pins fork commit `91d7f97abaeab5abe9b64e0db4343b7a7e12ca59`
+The installer pins fork commit `3afc184a9c3dcab090bd4a92effcf5e45ae4c864`
 and verifies archive SHA-256
-`2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21`.
+`e2d36c36376c44e11312325efa6865d8b58571b9f6cea67c8559abcd0288fd96`.
 It installs that source directly; no replacement views file is kept here.
 Other upstream modules and routes are retained.
 Installation remains opt-in through `ENABLE_HTTP_ZARR=true`.
+
+The pin supports separate NGFF 0.3/0.4 (Zarr v2) and optional 0.5 (Zarr v3)
+routes. The 0.5 arrays are unsharded, with little-endian bytes followed by
+Zstd level 1, and use the same chunk shape and pixel reader as 0.4.
+The viewer retains 0.4 as its default; opt into 0.5 using
+`omero.web.zarr_viewer.http_ngff_version=0.5` with ZarrViewer 0.8.1b4+ and
+Zarr-Python 3. See [HTTP format selection](../docs/http-zarr.md).
 
 The changes are:
 

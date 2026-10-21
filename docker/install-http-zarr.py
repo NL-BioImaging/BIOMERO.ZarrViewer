@@ -7,8 +7,8 @@ import subprocess
 import sys
 import urllib.request
 
-COMMIT = "91d7f97abaeab5abe9b64e0db4343b7a7e12ca59"
-SHA256 = "2c34a5e1c48bd1fd816340aee98dc807db4ab765ee8bbbc9866cf523fcdaea21"
+COMMIT = "3afc184a9c3dcab090bd4a92effcf5e45ae4c864"
+SHA256 = "e2d36c36376c44e11312325efa6865d8b58571b9f6cea67c8559abcd0288fd96"
 URL = f"https://codeload.github.com/NL-BioImaging/omero-web-zarr/tar.gz/{COMMIT}"
 
 

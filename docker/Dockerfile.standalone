@@ -20,6 +20,6 @@ RUN /opt/omero/web/venv3/bin/python -m pip install --no-cache-dir \
     && rm -rf /tmp/viewer-wheel /tmp/omero-web-zarr-source.tar.gz
 
 LABEL org.nlbioimaging.zarrviewer.http-enabled="${ENABLE_HTTP_ZARR}" \
-      org.nlbioimaging.zarrviewer.provider-commit="91d7f97abaeab5abe9b64e0db4343b7a7e12ca59"
+      org.nlbioimaging.zarrviewer.provider-commit="3afc184a9c3dcab090bd4a92effcf5e45ae4c864"
 ENV GUNICORN_CMD_ARGS="--limit-request-field_size 131072"
 USER omero-web
