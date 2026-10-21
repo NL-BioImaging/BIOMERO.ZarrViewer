@@ -161,7 +161,7 @@ export function NeuroglancerCanvas(props: Props) {
     {view === "orthogonal" && <div className="orthogonal-panel-labels" aria-label="Orthogonal panels">
       <span>XY</span><span>XZ</span><span>3D</span><span>YZ</span>
     </div>}
-    {progress && !error && <div className="volume-cache-progress" role="status">{progress}</div>}
+    {progress && !error && <div className="volume-cache-progress volume-stream-progress" role="status">{progress}</div>}
     {props.showScale && !error && <PanelScaleBars panels={panelScales} unit={props.unit || "micrometer"} />}
     {error && <div className="volume-error" role="alert"><strong>Unable to load 3D data</strong><p>{error}</p>
       <button onClick={() => { setError(undefined); setRetry(value => value + 1); }}>Retry</button>

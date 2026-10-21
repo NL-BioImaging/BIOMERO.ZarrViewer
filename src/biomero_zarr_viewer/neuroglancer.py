@@ -157,6 +157,10 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
         raise ROILimitExceeded("Choose a lower 3D quality: labels must contain at most 32 million voxels")
     version = hashlib.sha256(group_bytes + array_bytes).hexdigest()
     chunk_size = http_chunk_size(array, axes) if http is not None else None
+    # Larger decoded v3 blocks amortize HTTP, permissions and shard index I/O.
+    # Native v2 sources and label grids keep their exact existing layout.
+    if http is None and group_path.name == 'zarr.json' and not segmentation and math.prod(shape)>128**3:
+        chunk_size = [min(128, int(array.shape[axes.index(a)])) for a in 'xyz']
     if chunk_size is not None:
         # A changed streaming grid must not reuse a previous viewer's identity.
         version += json.dumps(chunk_size)
@@ -174,10 +178,6 @@ def prepare_source(claims, scope, group, level, channel, timepoint, segmentation
     if chunk_size is not None:
         source["chunk_size"] = chunk_size
     source["transport"] = "zarr" if native_metadata(source, claims) is not None else "chunks"
-    if source["transport"] == "chunks" and not segmentation and http is None:
-        # Python's decoder opens stored chunks itself. Preserve the original
-        # symlink/mount validation for layouts not served through Nginx.
-        cache.fingerprint(array_metadata.parent, Path(mount_root()), axes=axes, channel=channel, timepoint=timepoint)
     return source
 
 
@@ -189,7 +189,8 @@ def source_array(source, claims, http=None):
         metadata, _ = _safe_data_path(claims["store"], source["array"] + filename, claims.get("routes", []))
     except DataNotFound:
         metadata, _ = _safe_data_path(claims["store"], source["array"] + "/zarr.json", claims.get("routes", []))
-    return zarr.open_array(str(metadata.parent), mode="r")
+    from .physical_pixels import open_physical_array
+    return open_physical_array(claims, source["array"])
 
 
 def read_block(source, claims, bounds, array=None):

@@ -501,7 +501,7 @@ export default function App() {
     const load = async () => {
       const fieldCapability = field === capability.initial_path ? capability : await fetchCapabilities(imageId!, field, abort.signal);
       const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field, abort.signal) as any);
-      const imageLoader = withVolumeCache(withImageReadCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata),authStore), authStore, field, reportLoadProgress);
+      const imageLoader = withVolumeCache(withImageReadCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata),authStore,field), authStore, field, reportLoadProgress);
       const labelResults = await Promise.allSettled(fieldCapability.labels.map(async (label) => {
         const path = label.path;
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path, abort.signal) as any);
@@ -827,7 +827,7 @@ export default function App() {
           renderMode={effectiveRenderMode}
           labels3dAvailable={useNeuroglancer} volumeView={volumeView} onVolumeView={value=>{captureNavigation();setVolumeView(value);}}
           volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
-          clipping={clipping} onClipping={setClipping}
+          clipping={clipping} onClipping={setClipping} clippingShape={selectedVolumeLevel && [selectedVolumeLevel.width,selectedVolumeLevel.height,selectedVolumeLevel.depth]}
           onVolumeRenderer={value=>{captureNavigation();setVolumeRenderer(value);}} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
           volumeMemoryControls={currentLoaded && currentLoaded.sizeZ>1 ? <VolumeMemoryControls memory={volumeMemory}/> : undefined}
@@ -875,7 +875,7 @@ interface ViewerPanelProps {
   volumeView?: VolumeView;
   onVolumeView?: (view: VolumeView) => void;
   volumeRenderer?: VolumeRenderer;
-  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void;
+  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void; clippingShape?:number[];
   onVolumeRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
   volumeLevels: VolumeLevel[];
@@ -932,7 +932,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
           volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />}
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
-                clipping={props.clipping} onClipping={props.onClipping}
+                clipping={props.clipping} onClipping={props.onClipping} clippingShape={props.clippingShape}
               />
             : <PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
 
@@ -1089,7 +1089,7 @@ export function VolumeControls({
   onRenderer,
   neuroglancerAvailable = true,
   view = "3d", onView, blend = "additive", onBlend, appearance,
-  clipping, onClipping,
+  clipping, onClipping, clippingShape,
   memoryControls,
 }: {
   playing?:boolean; onPlayingChange?:(value:boolean)=>void;
@@ -1108,7 +1108,7 @@ export function VolumeControls({
   blend?: VolumeBlendMode; onBlend?: (blend:VolumeBlendMode) => void;
   appearance?: ReactNode;
   memoryControls?:ReactNode;
-  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void;
+  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void; clippingShape?:number[];
 }) {
   return <section className="panel-section position-section volume-controls" aria-label="Volume options">
     {appearance}
@@ -1116,7 +1116,7 @@ export function VolumeControls({
       {([["3d","Volume"],["slice","Slice"],["orthogonal","Orthogonal"]] as const).map(([value,label]) =>
         <button key={value} className={view === value ? "active" : ""} aria-pressed={view === value} onClick={()=>onView(value)}>{label}</button>)}
     </div></div>}
-    {view==='3d' && clipping && onClipping && <ClippingPlanes bounds={clipping} onChange={onClipping}/>}
+    {view==='3d' && clipping && onClipping && <ClippingPlanes bounds={clipping} onChange={onClipping} shape={clippingShape}/>}
     {onBlend && <div className="quality-control"><span>Display</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="3D display mode">
       {([["additive","Additive","Additive blend"],["maximum","Maximum","Maximum intensity"],["minimum","Minimum","Minimum intensity"]] as const).map(([value,label,name])=>
         <button key={value} aria-label={name} title={name} className={blend===value?"active":""} aria-pressed={blend===value} onClick={()=>onBlend(value)}>{label}</button>)}

@@ -68,6 +68,7 @@ export interface Capability {
     volume_url?: string;
     neuroglancer_url?: string;
     preview_url?: string;
+    raster_url?:string;
     native_samples_url?:string;
   };
   kind: "image" | "plate";

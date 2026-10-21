@@ -34,3 +34,23 @@ test('HTTP complete stacks read all Z together, keep C/T and exclude unsafe or p
   const huge={...source,_data:{getChunk:chunk},shape:[1,2,100,4096,4096]};
   expect(withImageReadCache([huge],auth)[0].getVolume).toBeUndefined();
 });
+
+
+test('physical screen and statistics tiles use bounded exact planes and isolate C/T/bindings',async()=>{
+  const fetch=vi.fn(async(url:string)=>{
+    const query=new URL(url).searchParams;
+    expect(query.get('array')).toBe('A/1/0/0');expect(query.get('axes')).toBe('t,c,z,y,x');
+    expect(query.get('z')).toBe('7');expect(query.get('t')).toBe('3');
+    return new Response(new Uint16Array([100+Number(query.get('c'))]).buffer,{headers:{'X-Zarr-Width':'1','X-Zarr-Height':'1'}});
+  });
+  const auth={isHttp:false,readIdentity:'one',rasterUrl:'/tile/',fetch} as any;
+  const old=vi.fn(()=>{throw Error('must not fetch encoded 3D chunks for a 2D plane');});
+  const source={_data:{path:'/0',getChunk:old},labels:['t','c','z','y','x'],shape:[4,2,8,512,512],dtype:'Uint16',tileSize:32,getTile:old};
+  const [wrapped]=withImageReadCache([source],auth,'A/1/0');
+  const options={x:1,y:1,selection:{t:3,z:7,c:1}};
+  expect(Array.from((await wrapped.getTile(options)).data)).toEqual([101]);
+  await wrapped.getTile(options);expect(fetch).toHaveBeenCalledTimes(1);
+  await wrapped.getTile({...options,selection:{...options.selection,c:0}});expect(fetch).toHaveBeenCalledTimes(2);
+  await wrapped.statisticsSource.getTile(options);expect(new URL(fetch.mock.calls.at(-1)![0]).searchParams.get('size')).toBe('32');
+  auth.readIdentity='two';await wrapped.getTile(options);expect(fetch).toHaveBeenCalledTimes(4);expect(old).not.toHaveBeenCalled();
+});

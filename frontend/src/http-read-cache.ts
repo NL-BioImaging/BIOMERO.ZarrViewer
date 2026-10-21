@@ -1,6 +1,7 @@
 import { SharedRequest } from './shared-request';
 import type { AuthenticatedZarrStore } from './authenticated-store';
 import { dtypeBytes } from './volume-utils';
+import {physicalTile} from './physical-tile';
 import { nativeSamples } from './native-samples';
 
 export const HTTP_DECODED_BUDGET = 64*1024*1024;
@@ -48,12 +49,13 @@ let serial=0;
 /** Coalesce decoded intensity chunks for both routes. HTTP alone gains bulk Z
  * reads; physical stores retain their existing quota-managed volume service.
  */
-export function withImageReadCache(loader:any[],auth:AuthenticatedZarrStore):any[]{
+export function withImageReadCache(loader:any[],auth:AuthenticatedZarrStore,field='.'):any[]{
   let cache=caches.get(auth);if(!cache){cache=new DecodedReadCache();caches.set(auth,cache);}
   // Small logical 3D chunks are storage units, not useful screen tiles. Group
   // them into 256px tiles while keeping the original chunks/pixels unchanged.
   const base=loader[0],large=base&&['x','y'].some(axis=>Number(base.shape?.[base.labels?.indexOf(axis)])>=512);
   const retile=!auth.isHttp&&large&&base.tileSize>=16&&base.tileSize<256;
+  let accelerated=false;
   const result=loader.map(source=>{
     const array=source._data;
     if(!array?.getChunk)return source;
@@ -70,7 +72,16 @@ export function withImageReadCache(loader:any[],auth:AuthenticatedZarrStore):any
         signal=>original(coords,{...options,signal}),options?.signal);
       wrapped.add(array);
     }
-    if(!auth.isHttp)return source;
+    if(!auth.isHttp){
+      if(!retile||!auth.rasterUrl||typeof array.path!=='string'||!source.labels.every((a:string)=>'tczyx'.includes(a))||!/^(Uint(8|16|32)|Int(8|16|32)|Float(32|64))$/.test(source.dtype))return source;
+      accelerated=true;
+      const read=(target:any,options:any)=>cache!.read(auth.readIdentity,JSON.stringify([id,'plane',target.tileSize,options.x,options.y,options.selection]),signal=>physicalTile(auth,target,field,options,signal),options.signal);
+      if(source.statisticsSource)source.statisticsSource.getTile=(options:any)=>read(source.statisticsSource,options);
+      return new Proxy(source,{get(target,key,receiver){
+        if(key==='getTile')return (options:any)=>read(target,options);
+        const value=Reflect.get(target,key,receiver);return typeof value==='function'?value.bind(target):value;
+      }});
+    }
     const labels:string[]=source.labels;
     const size=(axis:string)=>labels.includes(axis)?source.shape[labels.indexOf(axis)]:1;
     const bytes=size('x')*size('y')*size('z')*size('c')*dtypeBytes(source.dtype);
@@ -100,5 +111,5 @@ export function withImageReadCache(loader:any[],auth:AuthenticatedZarrStore):any
       const value=Reflect.get(target,key,receiver);return typeof value==='function'?value.bind(target):value;
     }});
   });
-  return auth.isHttp?result:loader;
+  return auth.isHttp||accelerated?result:loader;
 }

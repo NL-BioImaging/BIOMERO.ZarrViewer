@@ -74,6 +74,7 @@ export class AuthenticatedZarrStore {
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
   get isHttp(): boolean { return this.capability.store.transport === 'http'; }
+  get rasterUrl():string|undefined { return this.capability.store.raster_url; }
   get nativeSamplesUrl():string|undefined { return this.capability.store.native_samples_url; }
   get readIdentity(): string { return String(this.readRevision); }
   get neuroglancerUrl(): string | undefined { return this.capability.store.neuroglancer_url; }

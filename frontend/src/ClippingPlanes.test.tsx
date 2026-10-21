@@ -11,8 +11,9 @@ test('clipping is collapsed by default, constrains double handles and resets onl
   fireEvent.change(screen.getByLabelText('X clipping maximum'),{target:{value:'20'}});
   expect(screen.getByLabelText('X clipping maximum')).toHaveValue('45');
   fireEvent.change(screen.getByLabelText('Y clipping minimum'),{target:{value:'30'}});
-  fireEvent.click(screen.getByLabelText('Reset X clipping'));expect(screen.getByLabelText('X clipping minimum')).toHaveValue('0');
+  fireEvent.click(screen.getByLabelText('Reset X clipping'));expect(screen.getByLabelText('X clipping minimum')).toHaveValue('1');
   expect(screen.getByLabelText('Y clipping minimum')).toHaveValue('30');
+  expect(screen.getAllByText('1–100 / 100').length).toBeGreaterThan(0);
 });
 test('both renderers expose clipping only in Volume view',()=>{
   const props={sizeT:1,t:0,onT:()=>{},levels:[],onLevel:()=>{},clipping:fullClipping(),onClipping:()=>{}};

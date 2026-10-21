@@ -11,6 +11,9 @@ and adaptive `prefetch` controls. It loads chunks and can display a volume whose
 full uncompressed size exceeds its resident cache. A ready **view** does not mean
 that the complete dataset has downloaded. The viewer reports queued/downloading
 chunks and allocated GPU chunk bytes separately while further detail loads.
+The compact streaming message is at the bottom of the image so partially loaded
+volumes remain visible and interactive. Clipping controls use smaller aligned
+rows and one-based plane positions at the selected quality instead of percentages.
 
 [Viv's volume loader](https://github.com/hms-dbmi/viv/blob/main/packages/layers/src/volume-layer/utils.js)
 assembles a contiguous volume per channel. Its
@@ -61,6 +64,36 @@ changing stored chunks, pixel values or calibration. Native-size statistics tile
 remain separate to avoid increasing automatic-contrast I/O. Missing chunks retain
 the Zarr fill-value semantics; genuine transfer/decode errors are not replaced
 with zeros.
+
+## Exact 2D planes and larger decoded 3D blocks
+
+For large physical sources with small logical chunks, the optional signed
+`raster_url` capability enables a bounded pixel-tile API. A 256px screen tile
+previously required 64 logical 32px chunk reads **per channel**, including unused
+Z planes from each 3D chunk. The server now reads the requested XY plane from the
+original array and returns exact typed pixels. There is no conversion to RGB,
+contrast baking, resampling or source rewrite. Browser decoding and image-binding
+cache rules remain unchanged; four plane transfers may run concurrently.
+Statistics still sample small native tiles. Older servers without this capability,
+HTTP-Zarr sources and other chunk layouts keep their existing routes.
+
+Large physical v3 Neuroglancer intensity sources use bounded 128-cubed decoded
+blocks instead of 64-cubed blocks (up to 8 MiB at float32). This amortizes HTTP and
+shard-index work. Preparation no longer walks all chunk files for uncached
+intensities: the read-only storage adapter validates each requested metadata or
+chunk path against the signed mount/routes, including partial reads and symlinks.
+Label fingerprint/cache rules, native v2 streaming, HTTP providers and their
+streaming grids remain unchanged. Zarr-Python 2 and 3 are supported.
+
+A local bounded comparison on image 20401 at x=1588.89, y=4173.02, zoom=-0.503,
+z=700 used fresh browser contexts and the same 12-second post-controls window.
+Before: 1,010 completed requests / 26.5 MiB, still showing the blurred pyramid.
+After: 224 / 14.9 MiB, with the requested detail tiles complete about 6.8 seconds
+after navigation (controls appeared at 2.7 seconds). This is a local observation,
+not a guaranteed load time. No full high-resolution volume was loaded. In the
+same short Neuroglancer level-2 switch probe, the new route showed partial 3D
+content and about 340 MiB of GPU chunk cache within six seconds; the old route
+was still preparing. The v3 grid alone does not imply an eight-fold speedup.
 
 ## Local investigation fixture
 
