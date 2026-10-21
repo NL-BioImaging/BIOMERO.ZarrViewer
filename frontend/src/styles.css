@@ -328,3 +328,12 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
 /* Deck can set its own inline cursor; the image surface owns interaction feedback. */
 .image-cursor-surface canvas { cursor: var(--image-cursor, zoom-in) !important; }
+
+.clipping-panel { min-width: 0; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.clipping-panel summary { cursor: pointer; font-size: 12px; padding: 4px 0; }
+.clipping-axis { display: flex; align-items: center; gap: 10px; padding-top: 8px; min-width: 0; }
+.clipping-axis > span { width: 12px; }
+.clipping-axis .dual-range { flex: 1; min-width: 0; }
+.clipping-axis output { display: block; text-align: center; font-size: 10px; padding-top: 4px; }
+.clipping-axis .icon-button { flex: 0 0 26px; width: 26px; min-width: 26px; height: 26px; padding: 3px; }
+.clipping-axis .icon-button svg { width: 18px; height: 18px; }

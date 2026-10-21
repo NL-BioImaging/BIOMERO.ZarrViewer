@@ -91,12 +91,12 @@ Use **Reset 3D View** to recenter sections and reset the volume camera.
 
 ## Move around in 3D
 
-In **Neuroglancer**, drag to rotate and Shift+drag to pan. The mouse wheel zooms
+In **Neuroglancer**, left-drag rotates, while right-drag or Shift+left-drag pans. The mouse wheel zooms
 gently, about 12% per notch. **Ctrl+wheel** moves the focus through depth by ten
 calibrated Z slices per notch, without changing the zoom. The depth readout shows
 the movement distance; rotating the view changes the direction of depth movement.
 
-In **Viv**, drag to rotate and scroll to zoom. Shift, Ctrl, Alt or Meta with a drag pans the volume; a right-button drag also pans. In flat Viv sections, an ordinary left-button drag pans; modified drags do not rotate a flat image.
+In **Viv**, left-drag rotates, right-drag pans and scrolling zooms, matching Neuroglancer. Shift, Ctrl, Alt or Meta with a left-drag also pans the volume. In flat Viv sections and 2D images, both ordinary left-drag and right-drag pan. The middle button is not required for navigation.
 
 The cursor previews wheel zoom at rest. While dragging it shows the active pan or rotation action. In Neuroglancer, holding Ctrl shows slice/depth movement for the wheel; Shift shows slice movement in flat panels. Alt+wheel changes the depth range. Clicking changes the cursor to the action bound to that mouse button. The cursor stays with the operation that started a drag until the button is released.
 
@@ -104,6 +104,12 @@ The cursor previews wheel zoom at rest. While dragging it shows the active pan o
 Use **Reset 3D View** in the toolbar to return to the initial framing.
 The 3D scale bar follows zoom and shows the physical scale at the volume center.
 Perspective means objects nearer or farther from the center have a different apparent scale.
+
+## Clipping planes
+
+In **Volume** view, open **Clipping planes** immediately below the Volume/Slice/Orthogonal choices. The panel starts collapsed. Each X, Y and Z double slider selects the retained interval, from 0 to 100% of the volume. Use the reset icon beside an axis to restore that axis to its full range.
+
+Clipping works in **Viv** and **Neuroglancer**. In Neuroglancer it also clips segmentation surfaces. It changes only the display: source pixels, calibration and stored segmentation data remain intact. The bounds are shared when changing engines and retained in viewer links and movie capture settings. Clipping is inactive in Slice and Orthogonal layouts; returning to Volume restores the selected bounds.
 
 ## 3D display and brightness
 

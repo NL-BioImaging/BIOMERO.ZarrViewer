@@ -5,11 +5,13 @@ import { neuroglancerState, type NeuroglancerCamera, type NeuroglancerPrepared }
 import { SliceControls, volumeLayout, type VolumeView, type SlicePlane } from "./VolumeViewControls";
 import { PanelScaleBars, type PanelScale } from "./ScaleBar";
 import { viewerContextId } from "./viewer-context";
+import type { ClippingBounds } from './clipping';
 
 interface Props {
   auth: AuthenticatedZarrStore; field: string; channels: ChannelState[]; labels: LabelState[];
   t: number; resolution: number; blendMode: VolumeBlendMode; showScale: boolean; resetKey: number;
   brightness: number; gain: number; height: number;
+  clipping?:ClippingBounds;
   unit?: string;
   viewId?: string;
   view?: VolumeView; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
@@ -91,9 +93,9 @@ export function NeuroglancerCanvas(props: Props) {
     void prepare();
     return () => { cancelled = true; clearTimeout(timer); abort.abort(); };
   }, [props.auth, props.field, props.resolution, props.t, channelsKey, labelsKey, retry]);
-  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain]);
+  const displayKey = JSON.stringify([props.channels, props.labels, props.blendMode, props.brightness, props.gain,props.clipping]);
   const state = useMemo(() => prepared ? {
-    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain),
+    ...neuroglancerState(prepared, props.channels, props.labels, props.blendMode, false, props.brightness, props.gain,props.clipping),
     layout: volumeLayout(view, plane), showSlices: view === "orthogonal", showAxisLines: view === "orthogonal",
   } : undefined, [prepared, displayKey, view, plane, props.showScale]);
   useEffect(() => {

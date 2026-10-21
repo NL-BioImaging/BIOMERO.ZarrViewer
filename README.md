@@ -71,6 +71,8 @@ It preserves the installed BIOMERO/Analysis components and existing storage conf
   Select resolution quality, display blending,
   and intensity brightness while keeping physical XYZ proportions. Volume, Slice
   and Orthogonal layouts are available in both engines.
+  In Volume view, expand **Clipping planes** to trim X/Y/Z visually in either
+  engine, with a reset icon per axis. Right-drag pans in both engines.
 - **Navigation:** explore fields, wells and plates; use the 2D navigator,
   calibrated scale bars, Fit, native-pixel 1:1 zoom, fullscreen and the 3D reset control.
   Image cursors show zoom, pan, rotation or slice/depth movement as controls change.

@@ -12,6 +12,9 @@ import type { VolumeView as ViewMode, SlicePlane } from "./VolumeViewControls";
 import { VivSectionsCanvas } from "./VivSectionsCanvas";
 import { ScaleBar } from "./ScaleBar";
 import { GentleVolumeView } from "./viv-navigation";
+import { Plane } from '@math.gl/culling';
+import { getPhysicalSizeScalingMatrix } from '@vivjs/layers';
+import { clippingActive, type ClippingBounds } from './clipping';
 
 const VolumeVivViewer = VivViewer as any;
 
@@ -25,6 +28,7 @@ export interface VolumeCanvasProps {
   blendMode?: VolumeBlendMode;
   showScale?: boolean;
   brightness?: number;
+  clipping?:ClippingBounds;
   view?: ViewMode; plane?: SlicePlane; onPlane?: (plane: SlicePlane) => void;
   camera?: VolumeCameraState;
   orthographic?: boolean;
@@ -107,6 +111,7 @@ function VolumeRenderer({
   blendMode = "additive",
   showScale = true,
   brightness = 1,
+  clipping,
   camera,
   orthographic = false,
   onCameraChange,
@@ -179,10 +184,19 @@ function VolumeRenderer({
   // OrbitView maps 2^zoom pixels per world unit at the camera target. Because
   // it uses perspective, this bar describes the plane through the volume center.
   const view = useMemo(() => {
-    const view = new GentleVolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: true });
+    const view = new GentleVolumeView({ id: "3d", width, height, target: defaultView.target, useFixedAxis: false });
     view.orthographic = orthographic;
     return view;
   }, [width, height, defaultView.target, orthographic]);
+  const clippingPlanes=useMemo(()=>{
+    if(!clippingActive(clipping))return [];
+    const raw=loader[resolution];
+    const physical=getPhysicalSizeScalingMatrix(raw).transformPoint(['x','y','z'].map(a=>raw.shape[raw.labels.indexOf(a)]));
+    return clipping!.flatMap(([low,high],axis)=>[
+      new Plane([0,1,2].map(i=>i===axis?1:0),-low*physical[axis]),
+      new Plane([0,1,2].map(i=>i===axis?-1:0),high*physical[axis]),
+    ]);
+  },[loader,resolution,clipping]);
 
   useEffect(() => {
     setProgress(0);
@@ -199,6 +213,7 @@ function VolumeRenderer({
   }
 
   const layerProps = [{
+    clippingPlanes,
     loader: guardedLoader,
     modelMatrix,
     selections,

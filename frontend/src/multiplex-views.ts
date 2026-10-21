@@ -1,5 +1,6 @@
 import { DetailView, OverviewView, MultiscaleImageLayer, MAX_CHANNELS } from '@hms-dbmi/viv';
 import { actualScaleProps, nonBinaryPyramid, ActualScaleOverviewLayer } from './pyramid-layers';
+import { GentleDetailView } from './viv-navigation';
 const selectedBatches=new WeakMap<object,Map<string,any[]>>();
 function stableSelections(selections:any[],indices:number[]):any[]{
   let cache=selectedBatches.get(selections);if(!cache){cache=new Map();selectedBatches.set(selections,cache);}
@@ -25,7 +26,7 @@ export function channelBatches(props:any):any[] {
 }
 const resultIndex=(offset:number)=>Math.floor(offset/MAX_CHANNELS);
 
-export class MultiplexDetailView extends DetailView {
+export class MultiplexDetailView extends GentleDetailView {
   getLayers(args:any):any{return channelBatches(args.props).flatMap((props,index)=>{
     if(nonBinaryPyramid(props.loader)) {
       const scaled=actualScaleProps(props,Number(args.viewStates?.[this.id]?.zoom||0));

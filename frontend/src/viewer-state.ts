@@ -1,12 +1,14 @@
 import type { ChannelState, LabelState, ProjectionMode, RenderMode, RoiBounds, ViewportState, VolumeBlendMode, VolumeCameraState, VolumeRenderer } from "./types";
 import type { VolumeView, SlicePlane } from "./VolumeViewControls";
 import type { NeuroglancerCamera } from "./neuroglancer-state";
+import {clippingActive,type ClippingBounds} from './clipping';
 
 export function defaultVolumeBlend(renderer: VolumeRenderer = "neuroglancer"): VolumeBlendMode {
   return renderer === "neuroglancer" ? "maximum" : "additive";
 }
 
 export interface DeepLinkState {
+  clipping?:ClippingBounds;
   view?: "field" | "well" | "plate";
   plateField?: number;
   viewport?: ViewportState;
@@ -97,6 +99,11 @@ export function parseDeepLink(search = window.location.search): DeepLinkState {
   const projection = params.get("projection");
   if (projection === "mip" || projection === "mean" || projection === "min") state.projection = projection;
   if (params.get("render") === "3d") state.renderMode = "3d";
+  if(params.has('clip3d')){
+    const raw=params.get('clip3d')!.split(','),values=raw.map(Number);
+    if(raw.length===6&&raw.every(s=>s.trim()!=='')&&values.every(n=>Number.isFinite(n)&&n>=0&&n<=1)&&[0,2,4].every(i=>values[i]<=values[i+1]))
+      state.clipping=[[values[0],values[1]],[values[2],values[3]],[values[4],values[5]]];
+  }
   if (params.get("viewer3d") === "classic") state.volumeRenderer = "classic";
   if (params.has("brightness3d")) state.volumeBrightness = finite(params.get("brightness3d"), 1, .1, 4);
   if (params.has("gain3d")) state.volumeGain = finite(params.get("gain3d"), -3, -5, 3);
@@ -236,6 +243,7 @@ export function applyLabelDeepLink(labels: LabelState[], saved?: DeepLinkState["
 
 export function writeDeepLink(imageId: number, state: Required<Pick<DeepLinkState, "z" | "t">> & DeepLinkState): string {
   const params = new URLSearchParams();
+  if(clippingActive(state.clipping))params.set('clip3d',state.clipping!.flat().map(n=>Number(n.toFixed(4))).join(','));
   params.set("image", String(imageId));
   params.set("v", "2");
   if (state.view && state.view !== "field") params.set("view", state.view);

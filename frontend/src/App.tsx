@@ -48,6 +48,9 @@ import type { NeuroglancerCamera } from "./neuroglancer-state";
 import { OverviewGrid, defaultPlateFieldIndex } from "./OverviewGrid";
 import { plateGeometry } from "./plate-geometry";
 import { withVolumeCache, type LoadProgress } from "./volume-loader";
+import { withImageReadCache } from './http-read-cache';
+import { ClippingPlanes } from './ClippingPlanes';
+import { fullClipping, type ClippingBounds } from './clipping';
 import {
   activeVolumeChannels,
   chooseVolumeLevel,
@@ -329,6 +332,9 @@ export default function App() {
   const [renderMode, setRenderMode] = useState<RenderMode>(deepLink.renderMode || "2d");
   const [volumeLevel, setVolumeLevel] = useState<number | undefined>(deepLink.volumeLevel);
   const [volumeRenderer, setVolumeRenderer] = useState<VolumeRenderer>(deepLink.volumeRenderer || "neuroglancer");
+  const [clipping,setClipping]=useState<ClippingBounds>(deepLink.clipping||fullClipping);
+  const clippingScene=useRef<string|undefined>(undefined);
+  useEffect(()=>{if(!field)return;const scene=`${imageId}:${field}`;if(clippingScene.current&&clippingScene.current!==scene)setClipping(fullClipping());clippingScene.current=scene;},[imageId,field]);
   const [selectedVolumeBlend, setVolumeBlend] = useState<VolumeBlendMode | undefined>(deepLink.volumeBlend);
   const [volumeBrightness, setVolumeBrightness] = useState(deepLink.volumeBrightness ?? 1);
   const [volumeGain, setVolumeGain] = useState(deepLink.volumeGain ?? -3);
@@ -493,7 +499,7 @@ export default function App() {
     const load = async () => {
       const fieldCapability = field === capability.initial_path ? capability : await fetchCapabilities(imageId!, field, abort.signal);
       const imageResult = await loadOmeZarrFromStore(new PrefixStore(authStore.store, field, abort.signal) as any);
-      const imageLoader = withVolumeCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata), authStore, field, reportLoadProgress);
+      const imageLoader = withVolumeCache(withImageReadCache(attachNgffPhysicalSizes(imageResult.data, imageResult.metadata),authStore), authStore, field, reportLoadProgress);
       const labelResults = await Promise.allSettled(fieldCapability.labels.map(async (label) => {
         const path = label.path;
         const result = await loadOmeZarrFromStore(new PrefixStore(authStore.store, path, abort.signal) as any);
@@ -637,6 +643,7 @@ export default function App() {
         renderMode: effectiveRenderMode,
         volumeLevel: selectedVolumeLevel?.index,
         volumeRenderer,
+        clipping,
         volumeBlend,
         volumeBrightness,
         volumeGain,
@@ -656,7 +663,7 @@ export default function App() {
       window.history.replaceState(null, "", relative);
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [imageId, loaded, capability, viewMode, plateFieldIndex, navigation, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels]);
+  }, [imageId, loaded, capability, viewMode, plateFieldIndex, navigation, viewport, zIndex, tIndex, projection, effectiveRenderMode, selectedVolumeLevel, volumeRenderer, volumeBlend, volumeBrightness, volumeGain, volumeCamera, ngCamera, volumeView, slicePlane, field, channels, labels,clipping]);
 
   if (error && !capability) return <main className="fatal"><h1>OME-Zarr Viewer</h1><p>{error}</p></main>;
 
@@ -674,7 +681,7 @@ export default function App() {
           {currentLoaded && currentLoaded.sizeT > 1 && imageId && capability && viewMode === "field" && <MovieExport
             key={`${effectiveRenderMode}:${volumeRenderer}:${volumeView}`} imageId={imageId} sizeT={currentLoaded.sizeT} exporter={volumeMovieExporter} onBusy={setExportingVolume} recipe={{ version: 2, storeUuid: capability.store.uuid || undefined, sourceBinding: capability.store.binding_digest, source: { kind: "current-image" },
               ...(effectiveRenderMode==="3d"?{viewCapture:{version:1,space:"screen",renderer:useNeuroglancer?"neuroglancer":"viv",mode:volumeView,quality:selectedVolumeLevel!.index,
-                settings:{brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,
+                settings:{brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,clipping:volumeView==='3d'?clipping:undefined,
                   renderedChannels:(useNeuroglancer?channels.filter(c=>c.visible).slice(0,10):volumeChannels).map(c=>c.index),labelsRendered:useNeuroglancer}}}:{}),
               filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
               panels: [{ field, roi: effectiveRenderMode==="3d"?[0,0,...volumeMovieSize]:visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
@@ -739,6 +746,7 @@ export default function App() {
               labels={labels.map(label => ({ ...label, path: label.id.startsWith("focused-channel-") ? currentLoaded.path : fieldLabelPath(label.path, capability!.initial_path, currentLoaded.path) }))}
               t={tIndex} resolution={selectedVolumeLevel.index} blendMode={volumeBlend} showScale={showScale}
               brightness={volumeBrightness}
+              clipping={volumeView === '3d' ? clipping : undefined}
               gain={volumeGain} height={viewerSize.height} unit={geometry?.unit} viewId={ngViewId}
               view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               resetKey={volumeReset} camera={sharedNgCamera} onCameraChange={camera=>{setNgCamera(camera);if(geometry)acceptNavigation(fromNeuroglancer(camera,geometry.unit,panelHeight,volumeView));}}
@@ -756,6 +764,7 @@ export default function App() {
               blendMode={volumeBlend}
               brightness={volumeBrightness}
               showScale={showScale}
+              clipping={volumeView === '3d' ? clipping : undefined}
               camera={sharedVivCamera} view={volumeView} plane={slicePlane} onPlane={setSlicePlane}
               onCameraChange={camera=>{setVolumeCamera(camera);if(volumeGeometry)acceptNavigation(fromViv(camera,volumeGeometry));}}
               onCancel={() => setRenderMode("2d")}
@@ -811,6 +820,7 @@ export default function App() {
           renderMode={effectiveRenderMode}
           labels3dAvailable={useNeuroglancer} volumeView={volumeView} onVolumeView={value=>{captureNavigation();setVolumeView(value);}}
           volumeRenderer={useNeuroglancer ? "neuroglancer" : "classic"}
+          clipping={clipping} onClipping={setClipping}
           onVolumeRenderer={value=>{captureNavigation();setVolumeRenderer(value);}} neuroglancerAvailable={ngAvailable}
           volumeLevels={availableVolumeLevels}
           volumeLevel={selectedVolumeLevel?.index}
@@ -857,6 +867,7 @@ interface ViewerPanelProps {
   volumeView?: VolumeView;
   onVolumeView?: (view: VolumeView) => void;
   volumeRenderer?: VolumeRenderer;
+  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void;
   onVolumeRenderer?: (value: VolumeRenderer) => void;
   neuroglancerAvailable?: boolean;
   volumeLevels: VolumeLevel[];
@@ -911,6 +922,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
           volumeGain={props.volumeGain} onVolumeGain={props.onVolumeGain} />}
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
+                clipping={props.clipping} onClipping={props.onClipping}
               />
             : <PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
 
@@ -1067,6 +1079,7 @@ export function VolumeControls({
   onRenderer,
   neuroglancerAvailable = true,
   view = "3d", onView, blend = "additive", onBlend, appearance,
+  clipping, onClipping,
 }: {
   playing?:boolean; onPlayingChange?:(value:boolean)=>void;
   frameReady?:boolean;
@@ -1083,6 +1096,7 @@ export function VolumeControls({
   view?: VolumeView; onView?: (view: VolumeView) => void;
   blend?: VolumeBlendMode; onBlend?: (blend:VolumeBlendMode) => void;
   appearance?: ReactNode;
+  clipping?:ClippingBounds; onClipping?:(value:ClippingBounds)=>void;
 }) {
   return <section className="panel-section position-section volume-controls" aria-label="Volume options">
     {appearance}
@@ -1090,6 +1104,7 @@ export function VolumeControls({
       {([["3d","Volume"],["slice","Slice"],["orthogonal","Orthogonal"]] as const).map(([value,label]) =>
         <button key={value} className={view === value ? "active" : ""} aria-pressed={view === value} onClick={()=>onView(value)}>{label}</button>)}
     </div></div>}
+    {view==='3d' && clipping && onClipping && <ClippingPlanes bounds={clipping} onChange={onClipping}/>}
     {onBlend && <div className="quality-control"><span>Display</span><div className="mode-toggle volume-view-toggle" role="group" aria-label="3D display mode">
       {([["additive","Additive","Additive blend"],["maximum","Maximum","Maximum intensity"],["minimum","Minimum","Minimum intensity"]] as const).map(([value,label,name])=>
         <button key={value} aria-label={name} title={name} className={blend===value?"active":""} aria-pressed={blend===value} onClick={()=>onBlend(value)}>{label}</button>)}

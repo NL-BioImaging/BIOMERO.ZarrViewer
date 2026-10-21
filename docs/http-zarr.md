@@ -249,6 +249,9 @@ report contains timing/request counts, never credentials or session tokens.
 
 ## Standalone comparison of virtual 0.4 and 0.5
 
+For the later Viv MIP/WSI optimizations, see
+[Viv, WSI and direct OME-Zarr measurements](viv-wsi-performance-20261021.md).
+
 Local Docker measurements on 21 October 2026 used viewer 0.8.1b4 and
 provider `0.1.2.dev0+nlbi.2`, with the same OMERO.server, web image, chunk
 shapes, lossless Zstd level 1 and three concurrent HTTP readers. Each image

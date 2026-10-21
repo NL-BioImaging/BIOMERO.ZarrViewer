@@ -140,3 +140,10 @@ test("returns a persistent server error after three retries", async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
+
+test('decoded-cache scope changes with tokens and bindings without serializing large contexts on every chunk',()=>{
+  const cap=capability('large-context');const auth=new AuthenticatedZarrStore(cap,async()=>cap);
+  const first=auth.readIdentity;auth.update({...cap});expect(auth.readIdentity).toBe(first);
+  auth.update({...cap,store:{...cap.store,context:'new-context'}});expect(auth.readIdentity).not.toBe(first);
+  const second=auth.readIdentity;auth.update({...cap,store:{...cap.store,binding_digest:'new-binding'}});expect(auth.readIdentity).not.toBe(second);
+});

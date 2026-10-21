@@ -30,10 +30,14 @@ function progressSink(mode:ProjectionMode,onProgress?: (value:LoadProgress)=>voi
 async function project(depth:number,mode:Exclude<ProjectionMode,"slice">,
   load:(z:number)=>Promise<PixelRaster>,signal:AbortSignal,
   step:(done:number,total:number)=>void,yieldForProgress:boolean):Promise<PixelRaster> {
-  let first:PixelRaster|undefined,accumulator:Float64Array|undefined;
+  let first:PixelRaster|undefined,accumulator:any;
   for(let z=0;z<depth;z++){
     signal.throwIfAborted();const raster=await load(z);signal.throwIfAborted();
-    if(!first){first={...raster,data:new raster.data.constructor(0)};accumulator=Float64Array.from(raster.data);}
+    if(!first){
+      first={...raster,data:new raster.data.constructor(0)};
+      // Min/max retain existing values; only means need a Float64 sum buffer.
+      accumulator=mode==='mean'?Float64Array.from(raster.data):new raster.data.constructor(raster.data);
+    }
     else {
       if(raster.width!==first.width||raster.height!==first.height||raster.data.length!==accumulator!.length)
         throw new Error("Projection slices have inconsistent dimensions");
@@ -46,8 +50,8 @@ async function project(depth:number,mode:Exclude<ProjectionMode,"slice">,
     if(yieldForProgress&&z%8===7)await new Promise<void>(resolve=>setTimeout(resolve,0));
   }
   if(!first||!accumulator)throw new Error("The Z projection returned no planes");
-  const data=new first.data.constructor(accumulator.length);
-  for(let i=0;i<data.length;i++)data[i]=mode==="mean"?accumulator[i]/depth:accumulator[i];
+  const data=mode==='mean'?new first.data.constructor(accumulator.length):accumulator;
+  if(mode==='mean')for(let i=0;i<data.length;i++)data[i]=accumulator[i]/depth;
   return {...first,data};
 }
 

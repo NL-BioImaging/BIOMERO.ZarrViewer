@@ -8,12 +8,16 @@ import { registerActionListener } from "neuroglancer/unstable/util/event_action_
 import { PerspectivePanel } from "neuroglancer/unstable/perspective_view/panel.js";
 import { SliceViewPanel } from "neuroglancer/unstable/sliceview/panel.js";
 import { vec3 } from "neuroglancer/unstable/util/geom.js";
+import { installMeshClipping } from './mesh-clipping';
 import { configureVolumeWheel, depthWheelStep, wheelZoomFactor, sliceWheelStep, configureSliceWheel, linkOrthogonalZoom, orthogonalFitScale } from "../src/neuroglancer-controls";
 
 const origin = window.parent.location.origin;
 const send = (message: object) => window.parent.postMessage(message, origin);
 try {
+  let clipBounds:number[][]|undefined;
+  installMeshClipping(()=>clipBounds);
   const viewer = makeDefaultViewer({ showUIControls: false, showLayerDialog: false, resetStateWhenEmpty: false });
+  viewer.element.addEventListener('contextmenu',event=>event.preventDefault());
   setDefaultInputEventBindings(viewer.inputEventBindings);
 
   // Ordinary wheel movement zooms in every panel; modified wheel moves slices.
@@ -95,6 +99,7 @@ try {
     try {
       updating = true;
       const { state, resetKey, sceneKey } = event.data;
+      clipBounds=state.biomeroClip;
       physicalExtent = event.data.physicalExtentNm || physicalExtent;
       if ((!initialized || layout !== state.layout || resetKey !== reset || sceneKey !== scene) && state.layout === "4panel")
         fitPending = !event.data.camera?.crossSectionScale;
@@ -127,6 +132,7 @@ try {
           }
           if (spec.type === "image") {
             layer.fragmentMain.value = spec.shader;
+            layer.shaderControlState.restoreState(spec.shaderControls);
             layer.volumeRenderingMode.restoreState(spec.volumeRendering);
             layer.volumeRenderingGain.value = spec.volumeRenderingGain;
             layer.volumeRenderingDepthSamplesTarget.value = spec.volumeRenderingDepthSamples;
@@ -163,6 +169,7 @@ try {
       reset = resetKey;
       scene = sceneKey;
       send({ type: "biomero-ng-loading" });
+      viewer.display.scheduleRedraw();
     } catch (error) {
       send({ type: "biomero-ng-error", message: String(error) });
     } finally { updating = false; }

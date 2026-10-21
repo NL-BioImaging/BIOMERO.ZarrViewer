@@ -14,6 +14,7 @@ export function wheelZoomFactor(deltaY: number, deltaMode: number): number {
 }
 
 export function configureVolumeWheel(bindings: { set: (key: string, action: { action: string; preventDefault: boolean }) => void }) {
+  bindings.set('at:mousedown2',{action:'translate-via-mouse-drag',preventDefault:true});
   bindings.set("at:wheel", { action: "biomero-zoom-via-wheel", preventDefault: true });
   bindings.set("at:control+wheel", { action: "biomero-depth-via-wheel", preventDefault: true });
 }
@@ -25,6 +26,7 @@ export function sliceWheelStep(normal: ArrayLike<number>, resolution: number[], 
 }
 
 export function configureSliceWheel(bindings: { set: (key: string, action: { action: string; preventDefault: boolean }) => void }) {
+  bindings.set('at:mousedown2',{action:'translate-via-mouse-drag',preventDefault:true});
   bindings.set("at:wheel", { action: "biomero-section-zoom-via-wheel", preventDefault: true });
   bindings.set("at:control+wheel", { action: "biomero-slice-via-wheel", preventDefault: true });
   bindings.set("at:shift+wheel", { action: "biomero-slice-via-wheel", preventDefault: true });

@@ -151,3 +151,11 @@ test("volume layouts and both renderers' slice cameras round-trip with bounded o
   expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad&vivSlices={"position":[-1,0,1]}').volumeCamera).toBeUndefined();
   expect(parseDeepLink('?v=2&volumeView=bad&slicePlane=bad').volumeView).toBeUndefined();
 });
+
+test('clipping links retain all XYZ bounds and reject malformed or reversed ranges',()=>{
+  const clipping:[[number,number],[number,number],[number,number]]=[[.25,.75],[0,1],[.2,.8]];
+  const url=writeDeepLink(42,{z:0,t:0,renderMode:'3d',clipping});
+  expect(parseDeepLink(new URL(url,'http://localhost').search).clipping).toEqual(clipping);
+  for(const value of ['1,0,0,1,0,1','0,2,0,1,0,1','nan,1,0,1,0,1','0,1','0,,0,1,0,1'])
+    expect(parseDeepLink(new URLSearchParams({clip3d:value}).toString()).clipping).toBeUndefined();
+});

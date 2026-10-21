@@ -66,3 +66,13 @@ test("projection cache has a shared 64 MiB LRU budget across sources and separat
   await b.getRaster({selection:{c:0,t:0}});expect(getVolume).toHaveBeenCalledTimes(4);
   await b.getRaster({selection:{c:1,t:0}});await b.getRaster({selection:{c:1,t:1}});expect(getVolume).toHaveBeenCalledTimes(6);
 },15000);
+
+test('min/max preserve uint32 extremes and input buffers; means still accumulate without integer overflow',async()=>{
+  const planes=[new Uint32Array([4294967295,2]),new Uint32Array([1,4294967293])];
+  const source={labels:['z','y','x'],shape:[2,1,2],dtype:'Uint32',getRaster:async({selection}:any)=>({data:planes[selection.z],width:2,height:1})};
+  const mip=await projectSource(source,'mip').getRaster({selection:{}});
+  expect(mip.data).toBeInstanceOf(Uint32Array);expect(Array.from(mip.data)).toEqual([4294967295,4294967293]);
+  expect(Array.from((await projectSource(source,'min').getRaster({selection:{}})).data)).toEqual([1,2]);
+  expect(Array.from((await projectSource(source,'mean').getRaster({selection:{}})).data)).toEqual([2147483648,2147483647]);
+  expect(Array.from(planes[0])).toEqual([4294967295,2]);
+});

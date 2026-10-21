@@ -196,6 +196,7 @@ def well_eligibility(request, well_id, conn=None, **kwargs):
 
 def _capability_response(request, conn, store, *, require_plate=False):
     from .volume_cache import cache_limit
+    from .http_statistics import eligible as native_samples_eligible
     model = _inspect_resolved_store(store, request.GET.get("field"))
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
@@ -245,6 +246,7 @@ def _capability_response(request, conn, store, *, require_plate=False):
                 "render_url": render_url,
                 "volume_url": reverse("biomero_zarr_viewer_volume", kwargs={"image_id": store.image_id}) if store.http is None and cache_limit() else None,
                 "neuroglancer_url": reverse("biomero_zarr_viewer_neuroglancer", kwargs={"image_id": store.image_id}) if cache_limit() else None,
+                "native_samples_url": reverse("biomero_zarr_viewer_native_samples",kwargs={"image_id":store.image_id}) if store.http is not None and native_samples_eligible(store.http.image) else None,
                 "preview_url": reverse("biomero_zarr_viewer_previews", kwargs={"image_id": store.image_id}) if store.http is None and cache_limit() else None,
                 "movie_url": reverse("biomero_zarr_viewer_index") + f"?image={store.image_id}",
                 "binding_digest": binding_digest,

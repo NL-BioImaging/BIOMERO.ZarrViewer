@@ -35,6 +35,7 @@ export class AuthenticatedZarrStore {
   private activeHttpRequests = 0;
   private httpQueue: Array<() => void> = [];
   private virtualChunks = new VirtualChunkCache();
+  private readRevision = 0;
   readonly store: zarr.FetchStore;
 
   constructor(capability: Capability, refreshCapability: RefreshCapability) {
@@ -56,6 +57,7 @@ export class AuthenticatedZarrStore {
   }
 
   update(capability: Capability): void {
+    if(capability.image.id!==this.capability.image.id || capability.store.url!==this.capability.store.url || capability.store.binding_digest!==this.capability.store.binding_digest || capability.store.uuid!==this.capability.store.uuid || capability.store.context!==this.capability.store.context)this.readRevision++;
     if (capability.image.id !== this.capability.image.id || capability.store.binding_digest !== this.capability.store.binding_digest || capability.store.url !== this.capability.store.url) this.virtualChunks.clear();
     this.capability = capability;
   }
@@ -65,6 +67,9 @@ export class AuthenticatedZarrStore {
   }
 
   get volumeUrl(): string | undefined { return this.capability.store.volume_url; }
+  get isHttp(): boolean { return this.capability.store.transport === 'http'; }
+  get nativeSamplesUrl():string|undefined { return this.capability.store.native_samples_url; }
+  get readIdentity(): string { return String(this.readRevision); }
   get neuroglancerUrl(): string | undefined { return this.capability.store.neuroglancer_url; }
   get previewUrl(): string | undefined { return this.capability.store.preview_url; }
   get volumeIdentity(): string { return `${this.capability.store.binding_digest || ""}:${this.capability.store.uuid || ""}`; }

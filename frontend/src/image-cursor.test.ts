@@ -28,7 +28,7 @@ test('Neuroglancer cursors read the real bindings, including modified wheel and 
   expect(action(volume,{altKey:true})).toBe('depth');
   expect(action(volume,{buttons:1})).toBe('rotate');expect(action(volume,{shiftKey:true,buttons:1})).toBe('pan');
   expect(action(section,{buttons:1})).toBe('pan');expect(action(section,{shiftKey:true,buttons:1})).toBe('rotate');
-  expect(action(section,{buttons:2})).toBe('select');expect(action(volume,{ctrlKey:true,buttons:1})).toBe('select');
+  expect(action(section,{buttons:2})).toBe('pan');expect(action(volume,{buttons:2})).toBe('pan');expect(action(volume,{ctrlKey:true,buttons:1})).toBe('select');
 });
 
 test('stationary pointer updates with modifier keys; a drag keeps its starting binding until release',()=>{
