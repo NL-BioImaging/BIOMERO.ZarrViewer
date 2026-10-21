@@ -1,6 +1,29 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MovieExport, TimePlayback } from "./MovieControls";
 import type { MovieRecipe } from "./movie-recipe";
+import { useState } from 'react';
+
+test('controlled playback reports automatic stop and frame stepping',()=>{
+  const changed=vi.fn();
+  function Player(){
+    const [playing,setPlaying]=useState(false),[t,onT]=useState(0);
+    return <TimePlayback sizeT={2} t={t} onT={onT} playing={playing} onPlayingChange={value=>{changed(value);setPlaying(value);}}/>;
+  }
+  vi.useFakeTimers();
+  try {
+    render(<Player/>);
+    fireEvent.click(screen.getByRole('checkbox',{name:'Loop'}));
+    fireEvent.click(screen.getByRole('button',{name:'Play'}));
+    expect(changed).toHaveBeenLastCalledWith(true);
+    act(()=>vi.advanceTimersByTime(200));
+    act(()=>vi.advanceTimersByTime(200));
+    expect(changed).toHaveBeenLastCalledWith(false);
+    expect(screen.getByRole('button',{name:'Play'})).toBeEnabled();
+    fireEvent.click(screen.getByRole('button',{name:'Play'}));
+    fireEvent.click(screen.getByRole('button',{name:'Previous frame'}));
+    expect(changed).toHaveBeenLastCalledWith(false);
+  } finally {vi.useRealTimers();}
+});
 
 test("playback waits for the current frame and never queues multiple loads",()=>{
   vi.useFakeTimers();

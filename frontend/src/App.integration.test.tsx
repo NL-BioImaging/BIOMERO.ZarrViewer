@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import App from "./App";
 import { fetchCapabilities } from "./api";
@@ -8,7 +8,7 @@ import type { Capability } from "./types";
 vi.mock("./api",async importOriginal=>({...await importOriginal<any>(),fetchCapabilities:vi.fn()}));
 vi.mock("@hms-dbmi/viv",async importOriginal=>({...await importOriginal<any>(),loadOmeZarrFromStore:vi.fn()}));
 vi.mock("./volume-utils",async importOriginal=>({...await importOriginal<any>(),detectMax3dTextureSize:()=>2048}));
-function Canvas(props:any){useEffect(()=>props.onReady?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-camera-command={props.resetKey} data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
+function Canvas(props:any){useEffect(()=>(props.onReady||props.onTilesLoaded)?.(),[props.t,props.z,props.loader]);return <output data-testid="rendered-contrast" data-t={props.t} data-camera-command={props.resetKey} data-navigation={JSON.stringify(props.viewport||props.camera)}>{JSON.stringify(props.channels.map((c:any)=>[c.low,c.high]))}</output>;}
 vi.mock("./ViewerCanvas",()=>({ViewerCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./VolumeCanvas",()=>({VolumeCanvas:(props:any)=><Canvas {...props}/>}));
 vi.mock("./NeuroglancerCanvas",()=>({NeuroglancerCanvas:(props:any)=><Canvas {...props}/>}));
@@ -31,6 +31,67 @@ test("HTTP images render source contrast before native statistics finish",async(
   await screen.findByTestId("rendered-contrast");
   expect(screen.getByTestId("rendered-contrast")).toHaveTextContent("[0,32767]");
   expect(pixels).not.toHaveBeenCalled();
+});
+
+test("fresh HTTP images apply delayed initial AUTO contrast",async()=>{
+  vi.mocked(fetchCapabilities).mockResolvedValue({...capability,store:{...capability.store,transport:"http"}});
+  render(<App/>);
+  await waitFor(()=>expect(screen.getByTestId('rendered-contrast')).toHaveTextContent('[10,1000]'));
+  expect(screen.getByRole('spinbutton',{name:'DNA maximum value'})).toHaveValue(1000);
+});
+
+test.each(['manual','saved'])("delayed HTTP AUTO preserves %s contrast",async kind=>{
+  vi.mocked(fetchCapabilities).mockResolvedValue({...capability,store:{...capability.store,transport:"http"}});
+  if(kind==='saved')window.history.replaceState({},'', '/?image=539&v=2&channels='+encodeURIComponent(JSON.stringify([{index:0,visible:true,color:'#00FF00',low:5,high:800}])));
+  render(<App/>);await screen.findByTestId('rendered-contrast');
+  if(kind==='manual')fireEvent.change(screen.getByRole('spinbutton',{name:'DNA maximum value'}),{target:{value:'800'}});
+  await waitFor(()=>expect(screen.getByRole('button',{name:'AUTO'})).toBeEnabled());
+  expect(screen.getByTestId('rendered-contrast')).toHaveTextContent(kind==='saved'?'[5,800]':'[0,800]');
+});
+
+test.each(['2D','3D'])("%s playback freezes intensity controls and statistics until paused",async mode=>{
+  const raster=vi.fn(async({selection}:any)=>({data:new Uint16Array([0,10,20,30,40,selection.t?2000:1000]),width:3,height:2}));
+  vi.mocked(loadOmeZarrFromStore).mockResolvedValue({data:[{labels:['t','c','z','y','x'],shape:[4,1,8,2,3],dtype:'Uint16',tileSize:256,getRaster:raster}],metadata:{multiscales:[{axes:[{name:'t'},...capability.axes],datasets:[{path:'0'}]}]}} as any);
+  render(<App/>);
+  await waitFor(()=>expect(screen.getByTestId('rendered-contrast')).toHaveTextContent('[10,1000]'));
+  if(mode==='3D')fireEvent.click(screen.getByRole('button',{name:'3D'}));
+  await waitFor(()=>expect(screen.getByRole('button',{name:'AUTO'})).toBeEnabled());
+  const slider=screen.getByRole('slider',{name:'DNA display maximum'});
+  const bounds=[slider.getAttribute('min'),slider.getAttribute('max'),slider.getAttribute('value')];
+  const before=raster.mock.calls.length;
+  vi.useFakeTimers();
+  try {
+    fireEvent.click(screen.getByRole('button',{name:'Play'}));
+    for(let frame=0;frame<3;frame++){
+      await act(async()=>{vi.advanceTimersByTime(200);});
+      expect(screen.getByTestId('rendered-contrast')).toHaveAttribute('data-t',String(frame+1));
+      for(const name of ['DNA display minimum','DNA display maximum'])expect(screen.getByRole('slider',{name})).toBeDisabled();
+      for(const name of ['DNA minimum value','DNA maximum value'])expect(screen.getByRole('spinbutton',{name})).toBeDisabled();
+      for(const name of ['AUTO','FIT','HIST'])expect(screen.getByRole('button',{name})).toBeDisabled();
+      expect([slider.getAttribute('min'),slider.getAttribute('max'),slider.getAttribute('value')]).toEqual(bounds);
+      expect(screen.getByTestId('rendered-contrast')).toHaveTextContent('[10,1000]');
+      expect(raster).toHaveBeenCalledTimes(before);
+    }
+    await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'Pause'}));});
+    expect(slider).toBeEnabled();
+    expect(screen.getByRole('button',{name:'AUTO'})).toBeEnabled();
+    expect(raster.mock.calls.length).toBeGreaterThan(before);
+    expect(screen.getByTestId('rendered-contrast')).toHaveTextContent('[10,1000]');
+  } finally {vi.useRealTimers();}
+});
+
+test('a late HTTP statistics result cannot change contrast during playback',async()=>{
+  let resolvePixels!:(value:any)=>void;
+  const pixels=vi.fn(()=>new Promise(resolve=>{resolvePixels=resolve;}));
+  vi.mocked(fetchCapabilities).mockResolvedValue({...capability,store:{...capability.store,transport:'http'}});
+  vi.mocked(loadOmeZarrFromStore).mockResolvedValue({data:[{labels:['t','y','x'],shape:[4,2,3],dtype:'Uint16',tileSize:256,getRaster:pixels}],metadata:{multiscales:[{axes:[{name:'t'},{name:'y'},{name:'x'}],datasets:[{path:'0'}]}]}} as any);
+  render(<App/>);await waitFor(()=>expect(pixels).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole('button',{name:'Play'}));
+  await act(async()=>resolvePixels({data:new Uint16Array([0,10,20,30,40,1000]),width:3,height:2}));
+  expect(screen.getByTestId('rendered-contrast')).toHaveTextContent('[0,32767]');
+  expect(screen.getByRole('slider',{name:'DNA display maximum'})).toBeDisabled();
+  fireEvent.click(screen.getByRole('button',{name:'Pause'}));
+  expect(screen.getByRole('slider',{name:'DNA display maximum'})).toBeEnabled();
 });
 
 test("fresh opening samples useful contrast and mode changes preserve a manual range while refreshing statistics",async()=>{

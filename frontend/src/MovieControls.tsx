@@ -2,8 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { DEFAULT_MOVIE_FPS, movieSequence, type MovieRecipe } from './movie-recipe';
 import { exportMovie, type MovieResult } from './movie-renderer';
 
-export function TimePlayback({ sizeT, t, onT, ready=true }: { sizeT: number; t: number; onT: (value: number) => void; ready?:boolean }) {
-  const [playing, setPlaying] = useState(false), [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [loop, setLoop] = useState(true);
+export function TimePlayback({ sizeT, t, onT, ready=true, playing: controlledPlaying, onPlayingChange }: { sizeT: number; t: number; onT: (value: number) => void; ready?:boolean; playing?:boolean; onPlayingChange?:(value:boolean)=>void }) {
+  const [internalPlaying, setInternalPlaying] = useState(false), [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [loop, setLoop] = useState(true);
+  const playing=controlledPlaying??internalPlaying;
+  const setPlaying=(next:boolean|((value:boolean)=>boolean))=>{
+    const value=typeof next==='function'?next(playing):next;
+    if(controlledPlaying===undefined)setInternalPlaying(value);
+    onPlayingChange?.(value);
+  };
   const current = useRef(t); current.current = t;
   useEffect(() => {
     setPlaying(false);

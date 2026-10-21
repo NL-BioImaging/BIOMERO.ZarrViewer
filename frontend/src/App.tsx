@@ -316,6 +316,9 @@ export default function App() {
   const [field, setField] = useState<string | undefined>(deepLink.field);
   const [channels, setChannels] = useState<ChannelState[]>([]);
   const [channelAnalyses, setChannelAnalyses] = useState<ChannelAnalysis[]>([]);
+  const [playing,setPlaying]=useState(false);
+  const contrastLockedRef=useRef(false);
+  const onPlayingChange=useCallback((value:boolean)=>{contrastLockedRef.current=value;setPlaying(value);},[]);
   const [labels, setLabels] = useState<LabelState[]>([]);
   const [zIndex, setZIndex] = useState(deepLink.z || 0);
   const [tIndex, setTIndex] = useState(deepLink.t || 0);
@@ -398,6 +401,9 @@ export default function App() {
   const latestFrameKey=useRef(frameKey);latestFrameKey.current=frameKey;
   const frameReady=readyFrameKey===frameKey;
   const [exportingVolume,setExportingVolume]=useState(false);
+  const contrastLocked=playing||exportingVolume;
+  contrastLockedRef.current=contrastLocked;
+  useEffect(()=>onPlayingChange(false),[loaded,field,renderMode,viewMode,onPlayingChange]);
   const liveMovieFrame=useRef({t:tIndex,ready:frameReady});liveMovieFrame.current={t:tIndex,ready:frameReady};
   const movieScreenScale=Math.min(1,2048/Math.max(1,viewerSize.width,viewerSize.height));
   const volumeMovieSize:[number,number]=[Math.max(1,Math.floor(viewerSize.width*movieScreenScale)),Math.max(1,Math.floor(viewerSize.height*movieScreenScale))];
@@ -590,23 +596,33 @@ export default function App() {
 
   useEffect(() => {
     const analysisKey = statisticsKey;
-    if (!loaded || loaded.path !== field || !displayLoader || !channels.length || analyzedProjection.current === analysisKey) return;
+    if (contrastLocked || !loaded || loaded.path !== field || !displayLoader || !channels.length || analyzedProjection.current === analysisKey) return;
     let cancelled = false;
     const abort = new AbortController();
-    setChannelAnalyses([]);
     const analyze = async () => {
       if (loaded.capability.store.transport === "http") await abortableDelay(350,abort.signal);
       return analyzeChannels(loaded.image, channels, zIndex, tIndex, {signal: abort.signal, volume: effectiveRenderMode === "3d" || projection !== "slice"});
     };
     analyze().then((analyses) => {
-      if (cancelled) return;
+      if (cancelled || contrastLockedRef.current) return;
       analyzedProjection.current = analysisKey;
       setChannelAnalyses(analyses);
+      // HTTP images render immediately with source ranges. Apply the delayed
+      // initial AUTO only to untouched ranges, never restored/manual contrast.
+      setChannels(current=>{
+        if(contrastLockedRef.current)return current;
+        return current.map(channel=>{
+          const analysis=analyses.find(item=>item.index===channel.index);
+          return channel.contrastSource==="source" && analysis && analysis.status!=="error"
+            ? {...channel,low:analysis.autoLow,high:analysis.autoHigh,contrastSource:"auto" as const}
+            : channel;
+        });
+      });
     }).catch((reason) => {
       if (!cancelled) setStatus(`Projection warning: ${reason instanceof Error ? reason.message : "range calculation failed"}`);
     });
     return () => { cancelled = true; abort.abort(); };
-  }, [loaded, statisticsKey]);
+  }, [loaded, statisticsKey, contrastLocked]);
 
   useEffect(() => {
     if (!imageId || !loaded) return;
@@ -776,7 +792,10 @@ export default function App() {
             setVolumeCamera(undefined);
           }}
           channels={channels}
-          channelAnalyses={currentLoaded && analyzedProjection.current===statisticsKey ? channelAnalyses : []}
+          channelAnalyses={currentLoaded ? channelAnalyses : []}
+          statisticsReady={analyzedProjection.current===statisticsKey}
+          contrastLocked={contrastLocked}
+          playing={playing} onPlayingChange={onPlayingChange}
           onChannels={setChannels}
           labels={labels}
           onLabels={setLabels}
@@ -812,6 +831,10 @@ export default function App() {
 }
 
 interface ViewerPanelProps {
+  playing?:boolean;
+  onPlayingChange?:(value:boolean)=>void;
+  contrastLocked?:boolean;
+  statisticsReady?:boolean;
   frameReady?:boolean;
   capability: Capability | null;
   field?: string;
@@ -878,6 +901,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 t={props.t}
                 onT={props.onT}
                 frameReady={props.frameReady}
+                playing={props.playing} onPlayingChange={props.onPlayingChange}
                 levels={props.volumeLevels}
                 level={props.volumeLevel}
                 onLevel={props.onVolumeLevel}
@@ -888,7 +912,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
                 view={props.volumeView} onView={props.onVolumeView} blend={props.volumeBlend} onBlend={props.onVolumeBlend}
                 renderer={props.volumeRenderer} onRenderer={props.onVolumeRenderer} neuroglancerAvailable={props.neuroglancerAvailable}
               />
-            : <PlaneControls frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
+            : <PlaneControls playing={props.playing} onPlayingChange={props.onPlayingChange} frameReady={props.frameReady} sizeZ={props.sizeZ} sizeT={props.sizeT} z={props.z} t={props.t} projection={props.projection} onZ={props.onZ} onT={props.onT} onProjection={props.onProjection} />}
 
       <div className="panel-tabs content-tabs" role="tablist" aria-label="Image layers">
         <div className="layer-tab" role="presentation">
@@ -901,7 +925,7 @@ export function ViewerPanel(props: ViewerPanelProps) {
         </div>
       </div>
         {viewTab === "channels" ?
-          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} />
+          <ChannelPanel channels={props.channels} analyses={props.channelAnalyses} onChange={props.onChannels} locked={props.contrastLocked} statisticsReady={props.statisticsReady} />
           : <LabelPanel labels={props.labels} onChange={props.onLabels} volume={props.renderMode === "3d"} volumeDescription={props.volumeView === "slice" ? "Slice labels" : props.volumeView === "orthogonal" ? "Slices and 3D surfaces" : undefined} />}
 
       </div>
@@ -932,13 +956,18 @@ function DisplayOptions({ volumeBlend = "additive", onVolumeBlend, volumeBrightn
   </div>;
 }
 
-function ChannelPanel({ channels, analyses, onChange }: {
+function ChannelPanel({ channels, analyses, onChange, locked=false, statisticsReady=true }: {
+  locked?:boolean; statisticsReady?:boolean;
   channels: ChannelState[]; analyses: ChannelAnalysis[]; onChange: (value: ChannelState[]) => void;
 }) {
   const [histograms, setHistograms] = useState<Set<number>>(new Set());
   const analysisByIndex = new Map(analyses.map((analysis) => [analysis.index, analysis]));
-  const update = (index: number, patch: Partial<ChannelState>) => onChange(channels.map((item) => item.index === index ? { ...item, ...((patch.low != null || patch.high != null) ? {contrastSource: "manual" as const} : {}), ...patch } : item));
+  const update = (index: number, patch: Partial<ChannelState>) => {
+    if(locked && (patch.low!=null || patch.high!=null))return;
+    onChange(channels.map((item) => item.index === index ? { ...item, ...((patch.low != null || patch.high != null) ? {contrastSource: "manual" as const} : {}), ...patch } : item));
+  };
   const apply = (channel: ChannelState, mode: "auto" | "fit") => {
+    if(locked || !statisticsReady)return;
     const analysis = analysisByIndex.get(channel.index);
     if (!analysis) return;
     update(channel.index, mode === "auto"
@@ -960,7 +989,7 @@ function ChannelPanel({ channels, analyses, onChange }: {
         <div className="layer-heading"><input type="checkbox" aria-label={`${channel.label} visibility`} checked={channel.visible} onChange={(event) => update(channel.index, { visible: event.target.checked })}/><strong>{channel.label}</strong><ChannelColorPicker name={channel.label} color={channel.color} onChange={color => update(channel.index, { color })}/></div>
 
         {showHistogram && analysis && <Histogram values={analysis.histogram} color={channel.color} />}
-        <DualRange channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} actions={<div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={!analysis || analysis.status==="error"}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={!analysis || analysis.status==="error"}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={!analysis || analysis.status==="error"}>HIST</button></div>} />
+        <DualRange disabled={locked} channel={channel} analysis={analysis} onChange={(patch) => update(channel.index, patch)} actions={<div className="micro-actions"><button onClick={() => apply(channel, "auto")} disabled={locked || !statisticsReady || !analysis || analysis.status==="error"}>AUTO</button><button onClick={() => apply(channel, "fit")} disabled={locked || !statisticsReady || !analysis || analysis.status==="error"}>FIT</button><button className={showHistogram ? "active" : ""} aria-pressed={showHistogram} onClick={() => toggleHistogram(channel.index)} disabled={locked || !statisticsReady || !analysis || analysis.status==="error"}>HIST</button></div>} />
         {analysis?.status==="error" && <small role="status">Channel statistics are unavailable. The current contrast is preserved.</small>}
       </div>;
     })}
@@ -972,7 +1001,7 @@ function Histogram({ values, color }: { values: number[]; color: string }) {
   return <div className="histogram" aria-label="Sampled intensity histogram">{values.map((value, index) => <i key={index} style={{ height: `${Math.max(2, Math.log1p(value) / Math.log1p(maximum) * 100)}%`, backgroundColor: color }}/>)}</div>;
 }
 
-function DualRange({ channel, analysis, onChange, actions }: { channel: ChannelState; analysis?: ChannelAnalysis; onChange: (patch: Partial<ChannelState>) => void; actions?: ReactNode }) {
+function DualRange({ channel, analysis, onChange, actions, disabled=false }: { channel: ChannelState; analysis?: ChannelAnalysis; onChange: (patch: Partial<ChannelState>) => void; actions?: ReactNode; disabled?:boolean }) {
   const rangeMin = Math.min(analysis?.fitLow ?? channel.domainMin, channel.low);
   const rangeMax = Math.max(analysis?.fitHigh ?? channel.domainMax, channel.high);
   const span = Math.max(Number.EPSILON, rangeMax - rangeMin);
@@ -984,14 +1013,15 @@ function DualRange({ channel, analysis, onChange, actions }: { channel: ChannelS
   const style = { "--range-start": `${start}%`, "--range-end": `${end}%`, "--range-color": channel.color } as CSSProperties;
   return <div className="dual-range">
     <div className="range-track" style={style}>
-      <input aria-label={`${channel.label} display minimum`} type="range" min={rangeMin} max={rangeMax} step={step} value={low} onChange={(event) => onChange({ low: Math.min(Number(event.target.value), high) })}/>
-      <input aria-label={`${channel.label} display maximum`} type="range" min={rangeMin} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.max(Number(event.target.value), low) })}/>
+      <input disabled={disabled} aria-label={`${channel.label} display minimum`} type="range" min={rangeMin} max={rangeMax} step={step} value={low} onChange={(event) => onChange({ low: Math.min(Number(event.target.value), high) })}/>
+      <input disabled={disabled} aria-label={`${channel.label} display maximum`} type="range" min={rangeMin} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.max(Number(event.target.value), low) })}/>
     </div>
-    <div className="range-values"><input aria-label={`${channel.label} minimum value`} type="number" min={rangeMin} max={high} step={step} value={low} onChange={(event) => onChange({ low: Math.max(rangeMin, Math.min(Number(event.target.value), high)) })}/>{actions}<input aria-label={`${channel.label} maximum value`} type="number" min={low} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.min(rangeMax, Math.max(Number(event.target.value), low)) })}/></div>
+    <div className="range-values"><input disabled={disabled} aria-label={`${channel.label} minimum value`} type="number" min={rangeMin} max={high} step={step} value={low} onChange={(event) => onChange({ low: Math.max(rangeMin, Math.min(Number(event.target.value), high)) })}/>{actions}<input disabled={disabled} aria-label={`${channel.label} maximum value`} type="number" min={low} max={rangeMax} step={step} value={high} onChange={(event) => onChange({ high: Math.min(rangeMax, Math.max(Number(event.target.value), low)) })}/></div>
   </div>;
 }
 
-function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection, frameReady }: {
+function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection, frameReady, playing, onPlayingChange }: {
+  playing?:boolean; onPlayingChange?:(value:boolean)=>void;
   frameReady?:boolean;
   sizeZ: number;
   sizeT: number;
@@ -1018,12 +1048,13 @@ function PlaneControls({ sizeZ, sizeT, z, t, projection, onZ, onT, onProjection,
         ? <label className="slider">Z <input type="range" min="0" max={sizeZ - 1} value={z} onChange={(e) => onZ(Number(e.target.value))}/><output>{z + 1}/{sizeZ}</output></label>
         : <p className="projection-note">Using all {sizeZ} Z slices</p>}
     </>}
-    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
-    {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => onT(Number(e.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
+    {sizeT > 1 && <TimePlayback playing={playing} onPlayingChange={onPlayingChange} sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
+    {sizeT > 1 && <label className="slider">T <input type="range" min="0" max={sizeT - 1} value={t} onChange={(e) => {onPlayingChange?.(false);onT(Number(e.target.value));}}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }
 
 export function VolumeControls({
+  playing, onPlayingChange,
   frameReady,
   sizeT,
   t,
@@ -1037,6 +1068,7 @@ export function VolumeControls({
   neuroglancerAvailable = true,
   view = "3d", onView, blend = "additive", onBlend, appearance,
 }: {
+  playing?:boolean; onPlayingChange?:(value:boolean)=>void;
   frameReady?:boolean;
   sizeT: number;
   t: number;
@@ -1081,7 +1113,7 @@ export function VolumeControls({
     </label>
 
     {channelWarning && <p className="volume-warning" role="status">{channelWarning}</p>}
-    {sizeT > 1 && <TimePlayback sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
+    {sizeT > 1 && <TimePlayback playing={playing} onPlayingChange={onPlayingChange} sizeT={sizeT} t={t} onT={onT} ready={frameReady} />}
     {sizeT > 1 && <label className="slider">Timepoint <input aria-label="Timepoint" type="range" min="0" max={sizeT - 1} value={t} onChange={(event) => onT(Number(event.target.value))}/><output>{t + 1}/{sizeT}</output></label>}
   </section>;
 }

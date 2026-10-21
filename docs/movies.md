@@ -4,6 +4,17 @@ For data with more than one timepoint, the existing T slider provides playback,
 frame stepping, seeking, adjustable speed and looping. Playback defaults to
 5 frames per second and does not imply an acquisition interval.
 
+Playback holds the current channel intensity limits and slider bounds fixed.
+Intensity sliders, numeric limits, AUTO, FIT and HIST stay disabled throughout
+playback, including while the next frame loads. Statistics refresh resumes when
+playback pauses, finishes or is stopped by frame stepping/seeking; the selected
+contrast remains unchanged until the user adjusts it. This applies in 2D and 3D.
+
+Ordinary HTTP-backed images render immediately with their OMERO source ranges,
+then apply sampled initial AUTO contrast once it is available. Manual ranges
+and contrast restored from a viewer URL are preserved. Opening an image afresh
+from OMERO allows the initial AUTO calculation instead of restoring a saved URL.
+
 **Export movie** renders a selected frame range using the authenticated browser
 loaders and the current compositor. Encoding runs locally in a browser worker
 using WebCodecs and the bundled MP4 muxer. No new rendering service is required.
