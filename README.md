@@ -62,7 +62,7 @@ select optional unsharded OME-Zarr 0.5 with
 Existing imports, HCS plates and shallow segmentation results remain supported.
 Their physical-store registrations keep precedence over the optional HTTP
 provider. Follow the
-[NL-BIOMERO deployment guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md)
+[NL-BIOMERO deployment guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/deployment-nl-biomero.md)
 for integrated installation.
 
 To add the optional pinned HTTP provider to an existing combined web image,
@@ -93,27 +93,26 @@ It preserves the installed BIOMERO/Analysis components and existing storage conf
 Click **Help** in the top toolbar for the searchable viewer guide. The help
 window can be moved and resized while you inspect the image.
 
-See [large-volume loading and memory](docs/large-volumes.md) for engine-specific
+See [large-volume loading and memory](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/large-volumes.md) for engine-specific
 quality estimates, cache behavior and above-budget Neuroglancer levels.
 
 ## Documentation
 
 | For | Guide |
 | --- | --- |
-| Viewer users | [Viewer guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/viewer-guide.md) Â· [Movies](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/movies.md) |
-| Administrators | [Installation](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/installation.md) Â· [Configuration and cache](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/configuration.md) |
-| Deployment | [NL-BIOMERO](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-nl-biomero.md) Â· [OMERO deployment kit](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/deployment-omero-deployment-kit.md) |
-| Data providers | [Supported data and OMERO registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/data-and-registration.md) |
-| Developers | [Development](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/development.md) Â· [API and integrations](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/api.md) Â· [Compatibility checks](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/compatibility-spike.md) |
+| Viewer users | [Viewer guide](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/viewer-guide.md) · [Movies](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/movies.md) |
+| Administrators | [Installation](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/installation.md) · [Configuration and cache](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/configuration.md) |
+| Deployment | [NL-BIOMERO](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/deployment-nl-biomero.md) · [OMERO deployment kit](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/deployment-omero-deployment-kit.md) |
+| Data providers | [Supported data and OMERO registration](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/data-and-registration.md) |
+| Developers | [Development](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/development.md) · [API and integrations](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/api.md) · [Compatibility checks](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/compatibility-spike.md) |
 
 Part of [BIOMERO](https://nl-bioimaging.github.io/NL-BIOMERO/).
 The [published documentation](https://nl-bioimaging.github.io/BIOMERO.ZarrViewer/)
-and guide links track the main branch. For the current candidate, use the
-in-app Help or the guides in this branch.
+tracks the main branch. The guide links above are pinned to version 0.8.1.
 
 ## License and source
 
 Copyright (C) 2026 NL-BioImaging contributors. Licensed under
-[AGPL-3.0-or-later](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/LICENSE). See [NOTICE](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/NOTICE),
-[third-party notices](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/THIRD_PARTY_NOTICES.md) and
-[source provenance](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/main/docs/open-source-provenance.md).
+[AGPL-3.0-or-later](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/LICENSE). See [NOTICE](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/NOTICE),
+[third-party notices](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/THIRD_PARTY_NOTICES.md) and
+[source provenance](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docs/open-source-provenance.md).
