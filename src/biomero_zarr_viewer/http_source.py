@@ -289,10 +289,13 @@ class HttpZarrSource:
             return b"{}"
         return self._read_chunk(level, suffix, meta)
 
-    def _read_chunk(self, level, suffix, meta):
+    def _validate_chunk(self, suffix, meta):
         index = [int(value) for value in suffix.split("/")]
         if len(index) != len(meta["shape"]) or any(i >= (n + c - 1) // c for i, n, c in zip(index, meta["shape"], self.chunk_shape(meta))):
             raise DataNotFound("The virtual Zarr chunk is outside the image")
+
+    def _read_chunk(self, level, suffix, meta):
+        self._validate_chunk(suffix, meta)
         options = {}
         if getattr(provider_views(), "CHUNK_METADATA_API", 0) == 1:
             options = {"array_metadata": meta, "resolution_level": len(self.levels()) - 1 - int(level)}
@@ -351,6 +354,24 @@ class HttpZarrSource:
         source = self
 
         class SourceMapping(MutableMapping):
+            def __contains__(self, key):
+                # Zarr 2 checks membership before reading each chunk. The
+                # MutableMapping default calls __getitem__, fetching pixels
+                # twice. The provider's dense grid can be checked from metadata.
+                if key in (".zgroup", ".zattrs"):
+                    return True
+                match = re.fullmatch(r"(\d+)/(\.zarray|\.zattrs|\d+(?:/\d+)*)", key) if isinstance(key, str) else None
+                if match is None:
+                    return False
+                level, suffix = match.groups()
+                try:
+                    meta = source.array_metadata(level)
+                    if suffix not in (".zarray", ".zattrs"):
+                        source._validate_chunk(suffix, meta)
+                except DataNotFound:
+                    return False
+                return True
+
             def __getitem__(self, key):
                 try:
                     return source.read(key)

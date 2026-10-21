@@ -170,7 +170,15 @@
                        "python_passed":  235,
                        "failed_neuroglancer_requests":  0,
                        "browser_errors":  0,
-                       "biomero_shallow_roi_and_three_label_metadata_routes":  true
+                       "biomero_shallow_roi_and_three_label_metadata_routes":  true,
+                       "python_zarr2":  {
+                                            "skipped":  36,
+                                            "passed":  201
+                                        },
+                       "python_zarr3":  {
+                                            "skipped":  2,
+                                            "passed":  235
+                                        }
                    },
     "provider_commit_unchanged":  "3afc184a9c3dcab090bd4a92effcf5e45ae4c864"
 }

@@ -201,6 +201,8 @@ This uses the ordinary, unsharded
 Responses remain authenticated and private. No full-volume export or shared
 pixel cache is introduced. The 8 MiB decoded-response limit bounds larger
 layouts; source chunks retain the existing input-size limits.
+On Zarr-Python 2, store membership checks also use only grid metadata rather
+than fetching the chunk once for existence and again for its pixels.
 
 Local Windows/Chrome measurements on 21 October 2026 used three fresh browser
 contexts per case, a 1440 × 1000 viewport, warm server filesystem caches, and
