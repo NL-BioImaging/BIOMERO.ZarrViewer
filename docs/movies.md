@@ -21,6 +21,12 @@ using WebCodecs and the bundled MP4 muxer. No new rendering service is required.
 Chrome is the playback acceptance target; encoding support is checked separately
 before starting an export. Progress and cancellation are shown beside export.
 
+The film/download icon in the toolbar opens the export options (tooltip:
+**Export movie**). During export, a visible **Cancel** button remains beside
+the icon, including when the options panel is closed. Cancellation stops the
+active export and restores the controls; a late result from a cancelled export
+is not downloaded.
+
 Exports support intensity channels, slice or declared Z projection, independently
 ordered overlapping raster-label layers, caller-supplied points and lines, and
 tracks with explicit table-column mappings. Track gaps remain gaps; observations

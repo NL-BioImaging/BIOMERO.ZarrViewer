@@ -276,6 +276,7 @@ dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .time-playback label { display:flex; gap:4px; align-items:center; }
 .time-playback input[type=number] { width:54px; }
 .movie-export { position:relative; }
+.movie-export-actions { display:flex; align-items:center; gap:.55rem; }
 .movie-export-panel { position:absolute; z-index:20; right:0; top:42px; width:min(360px,85vw); padding:16px; background:#202437; border:1px solid #454b60; border-radius:6px; box-shadow:0 8px 20px #0008; }
 .movie-export-panel label { display:flex; justify-content:space-between; align-items:center; margin:8px 0; }
 .movie-export-panel input { width:90px; }

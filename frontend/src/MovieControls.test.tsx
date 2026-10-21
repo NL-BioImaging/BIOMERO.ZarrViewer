@@ -2,6 +2,18 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MovieExport, TimePlayback } from "./MovieControls";
 import type { MovieRecipe } from "./movie-recipe";
 import { useState } from 'react';
+import { exportMovie } from './movie-renderer';
+vi.mock('./movie-renderer',async original=>({...await original<any>(),exportMovie:vi.fn()}));
+
+test('movie export has an icon-only trigger with an accessible name and tooltip',()=>{
+  const recipe={panels:[{field:'.',roi:[0,0,32,32]}]} as MovieRecipe;
+  render(<MovieExport imageId={42} sizeT={4} recipe={recipe}/>);
+  const button=screen.getByRole('button',{name:'Export movie'});
+  expect(button).toHaveAttribute('title','Export movie');
+  expect(button.textContent).toBe('');expect(button.querySelector('svg')).toHaveAttribute('aria-hidden','true');
+  fireEvent.click(button);expect(button).toHaveAttribute('aria-expanded','true');
+  expect(screen.getByRole('region',{name:'Export movie'})).toBeInTheDocument();
+});
 
 test('controlled playback reports automatic stop and frame stepping',()=>{
   const changed=vi.fn();
@@ -39,16 +51,37 @@ test("playback waits for the current frame and never queues multiple loads",()=>
   } finally {vi.useRealTimers();}
 });
 
-test("stopping a 3D export restores the controls and reports a readable status",async()=>{
+test.each(['2D','3D'])("cancelling a %s export restores controls even with its panel closed",async mode=>{
   const onBusy=vi.fn(),exporter=vi.fn((_recipe:MovieRecipe,signal:AbortSignal)=>new Promise<any>((_resolve,reject)=>{
     signal.addEventListener('abort',()=>reject(new DOMException('signal is aborted without reason','AbortError')),{once:true});
   }));
   const recipe:MovieRecipe={sequence:{version:1,start:0,end:3,fps:5},viewCapture:{version:1,space:'screen',renderer:'viv',mode:'orthogonal',quality:0,settings:{}},
     panels:[{field:'.',roi:[0,0,512,256],sourceChannels:[1],z:0,t:0,overlays:[]}]};
-  render(<MovieExport imageId={42} sizeT={4} recipe={recipe} exporter={exporter} onBusy={onBusy}/>);
+  vi.mocked(exportMovie).mockImplementation(exporter as any);
+  render(<MovieExport imageId={42} sizeT={4} recipe={recipe} exporter={mode==='3D'?exporter:undefined} onBusy={onBusy}/>);
   fireEvent.click(screen.getByRole('button',{name:'Export movie'}));fireEvent.click(screen.getByRole('button',{name:'Create MP4'}));
   expect(onBusy).toHaveBeenLastCalledWith(true);expect(screen.getByRole('spinbutton',{name:'Last frame'})).toBeDisabled();
-  fireEvent.click(screen.getByRole('button',{name:'Stop'}));
-  await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent('Movie export stopped.'));
+  // Closing the options must not hide or disable cancellation.
+  fireEvent.click(screen.getByRole('button',{name:'Export movie'}));
+  expect(screen.queryByRole('region',{name:'Export movie'})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button',{name:'Cancel movie export'}));
+  await waitFor(()=>expect(onBusy).toHaveBeenLastCalledWith(false));
+  fireEvent.click(screen.getByRole('button',{name:'Export movie'}));
+  expect(screen.getByRole('status')).toHaveTextContent('Movie export cancelled.');
   expect(onBusy).toHaveBeenLastCalledWith(false);expect(screen.getByRole('button',{name:'Create MP4'})).toBeEnabled();expect(exporter).toHaveBeenCalledOnce();
+});
+
+test('a cancelled export cannot offer a late completed movie for download',async()=>{
+  let finish!:(value:any)=>void;
+  const exporter=vi.fn(()=>new Promise<any>(resolve=>{finish=resolve;}));
+  const recipe={sequence:{version:1,start:0,end:3,fps:5},panels:[{field:'.',roi:[0,0,32,32]}]} as MovieRecipe;
+  render(<MovieExport imageId={42} sizeT={4} recipe={recipe} exporter={exporter}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Export movie'}));
+  fireEvent.click(screen.getByRole('button',{name:'Create MP4'}));
+  fireEvent.click(screen.getByRole('button',{name:'Cancel movie export'}));
+  expect(screen.getByRole('button',{name:'Cancel movie export'})).toBeDisabled();
+  await act(async()=>finish({data:new ArrayBuffer(0),poster:new ArrayBuffer(0),provenance:{frameCount:4}}));
+  expect(screen.getByRole('status')).toHaveTextContent('Movie export cancelled.');
+  expect(screen.queryByRole('button',{name:'Download MP4'})).not.toBeInTheDocument();
+  expect(screen.getByRole('button',{name:'Create MP4'})).toBeEnabled();
 });
