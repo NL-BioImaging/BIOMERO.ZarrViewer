@@ -58,6 +58,41 @@ Set `BIOMERO_ZARR_VIEWER_ENABLED=FALSE` and recreate `omeroweb` to unregister
 the viewer. Nginx remains the normal OMERO.web frontend when the viewer is
 disabled.
 
+## Metadata document limit
+
+Large segmentation provenance and consolidated JSON metadata can exceed the
+viewer package's 4 MiB default per document. Raise the existing OMERO setting
+through deployment configuration; no new viewer release or image build is
+needed. For a 1 GiB ceiling, add to the deployment's `.env`:
+
+```ini
+BIOMERO_ZARR_MAX_METADATA_BYTES=1073741824
+```
+
+The deployment must forward that value in the `omeroweb` environment:
+
+```yaml
+CONFIG_omero_web_zarr__viewer_max__metadata__bytes: "${BIOMERO_ZARR_MAX_METADATA_BYTES:-1073741824}"
+```
+
+Use this entry in the service or append the deployment repository's
+`deployment_scenarios/docker-compose-zarrviewer-limits.yml` overlay to the
+existing Compose command, preserving the deployment's other overlays. Recreate
+only `omeroweb` with `up -d --no-deps --no-build omeroweb`. Slurm and workflow
+workers can continue running; web users may need to sign in again.
+
+Verify the effective setting:
+
+```sh
+docker compose exec omeroweb /opt/omero/web/venv3/bin/omero config get \
+    omero.web.zarr_viewer.max_metadata_bytes
+```
+
+Expect `1073741824`. Keep the environment/Compose setting for persistence when
+recreating the container. This ceiling applies to JSON metadata, while pixels
+continue to be read in chunks. See [configuration](configuration.md#metadata-document-size)
+for direct OMERO settings and memory considerations.
+
 ## Optional pinned HTTP-Zarr provider in an existing BIOMERO stack
 
 Use [`docker/Dockerfile.biomero`](https://github.com/NL-BioImaging/BIOMERO.ZarrViewer/blob/v0.8.1/docker/Dockerfile.biomero)

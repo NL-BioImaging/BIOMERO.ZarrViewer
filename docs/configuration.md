@@ -36,6 +36,42 @@ omero config set omero.web.zarr_viewer.render_max_overlays 8
 omero config set omero.web.zarr_viewer.render_max_aggregate_pixels 25000000
 ```
 
+## Metadata document size
+
+`omero.web.zarr_viewer.max_metadata_bytes` is an existing deployment setting.
+The package default is 4 MiB **per JSON metadata document**. To accept larger
+segmentation provenance or consolidated metadata, for example with a 1 GiB
+ceiling:
+
+```sh
+omero config set omero.web.zarr_viewer.max_metadata_bytes 1073741824
+omero config get omero.web.zarr_viewer.max_metadata_bytes
+```
+
+Restart OMERO.web to load the changed value. This requires no new viewer
+release, frontend build or package rebuild. Pixel data continues to be read in
+chunks; parsing large JSON documents consumes memory proportional to their size.
+
+For a generic OMERO.web Docker image, persist the value through its existing
+configuration startup interface:
+
+```yaml
+services:
+  omeroweb:
+    environment:
+      CONFIG_omero_web_zarr__viewer_max__metadata__bytes: "${BIOMERO_ZARR_MAX_METADATA_BYTES:-1073741824}"
+```
+
+In `.env`, set `BIOMERO_ZARR_MAX_METADATA_BYTES=1073741824`. The `CONFIG_` name
+encodes dots as single underscores and literal underscores as double
+underscores. It sets the viewer's registered OMERO/Django setting; merely
+passing a plain process environment variable with the internal setting's name
+does not configure a generic OMERO.web container.
+
+Keep the deployment's other Compose options and recreate only `omeroweb`.
+See [NL-BIOMERO deployment](deployment-nl-biomero.md#metadata-document-limit)
+for the optional deployment overlay and verification command.
+
 ## Shared volume and plate-preview cache
 
 Set these environment variables on the OMERO.web service and mount a persistent,
