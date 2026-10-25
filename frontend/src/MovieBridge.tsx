@@ -8,12 +8,15 @@ export function MovieBridge() {
   useEffect(() => {
     const nonce = new URLSearchParams(location.search).get('nonce');
     const imageId = selectedImageId();
+    // Analysis may use a separate window when Chrome cannot load an embedded
+    // renderer. The source window, exact origin and per-export nonce must match.
+    const host = window.opener || window.parent;
     let controller: AbortController | undefined;
     const send = (type: string, value?: unknown, transfer: Transferable[] = []) => {
-      window.parent.postMessage({ source: 'zarr-movie', nonce, type, value }, location.origin, transfer);
+      host.postMessage({ source: 'zarr-movie', nonce, type, value }, location.origin, transfer);
     };
     const receive = async (event: MessageEvent) => {
-      if (!nonce || !imageId || event.origin !== location.origin || event.source !== window.parent ||
+      if (!nonce || !imageId || event.origin !== location.origin || event.source !== host ||
           event.data?.source !== 'analysis-movie' || event.data.nonce !== nonce) return;
       if (event.data.type === 'cancel') { controller?.abort(); return; }
       if (event.data.type !== 'render' || controller) return;

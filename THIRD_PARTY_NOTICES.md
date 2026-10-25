@@ -7,7 +7,7 @@ listed below. Each package remains subject to its upstream license. This file
 is generated from `frontend/package-lock.json` and the legal files installed
 with the non-development npm packages.
 
-Generated for frontend version `0.8.0` with 228 production packages.
+Generated for frontend version `0.8.1` with 228 production packages.
 
 ## Package inventory
 

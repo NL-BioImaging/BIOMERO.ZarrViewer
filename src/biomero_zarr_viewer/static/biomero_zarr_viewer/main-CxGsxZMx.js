@@ -29022,9 +29022,9 @@ class S$ {
     let i = this._modules[e];
     if (!i)
       if (e === "webgl")
-        i = this.add("webgl", import("./index-CA0d1jP6.js"));
+        i = this.add("webgl", import("./index-Fwjbb4cW.js"));
       else if (e === "webgpu")
-        i = this.add("webgpu", import("./index-CkLOSxbc.js"));
+        i = this.add("webgpu", import("./index-B8nlf_Lh.js"));
       else
         throw new Error(`${e} backend not registered`);
     const r = (await i)[n];
@@ -34883,19 +34883,19 @@ const du = {
 function Us(t, e) {
   Array.isArray(t) || (t = [t]), t.forEach((n) => nY.set(n, e));
 }
-Us([void 0, 1], () => import("./raw-DLqYXUlv.js").then((t) => t.default));
-Us(5, () => import("./lzw-DvBgpnRo.js").then((t) => t.default));
+Us([void 0, 1], () => import("./raw-CRtw1ezF.js").then((t) => t.default));
+Us(5, () => import("./lzw-D6yyJhM3.js").then((t) => t.default));
 Us(6, () => {
   throw new Error("old style JPEG compression is not supported.");
 });
-Us(7, () => import("./jpeg-CqWUN9eM.js").then((t) => t.default));
-Us([8, 32946], () => import("./deflate-cJyVtVAW.js").then((t) => t.default));
-Us(32773, () => import("./packbits-OFDnVtO7.js").then((t) => t.default));
+Us(7, () => import("./jpeg-C8B80iaB.js").then((t) => t.default));
+Us([8, 32946], () => import("./deflate-BFA4Dy1c.js").then((t) => t.default));
+Us(32773, () => import("./packbits-DtimfEdf.js").then((t) => t.default));
 Us(
   34887,
-  () => import("./lerc-Dr4tWdll.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
+  () => import("./lerc-C5e2UNjI.js").then(async (t) => (await t.zstd.init(), t)).then((t) => t.default)
 );
-Us(50001, () => import("./webimage-CS5UhqIJ.js").then((t) => t.default));
+Us(50001, () => import("./webimage-B5wt8fjV.js").then((t) => t.default));
 function iY(t, e) {
   let n = t.length - e, i = 0;
   do {
@@ -52756,34 +52756,34 @@ async function sM(t, e, n, i) {
 }
 function Hte() {
   return L.useEffect(() => {
-    const t = new URLSearchParams(location.search).get("nonce"), e = DI();
-    let n;
-    const i = (r, a, c = []) => {
-      window.parent.postMessage({ source: "zarr-movie", nonce: t, type: r, value: a }, location.origin, c);
-    }, s = async (r) => {
-      if (!(!t || !e || r.origin !== location.origin || r.source !== window.parent || r.data?.source !== "analysis-movie" || r.data.nonce !== t)) {
-        if (r.data.type === "cancel") {
-          n?.abort();
+    const t = new URLSearchParams(location.search).get("nonce"), e = DI(), n = window.opener || window.parent;
+    let i;
+    const s = (a, c, u = []) => {
+      n.postMessage({ source: "zarr-movie", nonce: t, type: a, value: c }, location.origin, u);
+    }, r = async (a) => {
+      if (!(!t || !e || a.origin !== location.origin || a.source !== n || a.data?.source !== "analysis-movie" || a.data.nonce !== t)) {
+        if (a.data.type === "cancel") {
+          i?.abort();
           return;
         }
-        if (!(r.data.type !== "render" || n)) {
-          n = new AbortController();
+        if (!(a.data.type !== "render" || i)) {
+          i = new AbortController();
           try {
-            const a = await iM(
+            const c = await iM(
               e,
-              r.data.recipe,
-              n.signal,
-              (c, u) => i("progress", { completed: c, total: u })
+              a.data.recipe,
+              i.signal,
+              (u, d) => s("progress", { completed: u, total: d })
             );
-            i("complete", a, [a.data, a.poster]);
-          } catch (a) {
-            i("error", a instanceof Error ? a.message : String(a));
+            s("complete", c, [c.data, c.poster]);
+          } catch (c) {
+            s("error", c instanceof Error ? c.message : String(c));
           }
         }
       }
     };
-    return window.addEventListener("message", s), i("ready"), () => {
-      n?.abort(), window.removeEventListener("message", s);
+    return window.addEventListener("message", r), s("ready"), () => {
+      i?.abort(), window.removeEventListener("message", r);
     };
   }, []), /* @__PURE__ */ C.jsx("p", { role: "status", children: "Preparing movie…" });
 }

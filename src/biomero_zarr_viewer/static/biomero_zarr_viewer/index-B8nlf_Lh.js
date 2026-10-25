@@ -1,6 +1,6 @@
 import { c as N } from "./expression-BRUWrVmQ.js";
-import { d as f, e as v, r as m, f as k, A as M, h as V, i as L, b as S, G as z, j as y, k as R, C as $, l as _ } from "./main-DFoXhkb3.js";
-import { m as fe } from "./main-DFoXhkb3.js";
+import { d as f, e as v, r as m, f as k, A as M, h as V, i as L, b as S, G as z, j as y, k as R, C as $, l as _ } from "./main-CxGsxZMx.js";
+import { m as fe } from "./main-CxGsxZMx.js";
 const B = `fn arithmetic_add(x: {TYPE}, y: {TYPE}) -> {TYPE} {
   return x + y;
 }
