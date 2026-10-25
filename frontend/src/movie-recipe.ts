@@ -1,5 +1,5 @@
 export const DEFAULT_MOVIE_FPS = 5;
-export const MAX_MOVIE_FRAMES = 600;
+export const MAX_MOVIE_FRAMES = 2000;
 export const MAX_MOVIE_BYTES = 256 * 1024 * 1024;
 export interface MovieVector {
   kind: 'point' | 'line'; x: number; y: number; x2?: number; y2?: number;

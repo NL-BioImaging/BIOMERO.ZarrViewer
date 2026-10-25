@@ -34,7 +34,7 @@ are never interpolated automatically. Trails and current-position markers are
 bounded and use stable colors. Crops use source pixel coordinates and preserve
 their offsets. Scale-bar labels fit the exported panel.
 
-Initial limits are 600 frames, 2048 by 2048 pixels, and the smaller of 256 MiB or
+Initial limits are 2000 frames, 2048 by 2048 pixels, and the smaller of 256 MiB or
 the caller's upload limit. Processing is sequential and decoded frames are not
 retained for the entire sequence. Projection loading also reduces slices
 incrementally rather than requesting every slice at once.

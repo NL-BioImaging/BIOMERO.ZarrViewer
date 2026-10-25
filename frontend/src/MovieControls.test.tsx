@@ -85,3 +85,12 @@ test('a cancelled export cannot offer a late completed movie for download',async
   expect(screen.queryByRole('button',{name:'Download MP4'})).not.toBeInTheDocument();
   expect(screen.getByRole('button',{name:'Create MP4'})).toBeEnabled();
 });
+
+
+test('movie export defaults to all available frames up to 2000', () => {
+  const recipe={panels:[{field:'.',roi:[0,0,32,32]}]} as MovieRecipe;
+  render(<MovieExport imageId={42} sizeT={2500} recipe={recipe}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Export movie'}));
+  expect(screen.getByLabelText('Last frame')).toHaveValue(2000);
+  expect(screen.getByText(/Maximum 2000 frames/)).toBeInTheDocument();
+});

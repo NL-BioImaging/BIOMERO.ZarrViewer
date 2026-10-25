@@ -3,7 +3,7 @@ import { MovieExport, TimePlayback } from "./MovieControls";
 import { exportVolumeMovie, waitForVolumeFrame } from "./volume-movie";
 import { viewerContextId } from "./viewer-context";
 import { ViewerHelp } from "./HelpWindow";
-import { visibleMovieCrop, type MovieRecipe } from "./movie-recipe";
+import { visibleMovieCrop, MAX_MOVIE_FRAMES, type MovieRecipe } from "./movie-recipe";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { loadOmeZarrFromStore, getDefaultInitialViewState } from "@hms-dbmi/viv";
 import { capabilityCalibration } from "./calibration";
@@ -684,7 +684,7 @@ export default function App() {
               ...(effectiveRenderMode==="3d"?{viewCapture:{version:1,space:"screen",renderer:useNeuroglancer?"neuroglancer":"viv",mode:volumeView,quality:selectedVolumeLevel!.index,
                 settings:{brightness:volumeBrightness,blend:volumeBlend,gain:volumeGain,navigation,camera:useNeuroglancer?sharedNgCamera:sharedVivCamera,scaleBar:showScale,clipping:volumeView==='3d'?clipping:undefined,
                   renderedChannels:(useNeuroglancer?channels.filter(c=>c.visible).slice(0,10):volumeChannels).map(c=>c.index),labelsRendered:useNeuroglancer}}}:{}),
-              filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, 600) - 1, fps: 5 },
+              filename: capability.image.name, sequence: { version: 1, start: 0, end: Math.min(currentLoaded.sizeT, MAX_MOVIE_FRAMES) - 1, fps: 5 },
               panels: [{ field, roi: effectiveRenderMode==="3d"?[0,0,...volumeMovieSize]:visibleMovieCrop(axisSize(currentLoaded.image, "x"), axisSize(currentLoaded.image, "y"), sharedViewport, viewerSize),
                 sourceChannels: channels.filter(channel => channel.visible).map(channel => channel.index + 1),
                 channelSettings: channels, t: tIndex, z: zIndex, projection, scaleBar: showScale,

@@ -67,6 +67,6 @@ For MP4, require `zarr-movie-v1`, add `sequence={version:1,start,end,fps:5}`
 and return the existing recipe with `omero_analysis_render_format="mp4"`.
 ZarrViewer renders native-pixel tiles in the browser and encodes in a worker;
 no new server encoder or workflow service is needed. Defaults are 5 FPS,
-600 frames, 2048 x 2048 pixels, and 256 MiB or the smaller upload limit.
+2000 frames, 2048 x 2048 pixels, and 256 MiB or the smaller upload limit.
 Keep acquisition timing distinct. `tracks` uses explicit caller-supplied rows
 and id/x/y/t/z column mappings; missing observations remain gaps.

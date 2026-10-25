@@ -7,8 +7,12 @@ const recipe = (): MovieRecipe => ({ storeUuid: 'a2aa135b-9c87-4455-bb12-34a86e3
 test('movie defaults to 5 FPS and validates actual frame count and bounds', () => {
   expect(movieSequence(recipe(), 19)).toMatchObject({ fps: 5, frames: 19 });
   expect(() => movieSequence(recipe(), 10)).toThrow('range');
-  const value = recipe(); value.sequence.end = 600;
-  expect(() => movieSequence(value)).toThrow('600');
+  const value = recipe(); value.sequence.end = 1999;
+  expect(movieSequence(value).frames).toBe(2000);
+  value.sequence.end = 2000;
+  expect(() => movieSequence(value)).toThrow('2000');
+  value.sequence.end = 3999; value.sequence.step = 2;
+  expect(movieSequence(value).frames).toBe(2000);
   value.sequence.end = 5; value.sequence.step = 2;
   expect(movieSequence(value).frames).toBe(3);
 });
