@@ -11,11 +11,100 @@ from biomero_zarr_viewer.metadata import read_store_uuid
 from biomero_zarr_viewer.errors import InvalidMetadata
 from biomero_zarr_viewer.resolver import resolve_image_store
 from biomero_zarr_viewer.views import capabilities, plate_capabilities, render_png, render_svg, roi_png
-from .conftest import write_json, write_v2_image
+from .conftest import write_json, write_v2_image, write_v3_image
 from .fakes import FakeConnection, FakeImage, FakeOriginalFile, FakeParent, FakeWellSample
 from .test_views import _request, _write_renderable_store
 
 RESULT_UUID = "1a7792d6-f8d0-430d-b495-45975f02be82"
+
+
+@pytest.mark.parametrize("writer", [write_v2_image, write_v3_image])
+def test_common_identity_for_an_unknown_workflow(tmp_path, writer):
+    from biomero_zarr_viewer.metadata import inspect_store
+
+    root = writer(tmp_path / "new-workflow.zarr")
+    path = root / (".zattrs" if writer is write_v2_image else "zarr.json")
+    document = json.loads(path.read_text())
+    attrs = document if writer is write_v2_image else document["attributes"]
+    attrs.update({"biomero": {"result": {"schema_version": 1, "output_store_uuid": RESULT_UUID.upper()}},
+                  "never_seen_before": {"version": "1.0"},
+                  "citrackastra": {"output_store_uuid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"}})
+    write_json(path, document)
+    assert read_store_uuid(root) == RESULT_UUID
+    assert inspect_store(root)["store_uuid"] == RESULT_UUID
+
+
+@pytest.mark.parametrize("identity", [None, "", "bad"])
+def test_common_identity_never_falls_back_to_inherited_producers(configure_storage, identity):
+    _, mount = configure_storage
+    conn, root = shallow_connection(mount, 2)
+    write_json(root / ".zattrs", {"biomero": {"result": {"schema_version": 1, "output_store_uuid": identity}},
+                                "citrackastra": {"output_store_uuid": RESULT_UUID},
+                                "cisegmentation": {"output_store_uuid": RESULT_UUID}})
+    response = capabilities(_request("/"), 42, conn=conn)
+    assert response.status_code == (422 if identity == "bad" else 200)
+    if identity != "bad":
+        assert json.loads(response.content)["store"]["uuid"] is None
+
+
+@pytest.mark.parametrize("result", [None, [], {}, {"schema_version": True}, {"schema_version": "1"},
+                                   {"schema_version": 2, "output_store_uuid": RESULT_UUID}])
+def test_malformed_or_future_contract_is_not_treated_as_legacy(tmp_path, result):
+    write_json(tmp_path / ".zattrs", {"biomero": {"result": result},
+                                      "cisegmentation": {"output_store_uuid": RESULT_UUID}})
+    with pytest.raises(InvalidMetadata):
+        read_store_uuid(tmp_path)
+
+
+def test_other_biomero_metadata_does_not_disable_legacy_identity(tmp_path):
+    write_json(tmp_path / ".zattrs", {"biomero": {"other": "metadata"},
+                                      "cisegmentation": {"output_store_uuid": RESULT_UUID}})
+    assert read_store_uuid(tmp_path) == RESULT_UUID
+
+
+@pytest.mark.parametrize("shallow", [False, True])
+def test_tracking_identity_overrides_inherited_segmentation_identity(configure_storage, shallow):
+    _, mount = configure_storage
+    if shallow:
+        conn, root = shallow_connection(mount, 2)
+    else:
+        root = write_v2_image(mount / "tracking.zarr")
+        conn = FakeConnection(image=FakeImage(42, ".", [FakeOriginalFile("/recorded/tracking.zarr/", ".zattrs")]))
+    attrs = json.loads((root / ".zattrs").read_text())
+    attrs.update(cisegmentation={"output_store_uuid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"},
+                 citrackastra={"output_store_uuid": RESULT_UUID})
+    write_json(root / ".zattrs", attrs)
+    response = capabilities(_request("/"), 42, conn=conn)
+    assert response.status_code == 200
+    assert json.loads(response.content)["store"]["uuid"] == RESULT_UUID
+
+
+@pytest.mark.parametrize("identity", [None, "", "bad"])
+def test_tracking_identity_never_falls_back_to_earlier_segmentation(configure_storage, identity):
+    _, mount = configure_storage
+    conn, root = shallow_connection(mount, 2)
+    write_json(root / ".zattrs", {"cisegmentation": {"output_store_uuid": RESULT_UUID},
+                                "citrackastra": {"output_store_uuid": identity}})
+    response = capabilities(_request("/"), 42, conn=conn)
+    if identity == "bad":
+        assert response.status_code == 422
+        assert json.loads(response.content)["error"]["code"] == "invalid_ome_zarr_metadata"
+    else:
+        assert response.status_code == 200
+        assert json.loads(response.content)["store"]["uuid"] is None
+
+
+def test_tracking_render_still_rejects_an_inherited_source_uuid(configure_storage):
+    _, mount = configure_storage
+    conn, root = shallow_connection(mount, 2)
+    write_json(root / ".zattrs", {"citrackastra": {"output_store_uuid": RESULT_UUID}})
+    panel = {"field": ".", "roi": [1, 1, 7, 7], "sourceChannels": [1], "t": 1, "z": 1, "overlays": []}
+    def request(identity):
+        return _request("/", method="post", data=json.dumps({"storeUuid": identity, "panels": [panel]}), content_type="application/json")
+    assert render_png(request(RESULT_UUID), 42, conn=conn).status_code == 200
+    mismatch = render_png(request("3935615d-a18d-41d8-af04-e63cfec3a46c"), 42, conn=conn)
+    assert mismatch.status_code == 409
+    assert json.loads(mismatch.content)["error"]["code"] == "store_uuid_mismatch"
 
 
 def shallow_connection(mount, schema, *, plate=False, labels=True):
@@ -78,9 +167,12 @@ def test_result_identity_survives_pixel_redirection(configure_storage, schema, p
 
 
 @pytest.mark.parametrize("endpoint", [render_png, render_svg, roi_png])
-def test_render_uses_result_uuid_and_rejects_pixel_source_uuid(configure_storage, endpoint):
+@pytest.mark.parametrize("common_contract", [False, True])
+def test_render_uses_result_uuid_and_rejects_pixel_source_uuid(configure_storage, endpoint, common_contract):
     _, mount = configure_storage
-    conn, _ = shallow_connection(mount, 2)
+    conn, root = shallow_connection(mount, 2)
+    if common_contract:
+        write_json(root / ".zattrs", {"biomero": {"result": {"schema_version": 1, "output_store_uuid": RESULT_UUID}}})
     recipe = {"storeUuid": RESULT_UUID, "panels": [{"field": ".", "roi": [1, 1, 7, 7],
               "sourceChannels": [1], "t": 1, "z": 1, "overlays": [{
                   "labelPath": "labels/cells", "values": [7], "mode": "outline", "color": "#FFFF00"}]}]}

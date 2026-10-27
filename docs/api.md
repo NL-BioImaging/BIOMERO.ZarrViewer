@@ -75,8 +75,40 @@ schema-v3 databases supply the portable store UUID, field, label, object value,
 coordinates, and originating channels. The skill never invents an OMERO ID or
 hard-codes a consumer route.
 
-For shallow segmentation results, the UUID comes from the result store's own
-`cisegmentation.output_store_uuid` root metadata. Image pixels still come from
+Result identities use the workflow-independent root attribute contract below.
+The workflow creates one UUID per output store and writes that same UUID to its
+measurement/tracking database and portable render recipes. No workflow name or
+viewer plugin registration is needed.
+
+```json
+{
+  "biomero": {
+    "result": {
+      "schema_version": 1,
+      "output_store_uuid": "1a7792d6-f8d0-430d-b495-45975f02be82"
+    }
+  }
+}
+```
+
+Write this in the result root's `.zattrs` for Zarr v2 or the root `zarr.json`
+`attributes` for Zarr v3. It applies to standalone images, plates and shallow
+results. When copying a source store, replace its `biomero.result` with the new
+result identity, preserving unrelated metadata. Retaining the source identity
+would bind a database to the wrong result. Importers and shallow normalization
+must preserve this metadata; they must not generate a replacement UUID because
+the database already refers to the workflow's UUID.
+
+The common contract is authoritative. Missing/empty UUIDs remain unknown;
+malformed UUIDs, malformed contracts and unsupported schema versions are errors.
+They never trigger a search for an inherited producer/source UUID. When the
+common contract is absent, legacy `citrackastra.output_store_uuid` and then
+`cisegmentation.output_store_uuid` remain supported. A tracking declaration takes
+precedence over inherited segmentation metadata, even when its UUID is missing.
+Arbitrary provenance objects are not searched for candidate UUIDs.
+
+For shallow results, identity is read only from the logical result root.
+Image pixels still come from
 the canonical source, and label pixels follow the manifest's declared routes.
 Capabilities and PNG/SVG exports use the same result identity. A missing result
 UUID remains unknown; it never inherits the original image store's UUID.
