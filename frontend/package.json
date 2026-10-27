@@ -38,7 +38,7 @@
     "playwright-core": "1.62.0",
     "typescript": "5.9.3",
     "vite": "7.3.7",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   },
   "overrides": {
     "ikonate": {
@@ -52,6 +52,7 @@
       "texture-compressor": "npm:dry-uninstall@0.3.0"
     },
     "image-size": "2.0.4",
-    "nanoid": "3.3.18"
+    "nanoid": "3.3.18",
+    "zod": "4.6.7"
   }
 }
