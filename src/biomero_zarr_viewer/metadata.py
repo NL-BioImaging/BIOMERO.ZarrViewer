@@ -377,7 +377,7 @@ def read_store_uuid(root):
     return _store_uuid(attributes)
 
 
-def inspect_store(root, recorded_files=()):
+def inspect_store(root, recorded_files=(), *, include_store_identity=True):
     root = Path(root)
     if (root / ".zgroup").is_file():
         group = _read_json(root / ".zgroup")
@@ -410,7 +410,7 @@ def inspect_store(root, recorded_files=()):
     if version and version != expected:
         raise UnsupportedStore(f"OME-Zarr {version} is not supported with Zarr v{zarr_format}")
     version = expected
-    store_uuid = _store_uuid(root_attributes)
+    store_uuid = _store_uuid(root_attributes) if include_store_identity else None
 
     if isinstance(metadata.get("plate"), dict):
         plate = _plate_model(root, metadata["plate"], version, recorded_files)

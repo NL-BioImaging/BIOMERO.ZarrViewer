@@ -18,13 +18,23 @@ trusted analysis source; ZarrViewer does not inspect the source's schema.
 CISegmentation is one optional source and its portable database deliberately
 does not store OMERO object IDs.
 
-When both sides provide an identity, require:
+For notebook overlays use `source: {kind: "image-input"}`. The host uses the
+selected workspace Image's OMERO ID, or opens a chooser for multiple inputs.
+An optional `imageId` must be in that selection. Images and track/measurement
+tables are independent inputs: no workflow metadata, matching UUID or importer
+relationship is required. Validate dimensions, channel/plane/frame ranges and
+native-pixel coordinates. Technical compatibility cannot prove biological
+correspondence. Runtime access checks and change-detection digests are supplied
+by the host and require no producer conventions.
+
+Only for an explicitly requested legacy `storeUuid` binding, require:
 
 ```text
 measurement_runs.output_store_uuid == viewer store UUID
 ```
 
-Do not navigate or render when these values differ.
+Do not use that legacy binding when these values differ. This rule does not
+apply to the user's independent image-input overlay choice.
 
 For shallow segmentation results, the measured output UUID belongs to the
 result store even when original pixels are read from a canonical source.
@@ -138,7 +148,7 @@ viewer or carry OMERO credentials:
 result = {
     "omero_analysis_render_format": "png",  # or "svg"
     "omero_analysis_render_recipe": {
-        "storeUuid": store_uuid,
+        "source": {"kind": "image-input"},
         "filename": "selected-track.png",
         "panels": [{
             "field": field,
@@ -154,8 +164,8 @@ result = {
 }
 ```
 
-Analysis validates the one-panel bounds, resolves `storeUuid` in the current
-OMERO group, and sends the recipe to ZarrViewer. The PNG/SVG appears in the
+Analysis validates the one-panel bounds, resolves the user's selected workspace
+Image ID in the current group, and sends the recipe to ZarrViewer. The PNG/SVG appears in the
 notebook's saved results. Other callers may POST the same recipe directly to
 the authenticated renderer.
 
@@ -260,7 +270,8 @@ gallery panel.
 
 - Missing active OMERO context: ask the user to select the output Image or
   Plate.
-- UUID mismatch: stop and explain that the database belongs to another output.
+- UUID mismatch in a legacy UUID recipe: stop. Image-input recipes do not
+  require a relationship between the database and the selected image.
 - Missing schema-v3 navigation fields: inspect older tables and explain that
   automatic navigation may be incomplete.
 - Unknown field, label, channel, Z/T plane, or out-of-bounds ROI: report the

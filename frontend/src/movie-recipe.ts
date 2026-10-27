@@ -15,8 +15,14 @@ export interface MoviePanel {
 }
 export interface MovieRecipe {
   viewCapture?: {version:1; space:'screen'; renderer:string; mode:string; quality:number; settings:Record<string,unknown>};
-  version?: 2; storeUuid?: string; sourceBinding?: string; source?: { kind: "current-image" }; filename?: string; title?: string; panels: MoviePanel[];
+  version?: 2; storeUuid?: string; sourceBinding?: string; source?: { kind: "current-image" } | { kind: "image-input"; imageId?: number }; filename?: string; title?: string; panels: MoviePanel[];
   sequence: { version: 1; start: number; end: number; step?: number; fps?: number; maxBytes?: number; trailFrames?: number };
+}
+
+export function movieUsesImageInput(recipe: MovieRecipe): boolean {
+  // Existing viewer exports can carry both current-image and a store UUID.
+  return recipe.source?.kind === 'image-input' ||
+    recipe.source?.kind === 'current-image' && !recipe.storeUuid;
 }
 
 export function visibleMovieCrop(width: number, height: number, viewport?: { x: number; y: number; zoom: number },
@@ -55,6 +61,25 @@ export function movieSequence(recipe: MovieRecipe, sizeT?: number) {
   const trailFrames = value.trailFrames ?? 10;
   if (!Number.isInteger(trailFrames) || trailFrames < 0 || trailFrames > MAX_MOVIE_FRAMES) throw new Error('Invalid track trail length.');
   return { fps, step, frames, maxBytes, trailFrames, width: x1 - x0, height: y1 - y0 };
+}
+
+/** Check geometry against the selected image, independently of its producer. */
+export function validateMovieGeometry(recipe: MovieRecipe, size: {x: number; y: number; z: number; t: number; c: number}): MovieVector[] {
+  movieSequence(recipe, size.t);
+  const panel = recipe.panels[0];
+  if (panel.roi[2] > size.x || panel.roi[3] > size.y || panel.z >= size.z ||
+      panel.sourceChannels.some(c => c > size.c)) {
+    throw new Error('The requested crop, Z plane or channel does not fit the selected image.');
+  }
+  const vectors = mappedTrackVectors(panel);
+  for (const v of vectors) {
+    const coordinates = v.kind === 'line' ? [[v.x, v.y], [v.x2, v.y2]] : [[v.x, v.y]];
+    if (!Number.isInteger(v.t) || v.t < 0 || v.t >= size.t || !Number.isInteger(v.z) || v.z < 0 || v.z >= size.z ||
+        coordinates.some(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y) || x! < 0 || y! < 0 || x! >= size.x || y! >= size.y)) {
+      throw new Error('Track coordinates or frame/Z indices do not fit the selected image. Check the input image and coordinate mapping.');
+    }
+  }
+  return vectors;
 }
 
 /** Explicit mappings only. A missing timepoint is a gap, never an interpolated link. */

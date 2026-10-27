@@ -75,7 +75,15 @@ schema-v3 databases supply the portable store UUID, field, label, object value,
 coordinates, and originating channels. The skill never invents an OMERO ID or
 hard-codes a consumer route.
 
-Result identities use the workflow-independent root attribute contract below.
+For user-selected image overlays, the ordinary OMERO Image ID identifies the
+displayed image. Analysis accepts `source: {kind: "image-input"}` and selects that
+ID from workspace inputs. Images and track/measurement tables are independent;
+no workflow metadata or source/result relationship is required. Technical bounds
+and coordinate checks cannot establish biological correspondence.
+
+### Optional UUID result identities
+
+Existing identity-based consumers may use the root attribute contract below.
 The workflow creates one UUID per output store and writes that same UUID to its
 measurement/tracking database and portable render recipes. No workflow name or
 viewer plugin registration is needed.

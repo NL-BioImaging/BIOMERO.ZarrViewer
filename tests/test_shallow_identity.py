@@ -18,6 +18,25 @@ from .test_views import _request, _write_renderable_store
 RESULT_UUID = "1a7792d6-f8d0-430d-b495-45975f02be82"
 
 
+@pytest.mark.parametrize("identity", [None, "unrelated", "bad"])
+@pytest.mark.parametrize("endpoint", [render_png, render_svg])
+def test_selected_image_render_does_not_require_producer_identity(configure_storage, identity, endpoint):
+    _, mount = configure_storage
+    conn, root = shallow_connection(mount, 2)
+    write_json(root / ".zattrs", {"citrackastra": {"output_store_uuid": identity}})
+    capability = capabilities(_request("/?source=image-input"), 42, conn=conn)
+    assert capability.status_code == 200
+    assert json.loads(capability.content)["store"]["uuid"] is None
+    recipe = {"source": {"kind": "image-input", "imageId": 42}, "panels": [{
+        "field": ".", "roi": [1, 1, 7, 7], "sourceChannels": [1], "t": 0, "z": 0,
+        "overlays": [], "vectors": {"version": 1, "items": [
+            {"kind": "point", "x": 2, "y": 3, "t": 0, "z": 0, "color": "#00FFFF"}]}}]}
+    response = endpoint(_request("/", method="post", data=json.dumps(recipe), content_type="application/json"), 42, conn=conn)
+    assert response.status_code == 200
+    legacy = capabilities(_request("/"), 42, conn=conn)
+    assert legacy.status_code == (200 if identity is None else 422)
+
+
 @pytest.mark.parametrize("writer", [write_v2_image, write_v3_image])
 def test_common_identity_for_an_unknown_workflow(tmp_path, writer):
     from biomero_zarr_viewer.metadata import inspect_store

@@ -197,7 +197,8 @@ def well_eligibility(request, well_id, conn=None, **kwargs):
 def _capability_response(request, conn, store, *, require_plate=False):
     from .volume_cache import cache_limit
     from .http_statistics import eligible as native_samples_eligible
-    model = _inspect_resolved_store(store, request.GET.get("field"))
+    model = _inspect_resolved_store(store, request.GET.get("field"),
+                                    include_store_identity=request.GET.get("source") != "image-input")
     if require_plate and model.get("kind") != "plate":
         raise UnsupportedStore("The selected OMERO Plate is not backed by an OME-Zarr plate store")
     token, expires_at = make_read_context(
@@ -258,11 +259,12 @@ def _capability_response(request, conn, store, *, require_plate=False):
     )
 
 
-def _inspect_resolved_store(store, selected_field=None):
+def _inspect_resolved_store(store, selected_field=None, *, include_store_identity=True):
     if selected_field is not None and not isinstance(selected_field, str):
         raise InvalidROI("The selected field must be a path")
     source = getattr(store, "http", None)
-    model = source.model() if source is not None else inspect_store(store.path, store.recorded_files)
+    model = source.model() if source is not None else inspect_store(
+        store.path, store.recorded_files, include_store_identity=include_store_identity)
     if selected_field is not None and selected_field != model["initial_path"]:
         from .metadata import _image_model
         valid = {f["path"] for w in model.get("plate", {}).get("wells", []) for f in w["fields"]}
@@ -270,7 +272,9 @@ def _inspect_resolved_store(store, selected_field=None):
             raise DataNotFound("The selected field is not available")
         model.update(_image_model(store.path, selected_field, model["ngff_version"]))
         model["initial_path"] = selected_field
-    if store.identity_path is not None:
+    if not include_store_identity:
+        model["store_uuid"] = None
+    elif store.identity_path is not None:
         model["store_uuid"] = read_store_uuid(store.identity_path)
     if not store.routes:
         return model
@@ -299,6 +303,11 @@ def _inspect_resolved_store(store, selected_field=None):
 def _recipe_field(recipe):
     panels = recipe.get("panels") if isinstance(recipe, dict) else None
     return panels[0].get("field") if isinstance(panels, list) and panels and isinstance(panels[0], dict) else None
+
+
+def _image_input_recipe(recipe):
+    source = recipe.get("source") if isinstance(recipe, dict) else None
+    return isinstance(source, dict) and source.get("kind") in ("image-input", "current-image")
 
 
 def _label_roots(store):
@@ -338,7 +347,8 @@ def render_png(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store, _recipe_field(recipe))
+    model = _inspect_resolved_store(store, _recipe_field(recipe),
+                                    include_store_identity=not _image_input_recipe(recipe))
     rendered = render_recipe_png(
         store.path, model, recipe, label_roots=_label_roots(store),
         array_root=store.http.open_group() if store.http is not None else None,
@@ -362,7 +372,8 @@ def render_svg(request, image_id, conn=None, **kwargs):
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise InvalidROI("The render recipe is not valid JSON") from exc
     store = resolve_image_store(conn, image_id)
-    model = _inspect_resolved_store(store, _recipe_field(recipe))
+    model = _inspect_resolved_store(store, _recipe_field(recipe),
+                                    include_store_identity=not _image_input_recipe(recipe))
     rendered = render_recipe_svg(store.path, model, recipe, label_roots=_label_roots(store),
                                  array_root=store.http.open_group() if store.http is not None else None)
     response = HttpResponse(rendered.content, content_type="image/svg+xml")

@@ -46,8 +46,10 @@ projections; IDs are never averaged. Slice exports retain the selected Z plane.
 
 The additive render recipe uses `version: 2` and a `sequence` declaration with
 `version: 1`, `start`, `end`, optional `step`, and optional `fps` (default 5).
-The source is an explicitly verified store UUID or `source: {kind: "current-image"}`
-for an Image workspace; source bindings are checked again on authorization
+In Analysis use `source: {kind: "image-input"}` to select a workspace Image by
+its OMERO ID, independently of the table supplying tracks. No workflow/result
+metadata is required. `current-image` remains an alias and explicit UUID recipes
+remain supported. Source access and image changes are checked again on authorization
 refresh. The recipe retains frame range, playback speed, crop, dimensions,
 channel/contrast settings, overlays, source identity and renderer provenance.
 Acquisition units are preserved when available; otherwise timepoints are frames.
