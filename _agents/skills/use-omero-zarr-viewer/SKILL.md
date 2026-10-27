@@ -2,7 +2,7 @@
 name: use-omero-zarr-viewer
 description: Open an active OMERO OME-Zarr Image or Plate, or render bounded PNG, SVG, or MP4 outputs with caller-supplied vectors, raster label outlines, and temporal projections.
 metadata:
-  version: "8"
+  version: "9"
   biomero-purpose: "application-operation"
   biomero-consumers: "omero-analysis"
   biomero-auto-activate: "false"
@@ -28,11 +28,16 @@ gallery rendering, and failure behavior.
    to viewer links.
 2. Inspect the active OMERO group and selected Image or Plate. Never invent or
    infer an OMERO object ID from a portable database.
-3. Establish the requested store UUID, field, native-pixel crop, channels,
-   Z plane, and timepoint from authenticated OMERO context or trusted analysis
-   data. Verify the UUID against the current viewer capability and preserve
-   the active OMERO group. Never infer an OMERO object ID from a database.
-   For shallow results use the result UUID, not the canonical source-pixel UUID.
+3. Use the user-selected workspace Image input by its ordinary OMERO ID.
+   Image and track/measurement inputs are independent; no shared UUID, workflow
+   name or source/result relationship is required. Use
+   `source: {kind: "image-input"}` for notebook PNG, SVG and MP4 requests.
+   The host chooses the unique input or asks the user when several are selected.
+   An optional actual `imageId` must belong to the selected workspace inputs.
+   Establish field, crop, channels and T/Z from approved metadata; preserve the
+   active group. Validate coordinate transforms and technical bounds against
+   the selected image. Do not claim this proves biological correspondence.
+   Legacy recipes may explicitly use `storeUuid` instead and retain UUID checks.
 4. For a requested export, construct a bounded render recipe. Use raster label
    paths/values for outlines; use `vectors` for caller-supplied points or lines.
    The viewer does not require a particular measurement or tracking schema.
@@ -67,6 +72,6 @@ For MP4, require `zarr-movie-v1`, add `sequence={version:1,start,end,fps:5}`
 and return the existing recipe with `omero_analysis_render_format="mp4"`.
 ZarrViewer renders native-pixel tiles in the browser and encodes in a worker;
 no new server encoder or workflow service is needed. Defaults are 5 FPS,
-600 frames, 2048 x 2048 pixels, and 256 MiB or the smaller upload limit.
+2000 frames, 2048 x 2048 pixels, and 256 MiB or the smaller upload limit.
 Keep acquisition timing distinct. `tracks` uses explicit caller-supplied rows
 and id/x/y/t/z column mappings; missing observations remain gaps.

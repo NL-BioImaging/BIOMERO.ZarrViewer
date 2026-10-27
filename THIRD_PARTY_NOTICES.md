@@ -7,7 +7,7 @@ listed below. Each package remains subject to its upstream license. This file
 is generated from `frontend/package-lock.json` and the legal files installed
 with the non-development npm packages.
 
-Generated for frontend version `0.8.1` with 228 production packages.
+Generated for frontend version `0.8.1` with 225 production packages.
 
 ## Package inventory
 
@@ -160,8 +160,6 @@ Generated for frontend version `0.8.1` with 228 production packages.
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
-| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
-| `dry-uninstall@0.3.0` | MIT | Denys Potapov | [source](https://github.com/denys-potapov/dry-uninstall) | [L029](#l029) |
 | `earcut@2.2.4` | ISC | Vladimir Agafonkin | [source](https://github.com/mapbox/earcut) | [L030](#l030) |
 | `fast-deep-equal@3.1.3` | MIT | Evgeny Poberezkin | [source](https://github.com/epoberezkin/fast-deep-equal) | [L031](#l031) |
 | `fast-xml-builder@1.3.1` | MIT | Amit Gupta (https://solothought.com) | [source](https://github.com/NaturalIntelligence/fast-xml-builder) | [L018](#l018) |
@@ -237,7 +235,6 @@ Generated for frontend version `0.8.1` with 228 production packages.
 | `xml-utils@1.10.2` | CC0-1.0 | Daniel J. Dufour | [source](https://github.com/DanielJDufour/xml-utils) | [L083](#l083) |
 | `zarrita@0.5.4` | MIT | — | — | [L017](#l017) |
 | `zarrita@0.7.3` | MIT | — | [source](https://github.com/manzt/zarrita.js) | [L017](#l017) |
-| `zod@3.25.76` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L084](#l084) |
 | `zod@4.6.7` | MIT | Colin McDonnell <zod@colinhacks.com> | [source](https://github.com/colinhacks/zod) | [L084](#l084) |
 | `zstd-codec@0.1.5` | MIT | yoshihitoh | [source](https://github.com/yoshihitoh/zstd-codec) | [L085](#l085) |
 | `zstddec@0.1.0` | MIT AND BSD-3-Clause | Don McCurdy <dm@donmccurdy.com> | [source](github:donmccurdy/zstddec) | [L086](#l086) |
@@ -1457,7 +1454,7 @@ Apache License
 
 ### L029
 
-Packages: `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`
+Packages: `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`, `dry-uninstall@0.3.0 (LICENSE)`
 
 ````text
 MIT License
@@ -4241,7 +4238,7 @@ express Statement of Purpose.
 
 ### L084
 
-Packages: `zod@4.6.7 (LICENSE)`, `zod@3.25.76 (LICENSE)`
+Packages: `zod@4.6.7 (LICENSE)`
 
 ````text
 MIT License

@@ -1,9 +1,35 @@
-import { mappedTrackVectors, movieSequence, type MovieRecipe } from './movie-recipe';
+import { mappedTrackVectors, validateMovieGeometry, movieUsesImageInput, movieSequence, type MovieRecipe } from './movie-recipe';
 import { calibratedLabelCrop, composeLabels, cropPlane } from './movie-renderer';
 import { labelIdColor } from './label-color';
 
 const recipe = (): MovieRecipe => ({ storeUuid: 'a2aa135b-9c87-4455-bb12-34a86e3fe237', sequence: { version: 1, start: 0, end: 18 },
   panels: [{ field: '.', roi: [0, 0, 4, 4], sourceChannels: [1], t: 18, z: 0, overlays: [] }] });
+
+test('preserves direct viewer exports carrying a UUID and the legacy current-image marker', () => {
+  const value = recipe(); value.source = {kind: 'current-image'};
+  expect(movieUsesImageInput(value)).toBe(false);
+  delete value.storeUuid;
+  expect(movieUsesImageInput(value)).toBe(true);
+  value.source = {kind: 'image-input', imageId: 205};
+  expect(movieUsesImageInput(value)).toBe(true);
+});
+
+test('selected-image overlays need matching geometry, not workflow identity', () => {
+  const value = recipe(); delete value.storeUuid;
+  value.source = {kind: 'image-input', imageId: 205};
+  const size = {x: 20, y: 20, z: 1, t: 19, c: 1};
+  value.panels[0].tracks = {columns: {id: 'track', x: 'x', y: 'y', t: 'frame'}, rows: [
+    {track: 'a', x: 1, y: 2, frame: 0}, {track: 'a', x: 2, y: 3, frame: 1}]};
+  expect(validateMovieGeometry(value, size)).toHaveLength(3);
+  for (const row of [{track: 'a', x: 20, y: 2, frame: 0}, {track: 'a', x: 1, y: -1, frame: 0},
+                     {track: 'a', x: 1, y: 2, frame: 19}]) {
+    value.panels[0].tracks.rows = [row];
+    expect(() => validateMovieGeometry(value, size)).toThrow(/do not fit/);
+  }
+  delete value.panels[0].tracks;
+  expect(() => validateMovieGeometry(value, {...size, x: 3})).toThrow(/does not fit/);
+  expect(() => validateMovieGeometry(value, {...size, t: 18})).toThrow(/range/);
+});
 test('movie defaults to 5 FPS and validates actual frame count and bounds', () => {
   expect(movieSequence(recipe(), 19)).toMatchObject({ fps: 5, frames: 19 });
   expect(() => movieSequence(recipe(), 10)).toThrow('range');

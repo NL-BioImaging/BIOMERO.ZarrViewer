@@ -7,7 +7,7 @@ import { AuthenticatedZarrStore, PrefixStore } from './authenticated-store';
 import { fetchCapabilities } from './api';
 import { projectLoader } from './projection-loader';
 import { projectLabelLoader } from './label-projection';
-import { mappedTrackVectors, movieSequence, type MoviePanel, type MovieRecipe, type MovieVector } from './movie-recipe';
+import { validateMovieGeometry, movieUsesImageInput, movieSequence, type MoviePanel, type MovieRecipe, type MovieVector } from './movie-recipe';
 import type { Capability } from './types';
 
 const axisSize = (source: any, axis: string) => {
@@ -120,13 +120,14 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
   if (recipe.viewCapture) throw new Error('This recipe requires the 3D view exporter.');
   movieSequence(recipe);
   if (JSON.stringify(recipe).length > 1024 * 1024) throw new Error('Movie recipe exceeds 1 MiB. Use a smaller bounded track table.');
-  const capability = await fetchCapabilities(imageId,recipe.panels[0].field,signal);
+  const imageInput = movieUsesImageInput(recipe);
+  const capability = await fetchCapabilities(imageId,recipe.panels[0].field,signal,imageInput);
   if (recipe.storeUuid ? capability.store.uuid?.toLowerCase() !== recipe.storeUuid.toLowerCase()
       : !recipe.sourceBinding || recipe.sourceBinding !== capability.store.binding_digest)
     throw new Error('The movie references a different image store.');
   const panel = recipe.panels[0];
   const store = new AuthenticatedZarrStore(capability, async () => {
-    const fresh = await fetchCapabilities(imageId);
+    const fresh = await fetchCapabilities(imageId,recipe.panels[0].field,signal,imageInput);
     if (fresh.store.uuid !== capability.store.uuid || capability.store.binding_digest && fresh.store.binding_digest !== capability.store.binding_digest)
       throw new Error('The source image changed during export. Create the movie again.');
     return fresh;
@@ -134,6 +135,9 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
   const image = await loadOmeZarrFromStore(new PrefixStore(store.store, panel.field,signal) as any);
   attachNgffPhysicalSizes(image.data,image.metadata);
   const sequence = movieSequence(recipe, axisSize(image.data[0], 't'));
+  const vectors = validateMovieGeometry(recipe, {
+    x: axisSize(image.data[0], 'x'), y: axisSize(image.data[0], 'y'),
+    z: axisSize(image.data[0], 'z'), t: axisSize(image.data[0], 't'), c: axisSize(image.data[0], 'c')});
   const imageSource = projectLoader(image.data, panel.projection || 'slice')[0];
   const overlays: Array<{ overlay: MoviePanel["overlays"][number]; source: any; channel: number }> = [];
   for (const overlay of panel.overlays) {
@@ -151,7 +155,6 @@ export async function prepareMovie(imageId: number, recipe: MovieRecipe, signal:
     } else if (!overlay.labelChannel) throw new Error('Choose an available label layer.');
     overlays.push({ overlay, source: projectLabelLoader(loader, panel.projection || 'slice', overlay.values)[0], channel });
   }
-  const vectors = mappedTrackVectors(panel);
   const channelSettings = panel.sourceChannels.map(c => {
     const metadata = capability.channels[c - 1], requested = panel.channelSettings?.find(item => item.index === c - 1);
     const [minimum, maximum] = dtypeDomain(String(imageSource.dtype));
