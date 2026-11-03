@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_MOVIE_FPS, movieSequence, type MovieRecipe } from './movie-recipe';
+import { DEFAULT_MOVIE_FPS, MAX_MOVIE_FRAMES, movieSequence, type MovieRecipe } from './movie-recipe';
 import { exportMovie, type MovieResult } from './movie-renderer';
 
 export function TimePlayback({ sizeT, t, onT, ready=true, playing: controlledPlaying, onPlayingChange }: { sizeT: number; t: number; onT: (value: number) => void; ready?:boolean; playing?:boolean; onPlayingChange?:(value:boolean)=>void }) {
@@ -41,12 +41,12 @@ function download(name: string, data: ArrayBuffer, type: string) {
 
 export function MovieExport({ imageId, sizeT, recipe, exporter, onBusy }: { imageId: number; sizeT: number; recipe: MovieRecipe;
   exporter?: (recipe:MovieRecipe,signal:AbortSignal,progress:(done:number,total:number)=>void)=>Promise<MovieResult>; onBusy?:(busy:boolean)=>void }) {
-  const [open, setOpen] = useState(false), [start, setStart] = useState(1), [end, setEnd] = useState(Math.min(sizeT, 600));
+  const [open, setOpen] = useState(false), [start, setStart] = useState(1), [end, setEnd] = useState(Math.min(sizeT, MAX_MOVIE_FRAMES));
   const [fps, setFps] = useState(DEFAULT_MOVIE_FPS), [busy, setBusy] = useState(false), [status, setStatus] = useState('');
   const [cancelling,setCancelling]=useState(false);
   const [result, setResult] = useState<MovieResult>();
   const controller = useRef<AbortController | undefined>(undefined);
-  useEffect(() => { controller.current?.abort(); setStart(1); setEnd(Math.min(sizeT, 600)); setResult(undefined); }, [sizeT, recipe.panels[0].field]);
+  useEffect(() => { controller.current?.abort(); setStart(1); setEnd(Math.min(sizeT, MAX_MOVIE_FRAMES)); setResult(undefined); }, [sizeT, recipe.panels[0].field]);
   useEffect(() => () => controller.current?.abort(), []);
   const [x0, y0, x1, y1] = recipe.panels[0].roi;
   const cropFits = x1 > x0 && y1 > y0 && x1 - x0 <= 2048 && y1 - y0 <= 2048;
@@ -76,7 +76,7 @@ export function MovieExport({ imageId, sizeT, recipe, exporter, onBusy }: { imag
       {busy && <button type="button" aria-label="Cancel movie export" title="Cancel movie export" disabled={cancelling} onClick={cancel}>{cancelling?'Cancelling…':'Cancel'}</button>}
     </div>
     {open && <section aria-label="Export movie" className="movie-export-panel">
-      <p>{exporter ? 'Export the rendered 3D view at the current screen resolution, with its camera and visible layers held fixed.' : `Export the visible area (${x1 - x0} × ${y1 - y0} pixels) and its visible layers.`} Playback speed is separate from acquisition timing. Maximum 600 frames, 2048 × 2048 pixels, 256 MiB.</p>
+      <p>{exporter ? 'Export the rendered 3D view at the current screen resolution, with its camera and visible layers held fixed.' : `Export the visible area (${x1 - x0} × ${y1 - y0} pixels) and its visible layers.`} Playback speed is separate from acquisition timing. Maximum {MAX_MOVIE_FRAMES} frames, 2048 × 2048 pixels, 256 MiB.</p>
       <label>First frame <input type="number" min="1" max={sizeT} value={start} disabled={busy} onChange={event => setStart(Number(event.target.value))} /></label>
       <label>Last frame <input type="number" min="1" max={sizeT} value={end} disabled={busy} onChange={event => setEnd(Number(event.target.value))} /></label>
       <label>Frames per second <input type="number" min="1" max="60" value={fps} disabled={busy} onChange={event => setFps(Number(event.target.value))} /></label>

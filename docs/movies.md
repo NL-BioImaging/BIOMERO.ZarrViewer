@@ -34,7 +34,7 @@ are never interpolated automatically. Trails and current-position markers are
 bounded and use stable colors. Crops use source pixel coordinates and preserve
 their offsets. Scale-bar labels fit the exported panel.
 
-Initial limits are 600 frames, 2048 by 2048 pixels, and the smaller of 256 MiB or
+Initial limits are 2000 frames, 2048 by 2048 pixels, and the smaller of 256 MiB or
 the caller's upload limit. Processing is sequential and decoded frames are not
 retained for the entire sequence. Projection loading also reduces slices
 incrementally rather than requesting every slice at once.
@@ -46,8 +46,10 @@ projections; IDs are never averaged. Slice exports retain the selected Z plane.
 
 The additive render recipe uses `version: 2` and a `sequence` declaration with
 `version: 1`, `start`, `end`, optional `step`, and optional `fps` (default 5).
-The source is an explicitly verified store UUID or `source: {kind: "current-image"}`
-for an Image workspace; source bindings are checked again on authorization
+In Analysis use `source: {kind: "image-input"}` to select a workspace Image by
+its OMERO ID, independently of the table supplying tracks. No workflow/result
+metadata is required. `current-image` remains an alias and explicit UUID recipes
+remain supported. Source access and image changes are checked again on authorization
 refresh. The recipe retains frame range, playback speed, crop, dimensions,
 channel/contrast settings, overlays, source identity and renderer provenance.
 Acquisition units are preserved when available; otherwise timepoints are frames.

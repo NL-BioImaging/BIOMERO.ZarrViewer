@@ -326,14 +326,34 @@ def _plate_model(root, plate, version, recorded_files):
 
 
 def _store_uuid(root_attributes):
-    cisegmentation = root_attributes.get("cisegmentation", {})
-    value = cisegmentation.get("output_store_uuid") if isinstance(cisegmentation, dict) else None
+    # The common result contract is authoritative, even if it declares no UUID.
+    # Inherited producer attributes must never override the current result.
+    biomero = root_attributes.get("biomero", {})
+    if not isinstance(biomero, dict):
+        raise InvalidMetadata("The BIOMERO root metadata must be an object")
+    if "result" in biomero:
+        result = biomero["result"]
+        if not isinstance(result, dict):
+            raise InvalidMetadata("The BIOMERO result identity must be an object")
+        if type(result.get("schema_version")) is not int or result["schema_version"] != 1:
+            raise InvalidMetadata("Unsupported BIOMERO result identity schema version")
+        return _parse_store_uuid(result.get("output_store_uuid"), "BIOMERO result")
+
+    # Compatibility for stores published before the common contract. Tracking
+    # results can retain their source segmentation's attributes.
+    producer, description = ("citrackastra", "CITrackastra") if "citrackastra" in root_attributes else ("cisegmentation", "CI Segmentation")
+    metadata = root_attributes.get(producer, {})
+    value = metadata.get("output_store_uuid") if isinstance(metadata, dict) else None
+    return _parse_store_uuid(value, description)
+
+
+def _parse_store_uuid(value, description):
     if value is None or value == "":
         return None
     try:
         return str(UUID(str(value).strip()))
     except ValueError as exc:
-        raise InvalidMetadata("The CI Segmentation output store UUID is invalid") from exc
+        raise InvalidMetadata(f"The {description} output store UUID is invalid") from exc
 
 
 def read_store_uuid(root):
@@ -357,7 +377,7 @@ def read_store_uuid(root):
     return _store_uuid(attributes)
 
 
-def inspect_store(root, recorded_files=()):
+def inspect_store(root, recorded_files=(), *, include_store_identity=True):
     root = Path(root)
     if (root / ".zgroup").is_file():
         group = _read_json(root / ".zgroup")
@@ -390,7 +410,7 @@ def inspect_store(root, recorded_files=()):
     if version and version != expected:
         raise UnsupportedStore(f"OME-Zarr {version} is not supported with Zarr v{zarr_format}")
     version = expected
-    store_uuid = _store_uuid(root_attributes)
+    store_uuid = _store_uuid(root_attributes) if include_store_identity else None
 
     if isinstance(metadata.get("plate"), dict):
         plate = _plate_model(root, metadata["plate"], version, recorded_files)

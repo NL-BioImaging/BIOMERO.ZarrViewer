@@ -175,7 +175,7 @@ per second. This playback rate does not imply an acquisition interval.
 In a 2D field view, **Export movie** saves a browser-generated MP4 of the selected
 frame range and visible image area, with channel settings and label overlays.
 Export shows progress and can be cancelled. Encoding requires browser support;
-Chrome is the tested browser. Exports are limited to 600 frames and 2048 × 2048 pixels.
+Chrome is the tested browser. Exports are limited to 2000 frames and 2048 × 2048 pixels.
 In 3D, **Export movie** captures the rendered Volume, Slice or Orthogonal view in either engine. It preserves the selected camera, quality, visible layers and scale bars while stepping through time. Neuroglancer includes available label surfaces; Viv includes intensities. These movies use the current screen view, rather than native image pixels. Controls are held during export; Stop cancels and restores the previous timepoint. A recipe and poster accompany the MP4.
 
 ## Share a view
