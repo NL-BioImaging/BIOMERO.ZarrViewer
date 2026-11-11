@@ -1,11 +1,4 @@
----
-name: biomero-zarrviewer-release-notes
-description: Draft or review stable and beta release notes for BIOMERO.ZarrViewer using the shared NL-BIOMERO component-note guide.
----
-
-# BIOMERO.ZarrViewer Release Notes
-
-## Release notes
+# BIOMERO.ZarrViewer release notes
 
 Before drafting a stable or beta release body, read the current
 [shared component release-note guide](https://github.com/NL-BioImaging/NL-BIOMERO/blob/master/.agents/skills/omero-biomero-expert/references/component-release-notes.md).
